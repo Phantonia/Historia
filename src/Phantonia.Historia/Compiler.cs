@@ -29,13 +29,12 @@ public sealed class Compiler
         Binder binder = new(story);
         StoryNode boundStory = binder.Bind();
 
-        return "";
+        throw new NotImplementedException();
     }
 
     private void HandleError(Error error)
     {
-        
+        string fullMessage = Errors.GenerateFullMessage(HistoriaText, error);
+        errorOutput.WriteLine(fullMessage);
     }
-
-    
 }
