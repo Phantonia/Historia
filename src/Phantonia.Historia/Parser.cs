@@ -17,6 +17,8 @@ public sealed class Parser
 
     private readonly ImmutableArray<Token> tokens;
 
+    public event Action<Error>? ErrorFound;
+
     public StoryNode Parse()
     {
         int index = 0;
@@ -45,18 +47,24 @@ public sealed class Parser
         }
         else
         {
-            throw new NotImplementedException("Error");
+            ErrorFound?.Invoke(new Error { ErrorMessage = $"Expected a {kind}", Index = tokens[index].Index });
+            return new Token { Kind = TokenKind.Empty, Index = tokens[index].Index, Text = "" };
         }
     }
 
     private SymbolDeclarationNode? ParseSymbol(ref int index)
     {
-        return tokens[index] switch
+        switch (tokens[index])
         {
-            { Kind: TokenKind.SceneKeyword } => ParseSceneSymbol(ref index),
-            { Kind: TokenKind.EndOfFile } => null,
-            _ => throw new NotImplementedException("Error"),
-        };
+            case { Kind: TokenKind.SceneKeyword }: return ParseSceneSymbol(ref index);
+            case { Kind: TokenKind.EndOfFile }: return null;
+            default:
+                {
+                    ErrorFound?.Invoke(new Error { ErrorMessage = $"Unexpected token '{tokens[index].Text}'", Index = tokens[index].Index });
+                    index++;
+                    return ParseSymbol(ref index);
+                }
+        }
     }
 
     private SceneSymbolDeclarationNode ParseSceneSymbol(ref int index)
@@ -104,11 +112,20 @@ public sealed class Parser
 
     private StatementNode ParseStatement(ref int index)
     {
-        return tokens[index] switch
+        switch (tokens[index])
         {
-            { Kind: TokenKind.OutputKeyword } => ParseOutputStatement(ref index),
-            _ => throw new NotImplementedException("Error"),
-        };
+            case { Kind: TokenKind.OutputKeyword }: return ParseOutputStatement(ref index);
+            default:
+                {
+                    ErrorFound?.Invoke(new Error
+                    {
+                        ErrorMessage = tokens[index].Kind is TokenKind.EndOfFile ? "Unexpected end of file" : $"Unexpected token '{tokens[index].Text}'",
+                        Index = tokens[index].Index
+                    });
+                    index++;
+                    return ParseStatement(ref index);
+                }
+        }
     }
     
     private OutputStatementNode ParseOutputStatement(ref int index)
@@ -145,7 +162,16 @@ public sealed class Parser
 
                     return expression;
                 }
-            default: throw new NotImplementedException("Error");
+            default:
+                {
+                    ErrorFound?.Invoke(new Error
+                    {
+                        ErrorMessage = tokens[index].Kind is TokenKind.EndOfFile ? "Unexpected end of file" : $"Unexpected token '{tokens[index].Text}'",
+                        Index = tokens[index].Index
+                    });
+                    index++;
+                    return ParseExpression(ref index);
+                }
         }
     }
 }

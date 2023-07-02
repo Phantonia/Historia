@@ -38,4 +38,36 @@ public sealed class ParserTests
 
         Assert.IsTrue(scene.Body.Statements[1] is OutputStatementNode);
     }
+
+    [TestMethod]
+    public void TestError()
+    {
+        string code = """
+                      scene main { }
+                      hello!
+                      """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+
+        bool foundError = false;
+
+        parser.ErrorFound += e =>
+        {
+            if (!foundError)
+            {
+                Assert.AreEqual("Error: Unexpected token 'hello'\r\nhello!\r\n^", Errors.GenerateFullMessage(code, e));
+            }
+            else
+            {
+                Assert.AreEqual("Error: Unexpected token '!'\r\nhello!\r\n     ^", Errors.GenerateFullMessage(code, e));
+            }
+
+            foundError = true;
+        };
+
+        _ = parser.Parse();
+
+        Assert.IsTrue(foundError);
+    }
 }
