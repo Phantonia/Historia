@@ -15,10 +15,11 @@ public sealed record FlowGraph
 
     public static FlowGraph Empty { get; } = new();
 
-    public static FlowGraph CreateSimpleFlowGraph(int vertex) => Empty with
+    public static FlowGraph CreateSimpleFlowGraph(FlowVertex vertex) => Empty with
     {
-        StartVertex = vertex,
-        OutgoingEdges = Empty.OutgoingEdges.Add(vertex, ImmutableList.Create(EmptyNode)),
+        StartVertex = vertex.Index,
+        OutgoingEdges = Empty.OutgoingEdges.Add(vertex.Index, ImmutableList.Create(EmptyNode)),
+        Vertices = Empty.Vertices.Add(vertex.Index, vertex),
     };
 
     private FlowGraph() { }
@@ -27,11 +28,14 @@ public sealed record FlowGraph
 
     public int StartVertex { get; init; } = EmptyNode;
 
+    public ImmutableDictionary<int, FlowVertex> Vertices { get; init; } = ImmutableDictionary<int, FlowVertex>.Empty;
+
     public FlowGraph Append(FlowGraph graph)
     {
         // this method generates a huge amount of waste - can we optimize this?
 
-        MutEdges tempEdges = OutgoingEdges.ToDictionary(k => k.Key, l => l.Value.ToList());
+        MutEdges tempEdges = OutgoingEdges.ToDictionary(p => p.Key, p => p.Value.ToList());
+        Dictionary<int, FlowVertex> tempVertices = Vertices.ToDictionary(p => p.Key, p => p.Value);
 
         foreach ((int key, List<int> value) in tempEdges)
         {
@@ -52,11 +56,13 @@ public sealed record FlowGraph
             }
 
             tempEdges[key] = value.ToList();
+            tempVertices[key] = graph.Vertices[key];
         }
 
         return this with
         {
             OutgoingEdges = tempEdges.ToImmutableDictionary(p => p.Key, p => p.Value.ToImmutableList()),
+            Vertices = tempVertices.ToImmutableDictionary(),
         };
     }
 }
