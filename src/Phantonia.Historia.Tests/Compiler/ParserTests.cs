@@ -70,4 +70,29 @@ public sealed class ParserTests
 
         Assert.IsTrue(foundError);
     }
+
+    [TestMethod]
+    public void TestEarlyExit()
+    {
+        string code = """
+                      scene main
+                      {
+                          output 0;
+                      """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+
+        int errorCount = 0;
+
+        parser.ErrorFound += e =>
+        {
+            Assert.AreEqual("Error: Unexpected end of file\r\n    output 0;\r\n             ^", Errors.GenerateFullMessage(code, e));
+            errorCount++;
+        };
+
+        StoryNode story = parser.Parse(); // assert this does not throw
+
+        Assert.AreEqual(1, errorCount);
+    }
 }

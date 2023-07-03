@@ -76,7 +76,11 @@ public sealed class Parser
 
         Token nameToken = Expect(TokenKind.Identifier, ref index);
 
-        SceneBodyNode body = ParseSceneBody(ref index);
+        SceneBodyNode? body = ParseSceneBody(ref index);
+        if (body is null)
+        {
+            return null;
+        }
 
         return new SceneSymbolDeclarationNode
         {
@@ -86,7 +90,7 @@ public sealed class Parser
         };
     }
 
-    private SceneBodyNode ParseSceneBody(ref int index)
+    private SceneBodyNode? ParseSceneBody(ref int index)
     {
         ImmutableArray<StatementNode>.Builder statementBuilder = ImmutableArray.CreateBuilder<StatementNode>();
 
@@ -96,7 +100,12 @@ public sealed class Parser
 
         while (tokens[index].Kind is not TokenKind.ClosedBrace)
         {
-            StatementNode nextStatement = ParseStatement(ref index);
+            StatementNode? nextStatement = ParseStatement(ref index);
+            if (nextStatement is null)
+            {
+                return null;
+            }
+
             statementBuilder.Add(nextStatement);
         }
 
@@ -110,16 +119,24 @@ public sealed class Parser
         };
     }
 
-    private StatementNode ParseStatement(ref int index)
+    private StatementNode? ParseStatement(ref int index)
     {
         switch (tokens[index])
         {
-            case { Kind: TokenKind.OutputKeyword }: return ParseOutputStatement(ref index);
+            case { Kind: TokenKind.OutputKeyword }:
+                return ParseOutputStatement(ref index);
+            case { Kind: TokenKind.EndOfFile }:
+                ErrorFound?.Invoke(new Error
+                {
+                    ErrorMessage = "Unexpected end of file",
+                    Index = tokens[index].Index
+                });
+                return null;
             default:
                 {
                     ErrorFound?.Invoke(new Error
                     {
-                        ErrorMessage = tokens[index].Kind is TokenKind.EndOfFile ? "Unexpected end of file" : $"Unexpected token '{tokens[index].Text}'",
+                        ErrorMessage = $"Unexpected token '{tokens[index].Text}'",
                         Index = tokens[index].Index
                     });
                     index++;
@@ -128,7 +145,7 @@ public sealed class Parser
         }
     }
     
-    private OutputStatementNode ParseOutputStatement(ref int index)
+    private OutputStatementNode? ParseOutputStatement(ref int index)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.OutputKeyword);
 
@@ -136,7 +153,11 @@ public sealed class Parser
 
         index++;
 
-        ExpressionNode outputExpression = ParseExpression(ref index);
+        ExpressionNode? outputExpression = ParseExpression(ref index);
+        if (outputExpression is null)
+        {
+            return null;
+        }
 
         _ = Expect(TokenKind.Semicolon, ref index);
 
@@ -147,7 +168,7 @@ public sealed class Parser
         };
     }
 
-    private ExpressionNode ParseExpression(ref int index)
+    private ExpressionNode? ParseExpression(ref int index)
     {
         switch (tokens[index])
         {
@@ -156,17 +177,28 @@ public sealed class Parser
                 {
                     index++;
 
-                    ExpressionNode expression = ParseExpression(ref index);
+                    ExpressionNode? expression = ParseExpression(ref index);
+                    if (expression is null)
+                    {
+                        return null;
+                    }
 
                     _ = Expect(TokenKind.ClosedParenthesis, ref index);
 
                     return expression;
                 }
+            case { Kind: TokenKind.EndOfFile }:
+                ErrorFound?.Invoke(new Error
+                {
+                    ErrorMessage = "Unexpected end of file",
+                    Index = tokens[index].Index
+                });
+                return null;
             default:
                 {
                     ErrorFound?.Invoke(new Error
                     {
-                        ErrorMessage = tokens[index].Kind is TokenKind.EndOfFile ? "Unexpected end of file" : $"Unexpected token '{tokens[index].Text}'",
+                        ErrorMessage = $"Unexpected token '{tokens[index].Text}'",
                         Index = tokens[index].Index
                     });
                     index++;
