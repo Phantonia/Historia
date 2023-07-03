@@ -56,8 +56,14 @@ public sealed class Parser
     {
         switch (tokens[index])
         {
-            case { Kind: TokenKind.SceneKeyword }: return ParseSceneSymbol(ref index);
-            case { Kind: TokenKind.EndOfFile }: return null;
+            case { Kind: TokenKind.SceneKeyword }:
+                // if parse scene symbol returns null
+                // we have an eof too early
+                // however this still means we can return null here
+                // which means we are done parsing
+                return ParseSceneSymbol(ref index);
+            case { Kind: TokenKind.EndOfFile }:
+                return null;
             default:
                 {
                     ErrorFound?.Invoke(new Error { ErrorMessage = $"Unexpected token '{tokens[index].Text}'", Index = tokens[index].Index });
@@ -67,7 +73,7 @@ public sealed class Parser
         }
     }
 
-    private SceneSymbolDeclarationNode ParseSceneSymbol(ref int index)
+    private SceneSymbolDeclarationNode? ParseSceneSymbol(ref int index)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.SceneKeyword);
         int nodeIndex = tokens[index].Index;
@@ -172,7 +178,8 @@ public sealed class Parser
     {
         switch (tokens[index])
         {
-            case { Kind: TokenKind.IntegerLiteral, IntegerValue: int value }: return new IntegerLiteralExpressionNode { Value = value, Index = tokens[index++].Index };
+            case { Kind: TokenKind.IntegerLiteral, IntegerValue: int value }:
+                return new IntegerLiteralExpressionNode { Value = value, Index = tokens[index++].Index };
             case { Kind: TokenKind.OpenParenthesis }:
                 {
                     index++;
