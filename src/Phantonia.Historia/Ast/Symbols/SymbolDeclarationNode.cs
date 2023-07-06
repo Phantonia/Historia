@@ -3,4 +3,6 @@
 public abstract record SymbolDeclarationNode : SyntaxNode
 {
     protected SymbolDeclarationNode() { }
+
+    public required string Name { get; init; }
 }
