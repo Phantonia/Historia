@@ -78,6 +78,7 @@ public sealed record FlowGraph
         {
             OutgoingEdges = tempEdges.ToImmutableDictionary(p => p.Key, p => p.Value.ToImmutableList()),
             Vertices = tempVertices.ToImmutableDictionary(),
+            StartVertex = StartVertex == EmptyVertex ? graph.StartVertex : StartVertex,
         };
     }
 

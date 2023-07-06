@@ -43,6 +43,24 @@ public sealed class FlowGraphTests
     }
 
     [TestMethod]
+    public void TestEmptyAppend()
+    {
+        FlowGraph graph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 42 });
+
+        Assert.AreEqual(FlowGraph.EmptyVertex, FlowGraph.Empty.StartVertex);
+
+        FlowGraph otherGraph = FlowGraph.Empty.Append(graph);
+
+        Assert.AreEqual(42, otherGraph.StartVertex);
+
+        Assert.AreEqual(1, otherGraph.Vertices.Count);
+        Assert.AreEqual(1, otherGraph.OutgoingEdges.Count);
+
+        Assert.AreEqual(1, otherGraph.OutgoingEdges[42].Count);
+        Assert.AreEqual(FlowGraph.EmptyVertex, otherGraph.OutgoingEdges[42][0]);
+    }
+
+    [TestMethod]
     public void TestVertices()
     {
         FlowGraph graph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 0 });
