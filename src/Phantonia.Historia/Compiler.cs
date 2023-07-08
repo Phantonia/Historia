@@ -25,9 +25,12 @@ public sealed class Compiler
         Parser parser = new(tokens);
         parser.ErrorFound += HandleError;
         StoryNode story = parser.Parse();
+        parser.ErrorFound -= HandleError;
 
         Binder binder = new(story);
+        binder.ErrorFound += HandleError;
         StoryNode boundStory = binder.Bind();
+        binder.ErrorFound -= HandleError;
 
         throw new NotImplementedException();
     }
