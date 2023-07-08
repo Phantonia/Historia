@@ -49,7 +49,7 @@ public sealed class FlowAnalyzer
     {
         return statement switch
         {
-            OutputStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = statement.Index }),
+            OutputStatementNode { Expression: var expression } => FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = statement.Index, OutputExpression = expression }),
             _ => throw new NotImplementedException($"Unknown statement type {statement.GetType().FullName}"),
         };
     }
