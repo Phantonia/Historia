@@ -1,4 +1,6 @@
-﻿namespace Phantonia.Historia.Language.Ast.Symbols;
+﻿using Phantonia.Historia.Language.GrammaticalAnalysis;
+
+namespace Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
 
 public abstract record SymbolDeclarationNode : SyntaxNode
 {

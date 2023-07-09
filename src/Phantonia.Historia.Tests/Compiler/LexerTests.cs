@@ -1,6 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Phantonia.Historia.Language;
-using Phantonia.Historia.Language.Ast;
+using Phantonia.Historia.Language.LexicalAnalysis;
 using System.Collections.Immutable;
 
 namespace Phantonia.Historia.Tests.Compiler;

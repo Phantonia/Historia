@@ -1,11 +1,11 @@
-﻿using Phantonia.Historia.Language.Ast;
-using Phantonia.Historia.Language.Ast.Statements;
-using Phantonia.Historia.Language.Ast.Symbols;
-using Phantonia.Historia.Language.Flow;
+﻿using Phantonia.Historia.Language.FlowAnalysis;
+using Phantonia.Historia.Language.GrammaticalAnalysis;
+using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
+using Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
 using System;
 using System.Diagnostics;
 
-namespace Phantonia.Historia.Language;
+namespace Phantonia.Historia.Language.FlowAnalysis;
 
 // there is no abbreviation for this thing
 // always use its full name, im serious

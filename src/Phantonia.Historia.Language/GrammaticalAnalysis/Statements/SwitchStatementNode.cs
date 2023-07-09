@@ -1,7 +1,7 @@
-﻿using Phantonia.Historia.Language.Ast.Expressions;
+﻿using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 using System.Collections.Immutable;
 
-namespace Phantonia.Historia.Language.Ast.Statements;
+namespace Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 
 public sealed record SwitchStatementNode : StatementNode
 {

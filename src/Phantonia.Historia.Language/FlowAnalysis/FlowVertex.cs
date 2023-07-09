@@ -1,6 +1,6 @@
-﻿using Phantonia.Historia.Language.Ast.Expressions;
+﻿using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 
-namespace Phantonia.Historia.Language.Flow;
+namespace Phantonia.Historia.Language.FlowAnalysis;
 
 public readonly record struct FlowVertex
 {

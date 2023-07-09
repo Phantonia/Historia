@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Phantonia.Historia\Phantonia.Historia.Language.csproj" />
+    <ProjectReference Include="..\Phantonia.Historia.Language\Phantonia.Historia.Language.csproj" />
   </ItemGroup>
 
 </Project>

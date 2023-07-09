@@ -1,4 +1,4 @@
-﻿namespace Phantonia.Historia.Language.Ast;
+﻿namespace Phantonia.Historia.Language.GrammaticalAnalysis;
 
 public abstract record SyntaxNode
 {

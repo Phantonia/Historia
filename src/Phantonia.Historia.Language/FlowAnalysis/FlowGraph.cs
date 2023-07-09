@@ -7,7 +7,7 @@ using Edges = System.Collections.Immutable.ImmutableDictionary<
 using MutEdges = System.Collections.Generic.Dictionary<
     int, System.Collections.Generic.List<int>>;
 
-namespace Phantonia.Historia.Language.Flow;
+namespace Phantonia.Historia.Language.FlowAnalysis;
 
 public sealed record FlowGraph
 {

@@ -1,11 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Phantonia.Historia.Language.Flow;
-using System.Collections.Immutable;
+using Phantonia.Historia.Language.FlowAnalysis;
 using System.Linq;
-using Edges = System.Collections.Immutable.ImmutableDictionary<
-    int, System.Collections.Immutable.ImmutableList<int>>;
-using MutEdges = System.Collections.Generic.Dictionary<
-    int, System.Collections.Generic.List<int>>;
 
 namespace Phantonia.Historia.Tests.Compiler;
 

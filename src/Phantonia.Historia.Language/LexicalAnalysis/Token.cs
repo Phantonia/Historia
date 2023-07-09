@@ -1,4 +1,4 @@
-﻿namespace Phantonia.Historia.Language.Ast;
+﻿namespace Phantonia.Historia.Language.LexicalAnalysis;
 
 public readonly record struct Token
 {

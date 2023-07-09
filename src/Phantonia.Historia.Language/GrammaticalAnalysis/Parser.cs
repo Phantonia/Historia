@@ -1,12 +1,12 @@
-﻿using Phantonia.Historia.Language.Ast;
-using Phantonia.Historia.Language.Ast.Expressions;
-using Phantonia.Historia.Language.Ast.Statements;
-using Phantonia.Historia.Language.Ast.Symbols;
+﻿using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
+using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
+using Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
+using Phantonia.Historia.Language.LexicalAnalysis;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 
-namespace Phantonia.Historia.Language;
+namespace Phantonia.Historia.Language.GrammaticalAnalysis;
 
 public sealed class Parser
 {
@@ -152,7 +152,7 @@ public sealed class Parser
                 }
         }
     }
-    
+
     private OutputStatementNode? ParseOutputStatement(ref int index)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.OutputKeyword);

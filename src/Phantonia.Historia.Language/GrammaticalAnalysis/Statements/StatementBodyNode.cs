@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
+using Phantonia.Historia.Language.GrammaticalAnalysis;
 
-namespace Phantonia.Historia.Language.Ast.Statements;
+namespace Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 
 public sealed record StatementBodyNode : SyntaxNode
 {

@@ -1,5 +1,5 @@
-﻿using Phantonia.Historia.Language.Ast;
-using Phantonia.Historia.Language.Ast.Symbols;
+﻿using Phantonia.Historia.Language.GrammaticalAnalysis;
+using Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
 using System;
 
 namespace Phantonia.Historia.Language;

@@ -1,4 +1,4 @@
-﻿namespace Phantonia.Historia.Language.Ast.Expressions;
+﻿namespace Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 
 public sealed record IntegerLiteralExpressionNode : ExpressionNode
 {

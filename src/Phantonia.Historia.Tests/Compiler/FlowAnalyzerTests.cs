@@ -1,9 +1,9 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Phantonia.Historia.Language;
-using Phantonia.Historia.Language.Ast.Expressions;
-using Phantonia.Historia.Language.Flow;
+using Phantonia.Historia.Language.FlowAnalysis;
+using Phantonia.Historia.Language.GrammaticalAnalysis;
+using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
+using Phantonia.Historia.Language.LexicalAnalysis;
 using System.Collections.Immutable;
-using System.IO;
 using System.Linq;
 
 namespace Phantonia.Historia.Tests.Compiler;

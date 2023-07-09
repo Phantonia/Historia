@@ -1,8 +1,7 @@
-﻿using Phantonia.Historia.Language.Ast;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using System.Threading;
 
-namespace Phantonia.Historia.Language;
+namespace Phantonia.Historia.Language.LexicalAnalysis;
 
 public sealed class Lexer
 {
@@ -58,7 +57,7 @@ public sealed class Lexer
             ')' => new Token { Kind = TokenKind.ClosedParenthesis, Text = ")", Index = index++ },
             ';' => new Token { Kind = TokenKind.Semicolon, Text = ";", Index = index++ },
             >= '0' and <= '9' => LexIntegerLiteral(ref index),
-            (>= 'a' and <= 'z') or (>= 'A' and <= 'Z') or '_' => LexIdentifierOrKeyword(ref index),
+            >= 'a' and <= 'z' or >= 'A' and <= 'Z' or '_' => LexIdentifierOrKeyword(ref index),
             _ => new Token { Kind = TokenKind.Unknown, Text = historiaText[index].ToString(), Index = index++ },
         };
     }
@@ -86,7 +85,7 @@ public sealed class Lexer
     {
         int startIndex = index;
 
-        while (historiaText[index] is (>= 'a' and <= 'z') or (>= 'A' and <= 'Z') or (>= '0' and <= '9') or '_')
+        while (historiaText[index] is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or >= '0' and <= '9' or '_')
         {
             index++;
 

@@ -1,8 +1,8 @@
 ﻿// uncomment this to see the example story class below
 // #define EXAMPLE_STORY
 
-using Phantonia.Historia.Language.Ast.Expressions;
-using Phantonia.Historia.Language.Flow;
+using Phantonia.Historia.Language.FlowAnalysis;
+using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text;

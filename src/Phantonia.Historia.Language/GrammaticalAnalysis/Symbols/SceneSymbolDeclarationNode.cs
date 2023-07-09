@@ -1,6 +1,6 @@
-﻿using Phantonia.Historia.Language.Ast.Statements;
+﻿using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 
-namespace Phantonia.Historia.Language.Ast.Symbols;
+namespace Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
 
 public sealed record SceneSymbolDeclarationNode : SymbolDeclarationNode
 {

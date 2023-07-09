@@ -1,9 +1,10 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Phantonia.Historia.Language;
-using Phantonia.Historia.Language.Ast;
-using Phantonia.Historia.Language.Ast.Expressions;
-using Phantonia.Historia.Language.Ast.Statements;
-using Phantonia.Historia.Language.Ast.Symbols;
+using Phantonia.Historia.Language.GrammaticalAnalysis;
+using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
+using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
+using Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
+using Phantonia.Historia.Language.LexicalAnalysis;
 
 namespace Phantonia.Historia.Tests.Compiler;
 

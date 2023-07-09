@@ -1,6 +1,6 @@
-﻿using Phantonia.Historia.Language.Ast.Expressions;
+﻿using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 
-namespace Phantonia.Historia.Language.Ast.Statements;
+namespace Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 
 public sealed record OutputStatementNode : StatementNode
 {

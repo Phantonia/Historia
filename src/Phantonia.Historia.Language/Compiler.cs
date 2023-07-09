@@ -1,4 +1,5 @@
-﻿using Phantonia.Historia.Language.Ast;
+﻿using Phantonia.Historia.Language.GrammaticalAnalysis;
+using Phantonia.Historia.Language.LexicalAnalysis;
 using System;
 using System.Collections.Immutable;
 using System.IO;
