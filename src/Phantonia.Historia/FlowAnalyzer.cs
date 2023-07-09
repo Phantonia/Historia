@@ -50,7 +50,22 @@ public sealed class FlowAnalyzer
         return statement switch
         {
             OutputStatementNode { Expression: var expression } => FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = statement.Index, OutputExpression = expression }),
+            SwitchStatementNode switchStatement => GenerateSwitchFlowGraph(switchStatement),
             _ => throw new NotImplementedException($"Unknown statement type {statement.GetType().FullName}"),
         };
+    }
+
+    private FlowGraph GenerateSwitchFlowGraph(SwitchStatementNode switchStatement)
+    {
+        FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = switchStatement.Index, OutputExpression = switchStatement.Expression });
+
+        foreach (OptionNode option in switchStatement.Options)
+        {
+            FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body);
+
+            flowGraph = flowGraph.AppendToVertex(flowGraph.StartVertex, nestedFlowGraph);
+        }
+
+        return flowGraph;
     }
 }

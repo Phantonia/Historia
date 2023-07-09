@@ -82,6 +82,39 @@ public sealed record FlowGraph
         };
     }
 
+    public FlowGraph AppendToVertex(int vertex, FlowGraph graph)
+    {
+        // this method generates a huge amount of waste - can we optimize this?
+
+        if (!Vertices.ContainsKey(vertex))
+        {
+            throw new ArgumentException($"{nameof(vertex)} is not a vertex of this graph.");
+        }
+
+        MutEdges tempEdges = OutgoingEdges.ToDictionary(p => p.Key, p => p.Value.ToList());
+        Dictionary<int, FlowVertex> tempVertices = Vertices.ToDictionary(p => p.Key, p => p.Value);
+
+        foreach ((int key, ImmutableList<int> value) in graph.OutgoingEdges)
+        {
+            if (tempEdges.ContainsKey(key))
+            {
+                throw new InvalidOperationException("Duplicated vertex key");
+            }
+
+            tempEdges[key] = value.ToList();
+            tempVertices[key] = graph.Vertices[key];
+        }
+
+        tempEdges[vertex].Add(graph.StartVertex);
+
+        return this with
+        {
+            OutgoingEdges = tempEdges.ToImmutableDictionary(p => p.Key, p => p.Value.ToImmutableList()),
+            Vertices = tempVertices.ToImmutableDictionary(),
+            StartVertex = StartVertex == EmptyVertex ? graph.StartVertex : StartVertex,
+        };
+    }
+
     public FlowGraph Replace(int replacedVertex, FlowGraph graph)
     {
         // this method generates a huge amount of waste - can we optimize this?

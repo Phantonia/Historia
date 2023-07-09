@@ -146,4 +146,28 @@ public sealed class FlowGraphTests
         AssertHasEdges(7, 8);
         AssertHasEdges(8, FlowGraph.EmptyVertex, 6);
     }
+
+    [TestMethod]
+    public void TestAppendToVertex()
+    {
+        FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 0 }, 1)
+                                             .AddVertex(new FlowVertex { Index = 1 }, FlowGraph.EmptyVertex);
+
+        FlowGraph nestedGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 2 }, 3, 4)
+                                               .AddVertex(new FlowVertex { Index = 3 }, 4)
+                                               .AddVertex(new FlowVertex { Index = 4 }, FlowGraph.EmptyVertex);
+
+        FlowGraph resultGraph = flowGraph.AppendToVertex(0, nestedGraph);
+
+        Assert.AreEqual(0, resultGraph.StartVertex);
+
+        Assert.AreEqual(5, resultGraph.Vertices.Count);
+        Assert.AreEqual(2, resultGraph.OutgoingEdges[0].Count);
+        Assert.AreEqual(1, resultGraph.OutgoingEdges[0][0]);
+        Assert.AreEqual(2, resultGraph.OutgoingEdges[0][1]);
+
+        Assert.AreEqual(2, resultGraph.OutgoingEdges[2].Count);
+        Assert.AreEqual(3, resultGraph.OutgoingEdges[2][0]);
+        Assert.AreEqual(4, resultGraph.OutgoingEdges[2][1]);
+    }
 }
