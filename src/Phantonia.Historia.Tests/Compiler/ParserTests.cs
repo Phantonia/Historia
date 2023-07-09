@@ -95,4 +95,112 @@ public sealed class ParserTests
 
         Assert.AreEqual(1, errorCount);
     }
+
+    [TestMethod]
+    public void TestSwitchParsing()
+    {
+        string code = """
+                      scene main
+                      {
+                          switch (4)
+                          {
+                              option (5)
+                              {
+                                  output 6;
+                              }
+
+                              option (7)
+                              {
+                                  output 8;
+                                  output 9;
+                              }
+                          }
+                      }
+                      """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail();
+
+        StoryNode story = parser.Parse();
+
+        // trust me, this is the cleanest way to write that down
+        // actually that's very cool, it's just that we have a lot of nesting
+        if (story is not
+            {
+                Symbols:
+                [
+                    SceneSymbolDeclarationNode
+                    {
+                        Name: "main",
+                        Body: StatementBodyNode
+                        {
+                            Statements:
+                            [
+                                SwitchStatementNode
+                                {
+                                    Expression: IntegerLiteralExpressionNode
+                                    {
+                                        Value: 4
+                                    },
+                                    Options:
+                                    [
+                                        OptionNode
+                                        {
+                                            Expression: IntegerLiteralExpressionNode
+                                            {
+                                                Value: 5
+                                            },
+                                            Body: StatementBodyNode
+                                            {
+                                                Statements:
+                                                [
+                                                    OutputStatementNode
+                                                    {
+                                                        Expression: IntegerLiteralExpressionNode
+                                                        {
+                                                            Value: 6
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        OptionNode
+                                        {
+                                            Expression: IntegerLiteralExpressionNode
+                                            {
+                                                Value: 7
+                                            },
+                                            Body: StatementBodyNode
+                                            {
+                                                Statements:
+                                                [
+                                                    OutputStatementNode
+                                                    {
+                                                        Expression: IntegerLiteralExpressionNode
+                                                        {
+                                                            Value: 8
+                                                        }
+                                                    },
+                                                    OutputStatementNode
+                                                    {
+                                                        Expression: IntegerLiteralExpressionNode
+                                                        {
+                                                            Value: 9
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ]
+            })
+        {
+            Assert.Fail();
+        }
+    }
 }

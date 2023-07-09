@@ -82,7 +82,7 @@ public sealed class Parser
 
         Token nameToken = Expect(TokenKind.Identifier, ref index);
 
-        SceneBodyNode? body = ParseSceneBody(ref index);
+        StatementBodyNode? body = ParseStatementBody(ref index);
         if (body is null)
         {
             return null;
@@ -96,7 +96,7 @@ public sealed class Parser
         };
     }
 
-    private SceneBodyNode? ParseSceneBody(ref int index)
+    private StatementBodyNode? ParseStatementBody(ref int index)
     {
         ImmutableArray<StatementNode>.Builder statementBuilder = ImmutableArray.CreateBuilder<StatementNode>();
 
@@ -118,7 +118,7 @@ public sealed class Parser
         // now we have the }
         index++;
 
-        return new SceneBodyNode
+        return new StatementBodyNode
         {
             Statements = statementBuilder.ToImmutable(),
             Index = nodeIndex,
@@ -131,6 +131,8 @@ public sealed class Parser
         {
             case { Kind: TokenKind.OutputKeyword }:
                 return ParseOutputStatement(ref index);
+            case { Kind: TokenKind.SwitchKeyword }:
+                return ParseSwitchStatement(ref index);
             case { Kind: TokenKind.EndOfFile }:
                 ErrorFound?.Invoke(new Error
                 {
@@ -172,6 +174,83 @@ public sealed class Parser
             Expression = outputExpression,
             Index = nodeIndex,
         };
+    }
+
+    private SwitchStatementNode? ParseSwitchStatement(ref int index)
+    {
+        int nodeIndex = tokens[index].Index;
+
+        Debug.Assert(tokens[index] is { Kind: TokenKind.SwitchKeyword });
+
+        index++;
+
+        _ = Expect(TokenKind.OpenParenthesis, ref index);
+
+        ExpressionNode? expression = ParseExpression(ref index);
+        if (expression is null)
+        {
+            return null;
+        }
+
+        _ = Expect(TokenKind.ClosedParenthesis, ref index);
+
+        _ = Expect(TokenKind.OpenBrace, ref index);
+
+        ImmutableArray<OptionNode>? optionNodes = ParseOptions(ref index);
+        if (optionNodes is null)
+        {
+            return null;
+        }
+
+        _ = Expect(TokenKind.ClosedBrace, ref index);
+
+        return new SwitchStatementNode
+        {
+            Expression = expression,
+            Options = (ImmutableArray<OptionNode>)optionNodes,
+            Index = nodeIndex,
+        };
+    }
+
+    private ImmutableArray<OptionNode>? ParseOptions(ref int index)
+    {
+        ImmutableArray<OptionNode>.Builder optionBuilder = ImmutableArray.CreateBuilder<OptionNode>();
+
+        while (tokens[index] is { Kind: TokenKind.OptionKeyword })
+        {
+            int nodeIndex = tokens[index].Index;
+
+            _ = Expect(TokenKind.OptionKeyword, ref index);
+
+            _ = Expect(TokenKind.OpenParenthesis, ref index);
+
+            ExpressionNode? expression = ParseExpression(ref index);
+
+            if (expression is null)
+            {
+                return null;
+            }
+
+            _ = Expect(TokenKind.ClosedParenthesis, ref index);
+
+            StatementBodyNode? body = ParseStatementBody(ref index);
+
+            if (body is null)
+            {
+                return null;
+            }
+
+            OptionNode optionNode = new()
+            {
+                Index = nodeIndex,
+                Body = body,
+                Expression = expression,
+            };
+
+            optionBuilder.Add(optionNode);
+        }
+
+        return optionBuilder.ToImmutable();
     }
 
     private ExpressionNode? ParseExpression(ref int index)

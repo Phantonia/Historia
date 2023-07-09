@@ -1,8 +1,10 @@
-﻿namespace Phantonia.Historia.Language.Ast.Symbols;
+﻿using Phantonia.Historia.Language.Ast.Statements;
+
+namespace Phantonia.Historia.Language.Ast.Symbols;
 
 public sealed record SceneSymbolDeclarationNode : SymbolDeclarationNode
 {
     public SceneSymbolDeclarationNode() { }
 
-    public required SceneBodyNode Body { get; init; }
+    public required StatementBodyNode Body { get; init; }
 }

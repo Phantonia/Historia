@@ -32,7 +32,7 @@ public sealed class FlowAnalyzer
         return null;
     }
 
-    private FlowGraph GenerateBodyFlowGraph(SceneBodyNode body)
+    private FlowGraph GenerateBodyFlowGraph(StatementBodyNode body)
     {
         FlowGraph graph = FlowGraph.Empty;
 

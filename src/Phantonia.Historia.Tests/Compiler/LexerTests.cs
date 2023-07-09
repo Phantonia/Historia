@@ -86,4 +86,21 @@ public sealed class LexerTests
 
         Assert.AreEqual(index, tokens.Length);
     }
+
+    [TestMethod]
+    public void TestKeywords()
+    {
+        string code = "scene output switch option blablabla";
+
+        Lexer lexer = new(code);
+        ImmutableArray<Token> tokens = lexer.Lex();
+
+        Assert.AreEqual(6, tokens.Length);
+        Assert.AreEqual(TokenKind.SceneKeyword, tokens[0].Kind);
+        Assert.AreEqual(TokenKind.OutputKeyword, tokens[1].Kind);
+        Assert.AreEqual(TokenKind.SwitchKeyword, tokens[2].Kind);
+        Assert.AreEqual(TokenKind.OptionKeyword, tokens[3].Kind);
+        Assert.AreEqual(TokenKind.Identifier, tokens[4].Kind);
+        Assert.AreEqual(TokenKind.EndOfFile, tokens[5].Kind);
+    }
 }
