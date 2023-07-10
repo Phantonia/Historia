@@ -49,7 +49,7 @@ public sealed class FlowAnalyzer
     {
         return statement switch
         {
-            OutputStatementNode { Expression: var expression } => FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = statement.Index, OutputExpression = expression }),
+            OutputStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = statement.Index, AssociatedStatement = statement }),
             SwitchStatementNode switchStatement => GenerateSwitchFlowGraph(switchStatement),
             _ => throw new NotImplementedException($"Unknown statement type {statement.GetType().FullName}"),
         };
@@ -57,7 +57,7 @@ public sealed class FlowAnalyzer
 
     private FlowGraph GenerateSwitchFlowGraph(SwitchStatementNode switchStatement)
     {
-        FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = switchStatement.Index, OutputExpression = switchStatement.Expression });
+        FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = switchStatement.Index, AssociatedStatement = switchStatement });
 
         foreach (OptionNode option in switchStatement.Options)
         {

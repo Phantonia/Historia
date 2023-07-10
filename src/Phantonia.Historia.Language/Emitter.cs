@@ -1,11 +1,13 @@
 ﻿// uncomment this to see the example story class below
-// #define EXAMPLE_STORY
+#define EXAMPLE_STORY
 
 using Phantonia.Historia.Language.FlowAnalysis;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
+using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
+using System.CodeDom.Compiler;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Text;
+using System.IO;
 
 namespace Phantonia.Historia.Language;
 
@@ -22,110 +24,265 @@ public sealed class Emitter
     {
         const string className = "HistoriaStory";
         const string outputType = "int";
+        const string optionsType = "int";
 
-        StringBuilder bob = new();
+        IndentedTextWriter writer = new(new StringWriter());
 
-        bob.AppendLine($$"""
-                         public sealed class {{className}}
-                         {
-                             public {{className}}()
-                             {
-                         
-                             }
-                      
-                             private int state;
-                      
-                             public {{outputType}} Output { get; private set; }
+        writer.WriteManyLines(
+          $$"""
+            public sealed class {{className}}
+            {
+                public {{className}}()
+                {
+            """);
 
-                             public bool TryContinue()
-                             {
-                                 state = GetNextState(0);
-                                 Output = GetOutput();
-                                 return true;
-                             }
+        writer.Indent += 2;
 
-                         """);
+        writer.Write("Output = ");
 
-
-        GenerateGetNextStateMethod(bob);
-
-        bob.AppendLine();
-
-        GenerateGetOutputMethod(bob, outputType);
-
-        bob.AppendLine("}");
-
-        return bob.ToString();
-    }
-
-    private void GenerateGetNextStateMethod(StringBuilder bob)
-    {
-        const string Tab = "    ";
-
-        bob.AppendLine("""
-                           private int GetNextState(int option)
-                           {
-                               switch (state, option)
-                               {
-                       """);
-
-        // currently we only have linear states
-        foreach ((int index, ImmutableList<int> edges) in flowGraph.OutgoingEdges)
+        if (flowGraph.Vertices[flowGraph.StartVertex].AssociatedStatement is IOutputStatementNode outputStatement)
         {
-            Debug.Assert(edges.Count == 1);
-
-            bob.AppendLine($"{Tab}{Tab}{Tab}case ({index}, _):");
-            bob.AppendLine($"{Tab}{Tab}{Tab}{Tab}return {edges[0]};");
+            GenerateExpression(writer, outputStatement.OutputExpression);
+        }
+        else
+        {
+            writer.Write("default");
         }
 
-        bob.AppendLine("""
-                               }
+        writer.WriteLine(";");
 
-                               throw new System.InvalidOperationException("Invalid state");
-                           }
-                       """);
+        writer.Indent--;
+
+        writer.WriteManyLines(
+          $$"""
+            }
+                      
+            private int state = {{flowGraph.StartVertex}};
+
+            public bool FinishedStory { get; private set; } = false;
+            
+            public System.Collections.Immutable.ImmutableArray<{{optionsType}}> Options { get; private set; } = System.Collections.Immutable.ImmutableArray<{{optionsType}}>.Empty;
+                      
+            public {{outputType}} Output { get; private set; }
+
+            public bool TryContinue()
+            {
+                if (FinishedStory || Options.Length != 0)
+                {
+                    return false;
+                }
+
+                state = GetNextState(0);
+                Output = GetOutput();
+                Options = GetOptions();
+            
+                if (state == -1)
+                {
+                    FinishedStory = true;
+                }
+            
+                return true;
+            }
+
+            public bool TryContinueWithOption(int option)
+            {
+                if (FinishedStory || option < 0 || option >= Options.Length)
+                {
+                    return false;
+                }
+
+                state = GetNextState(option);
+                Output = GetOutput();
+                Options = GetOptions();
+
+                if (state == -1)
+                {
+                    FinishedStory = true;
+                }
+
+                return true;
+            }
+
+            """);
+
+        writer.Indent++;
+        GenerateGetNextStateMethod(writer);
+
+        writer.WriteLine();
+
+        GenerateGetOutputMethod(writer, outputType);
+
+        writer.WriteLine();
+
+        GenerateGetOptionsMethod(writer, optionsType);
+        writer.Indent--;
+
+        writer.WriteLine("}");
+
+        return ((StringWriter)writer.InnerWriter).ToString();
+    }
+
+    private void GenerateGetNextStateMethod(IndentedTextWriter writer)
+    {
+        writer.WriteManyLines(
+            """
+            private int GetNextState(int option)
+            {
+                switch (state, option)
+                {
+            """);
+
+        writer.Indent += 2;
+
+        foreach ((int index, ImmutableList<int> edges) in flowGraph.OutgoingEdges)
+        {
+            if (edges.Count == 1)
+            {
+                writer.WriteLine($"case ({index}, _):");
+
+                writer.Indent++;
+                writer.WriteLine($"return {edges[0]};");
+                writer.Indent--;
+            }
+            else if (flowGraph.Vertices[index].AssociatedStatement is SwitchStatementNode switchStatement)
+            {
+                Debug.Assert(switchStatement.Options.Length == edges.Count);
+
+                for (int i = 0; i < switchStatement.Options.Length; i++)
+                {
+                    // we know that for each option its index equals that of the associated next vertex
+                    // we also know that the order that the options appear in the switch statement node is exactly how each one will be indexed
+                    // plus we know that the outgoing edges are in exactly the right order
+
+                    // here we assert that the index of the vertex equals the index of the first statement of the option
+                    // however we ignore the case where the option's body is empty - there it would be impossible to get the next statement
+                    Debug.Assert(switchStatement.Options[i].Body.Statements.Length == 0 || switchStatement.Options[i].Body.Statements[0].Index == edges[i]);
+
+                    writer.WriteLine($"case ({index}, {i}):");
+
+                    writer.Indent++;
+                    writer.WriteLine($"return {edges[i]};");
+                    writer.Indent--;
+                }
+            }
+        }
+
+        writer.Indent -= 2;
+
+        writer.WriteManyLines(
+            """
+                }
+
+                throw new System.InvalidOperationException("Invalid state");
+            }
+            """);
 
     }
 
-    private void GenerateGetOutputMethod(StringBuilder bob, string outputType)
+    private void GenerateGetOutputMethod(IndentedTextWriter writer, string outputType)
     {
-        const string Tab = "    ";
+        writer.WriteManyLines(
+            $$"""
+              private {{outputType}} GetOutput()
+              {
+                  switch (state)
+                  {
+              """);
 
-        bob.AppendLine($$"""
-                             private {{outputType}} GetOutput()
-                             {
-                                 switch (state)
-                                 {
-                         """);
+        writer.Indent += 2;
 
-        // currently we only have linear states
         foreach ((int index, FlowVertex vertex) in flowGraph.Vertices)
         {
-            if (vertex.OutputExpression is null)
+            ExpressionNode outputExpression;
+
+            switch (vertex.AssociatedStatement)
+            {
+                case OutputStatementNode outputStatement:
+                    outputExpression = outputStatement.OutputExpression;
+                    break;
+                case SwitchStatementNode switchStatement:
+                    outputExpression = switchStatement.OutputExpression;
+                    break;
+                default:
+                    continue;
+            }
+
+            if (vertex.AssociatedStatement is not (OutputStatementNode or SwitchStatementNode))
             {
                 continue;
             }
 
-            bob.AppendLine($"{Tab}{Tab}{Tab}case {index}:");
-            bob.Append($"{Tab}{Tab}{Tab}{Tab}return ");
-            GenerateExpression(bob, vertex.OutputExpression);
-            bob.AppendLine(";");
+            writer.WriteLine($"case {index}:");
+
+            writer.Indent++;
+            writer.Write($"return ");
+            GenerateExpression(writer, outputExpression);
+            writer.WriteLine(";");
+            writer.Indent--;
         }
 
-        bob.AppendLine("""
-                               }
+        writer.Indent -= 2;
 
-                               throw new System.InvalidOperationException("Invalid state");
-                           }
-                       """);
+        writer.WriteManyLines(
+            """
+                    case -1:
+                        return default;
+                }
+
+                throw new System.InvalidOperationException("Invalid state");
+            }
+            """);
     }
 
-    private static void GenerateExpression(StringBuilder bob, ExpressionNode expression)
+    private void GenerateGetOptionsMethod(IndentedTextWriter writer, string optionsType)
+    {
+        writer.WriteManyLines(
+            $$"""
+              private System.Collections.Immutable.ImmutableArray<{{optionsType}}> GetOptions()
+              {
+                  switch (state)
+                  {
+              """);
+
+        writer.Indent += 2;
+
+        foreach ((int index, FlowVertex vertex) in flowGraph.Vertices)
+        {
+            if (vertex.AssociatedStatement is SwitchStatementNode switchStatement)
+            {
+                writer.WriteLine($"case {index}:");
+
+                writer.Indent++;
+                writer.Write("return System.Collections.Immutable.ImmutableArray.ToImmutableArray(new[] { ");
+
+                foreach (OptionNode option in switchStatement.Options)
+                {
+                    GenerateExpression(writer, option.Expression);
+                    writer.Write(", ");
+                }
+
+                writer.WriteLine("});");
+                writer.Indent--;
+            }
+        }
+
+        writer.Indent -= 2;
+
+        writer.WriteManyLines(
+          $$"""
+                }
+
+                return System.Collections.Immutable.ImmutableArray<{{optionsType}}>.Empty;
+            }
+            """);
+    }
+
+    private static void GenerateExpression(IndentedTextWriter writer, ExpressionNode expression)
     {
         switch (expression)
         {
             case IntegerLiteralExpressionNode { Value: int intValue }:
-                bob.Append(intValue);
+                writer.Write(intValue);
                 return;
         }
 

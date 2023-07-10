@@ -35,7 +35,7 @@ public sealed class ParserTests
         OutputStatementNode? outputStatement = scene.Body.Statements[0] as OutputStatementNode;
         Assert.IsNotNull(outputStatement);
 
-        Assert.IsTrue(outputStatement is { Expression: IntegerLiteralExpressionNode { Value: 42 } });
+        Assert.IsTrue(outputStatement is { OutputExpression: IntegerLiteralExpressionNode { Value: 42 } });
 
         Assert.IsTrue(scene.Body.Statements[1] is OutputStatementNode);
     }
@@ -132,72 +132,72 @@ public sealed class ParserTests
                 Symbols:
                 [
                     SceneSymbolDeclarationNode
+                {
+                    Name: "main",
+                    Body: StatementBodyNode
                     {
-                        Name: "main",
-                        Body: StatementBodyNode
-                        {
-                            Statements:
+                        Statements:
                             [
                                 SwitchStatementNode
+                            {
+                                OutputExpression: IntegerLiteralExpressionNode
                                 {
-                                    Expression: IntegerLiteralExpressionNode
-                                    {
-                                        Value: 4
-                                    },
-                                    Options:
+                                    Value: 4
+                                },
+                                Options:
                                     [
                                         OptionNode
+                                    {
+                                        Expression: IntegerLiteralExpressionNode
                                         {
-                                            Expression: IntegerLiteralExpressionNode
-                                            {
-                                                Value: 5
-                                            },
-                                            Body: StatementBodyNode
-                                            {
-                                                Statements:
-                                                [
-                                                    OutputStatementNode
-                                                    {
-                                                        Expression: IntegerLiteralExpressionNode
-                                                        {
-                                                            Value: 6
-                                                        }
-                                                    }
-                                                ]
-                                            }
+                                            Value: 5
                                         },
-                                        OptionNode
+                                        Body: StatementBodyNode
                                         {
-                                            Expression: IntegerLiteralExpressionNode
-                                            {
-                                                Value: 7
-                                            },
-                                            Body: StatementBodyNode
-                                            {
-                                                Statements:
+                                            Statements:
                                                 [
                                                     OutputStatementNode
+                                                {
+                                                    OutputExpression: IntegerLiteralExpressionNode
                                                     {
-                                                        Expression: IntegerLiteralExpressionNode
-                                                        {
-                                                            Value: 8
-                                                        }
-                                                    },
-                                                    OutputStatementNode
-                                                    {
-                                                        Expression: IntegerLiteralExpressionNode
-                                                        {
-                                                            Value: 9
-                                                        }
+                                                        Value: 6
                                                     }
+                                                }
                                                 ]
-                                            }
                                         }
+                                    },
+                                        OptionNode
+                                    {
+                                        Expression: IntegerLiteralExpressionNode
+                                        {
+                                            Value: 7
+                                        },
+                                        Body: StatementBodyNode
+                                        {
+                                            Statements:
+                                                [
+                                                    OutputStatementNode
+                                                {
+                                                    OutputExpression: IntegerLiteralExpressionNode
+                                                    {
+                                                        Value: 8
+                                                    }
+                                                },
+                                                    OutputStatementNode
+                                                {
+                                                    OutputExpression: IntegerLiteralExpressionNode
+                                                    {
+                                                        Value: 9
+                                                    }
+                                                }
+                                                ]
+                                        }
+                                    }
                                     ]
-                                }
+                            }
                             ]
-                        }
                     }
+                }
                 ]
             })
         {

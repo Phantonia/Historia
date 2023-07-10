@@ -2,9 +2,9 @@
 
 namespace Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 
-public sealed record OutputStatementNode : StatementNode
+public sealed record OutputStatementNode : StatementNode, IOutputStatementNode
 {
     public OutputStatementNode() { }
 
-    public required ExpressionNode Expression { get; init; }
+    public required ExpressionNode OutputExpression { get; init; }
 }

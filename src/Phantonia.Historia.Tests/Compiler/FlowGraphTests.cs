@@ -1,5 +1,8 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Phantonia.Historia.Language.FlowAnalysis;
+using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
+using System.Diagnostics.CodeAnalysis;
+using System;
 using System.Linq;
 
 namespace Phantonia.Historia.Tests.Compiler;
@@ -7,10 +10,19 @@ namespace Phantonia.Historia.Tests.Compiler;
 [TestClass]
 public sealed class FlowGraphTests
 {
+    private sealed record Stub : StatementNode
+    {
+        [SetsRequiredMembers]
+        public Stub()
+        {
+            Index = 0;
+        }
+    }
+
     [TestMethod]
     public void TestSimpleFlowGraph()
     {
-        FlowGraph simpleGraph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 42 });
+        FlowGraph simpleGraph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 42, AssociatedStatement = new Stub() });
 
         Assert.AreEqual(42, simpleGraph.StartVertex);
         Assert.AreEqual(1, simpleGraph.OutgoingEdges.Count);
@@ -22,8 +34,8 @@ public sealed class FlowGraphTests
     [TestMethod]
     public void TestSimpleAppend()
     {
-        FlowGraph fgA = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 42 });
-        FlowGraph fgB = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 64 });
+        FlowGraph fgA = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 42, AssociatedStatement = new Stub() });
+        FlowGraph fgB = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 64, AssociatedStatement = new Stub() });
 
         FlowGraph resultGraph = fgA.Append(fgB);
 
@@ -40,7 +52,7 @@ public sealed class FlowGraphTests
     [TestMethod]
     public void TestEmptyAppend()
     {
-        FlowGraph graph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 42 });
+        FlowGraph graph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 42 , AssociatedStatement = new Stub() });
 
         Assert.AreEqual(FlowGraph.EmptyVertex, FlowGraph.Empty.StartVertex);
 
@@ -58,11 +70,11 @@ public sealed class FlowGraphTests
     [TestMethod]
     public void TestVertices()
     {
-        FlowGraph graph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 0 });
+        FlowGraph graph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 0 , AssociatedStatement = new Stub() });
 
         for (int i = 1; i < 8; i++)
         {
-            graph = graph.Append(FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = i }));
+            graph = graph.Append(FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = i, AssociatedStatement = new Stub() }));
         }
 
         for (int i = 0; i < 8; i++)
@@ -74,10 +86,10 @@ public sealed class FlowGraphTests
     [TestMethod]
     public void TestMoreComplexGraph()
     {
-        FlowGraph graph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 5 }, 6, 7)
-                                         .AddVertex(new FlowVertex { Index = 6 }, 7, FlowGraph.EmptyVertex)
-                                         .AddVertex(new FlowVertex { Index = 7 }, 8)
-                                         .AddVertex(new FlowVertex { Index = 8 }, 6, FlowGraph.EmptyVertex);
+        FlowGraph graph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 5, AssociatedStatement = new Stub() }, 6, 7)
+                                         .AddVertex(new FlowVertex { Index = 6, AssociatedStatement = new Stub() }, 7, FlowGraph.EmptyVertex)
+                                         .AddVertex(new FlowVertex { Index = 7 , AssociatedStatement = new Stub() }, 8)
+                                         .AddVertex(new FlowVertex { Index = 8 , AssociatedStatement = new Stub() }, 6, FlowGraph.EmptyVertex);
 
         Assert.AreEqual(5, graph.StartVertex);
 
@@ -107,14 +119,14 @@ public sealed class FlowGraphTests
     [TestMethod]
     public void TestReplace()
     {
-        FlowGraph graphA = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 5 }, 6, 7)
-                                          .AddVertex(new FlowVertex { Index = 6 }, 7, FlowGraph.EmptyVertex)
-                                          .AddVertex(new FlowVertex { Index = 7 }, 8)
-                                          .AddVertex(new FlowVertex { Index = 8 }, 6, FlowGraph.EmptyVertex);
+        FlowGraph graphA = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 5 , AssociatedStatement = new Stub() }, 6, 7)
+                                          .AddVertex(new FlowVertex { Index = 6 , AssociatedStatement = new Stub() }, 7, FlowGraph.EmptyVertex)
+                                          .AddVertex(new FlowVertex { Index = 7 , AssociatedStatement = new Stub() }, 8)
+                                          .AddVertex(new FlowVertex { Index = 8 , AssociatedStatement = new Stub() }, 6, FlowGraph.EmptyVertex);
 
-        FlowGraph graphB = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 9 }, 10, 11)
-                                          .AddVertex(new FlowVertex { Index = 10 }, FlowGraph.EmptyVertex)
-                                          .AddVertex(new FlowVertex { Index = 11 }, FlowGraph.EmptyVertex);
+        FlowGraph graphB = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 9 , AssociatedStatement = new Stub() }, 10, 11)
+                                          .AddVertex(new FlowVertex { Index = 10 , AssociatedStatement = new Stub() }, FlowGraph.EmptyVertex)
+                                          .AddVertex(new FlowVertex { Index = 11 , AssociatedStatement = new Stub() }, FlowGraph.EmptyVertex);
 
         FlowGraph graphC = graphA.Replace(5, graphB);
 
@@ -145,12 +157,12 @@ public sealed class FlowGraphTests
     [TestMethod]
     public void TestAppendToVertex()
     {
-        FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 0 }, 1)
-                                             .AddVertex(new FlowVertex { Index = 1 }, FlowGraph.EmptyVertex);
+        FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 0 , AssociatedStatement = new Stub() }, 1)
+                                             .AddVertex(new FlowVertex { Index = 1 , AssociatedStatement = new Stub() }, FlowGraph.EmptyVertex);
 
-        FlowGraph nestedGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 2 }, 3, 4)
-                                               .AddVertex(new FlowVertex { Index = 3 }, 4)
-                                               .AddVertex(new FlowVertex { Index = 4 }, FlowGraph.EmptyVertex);
+        FlowGraph nestedGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 2 , AssociatedStatement = new Stub() }, 3, 4)
+                                               .AddVertex(new FlowVertex { Index = 3 , AssociatedStatement = new Stub() }, 4)
+                                               .AddVertex(new FlowVertex { Index = 4 , AssociatedStatement = new Stub() }, FlowGraph.EmptyVertex);
 
         FlowGraph resultGraph = flowGraph.AppendToVertex(0, nestedGraph);
 

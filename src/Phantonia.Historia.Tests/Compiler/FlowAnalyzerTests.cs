@@ -2,6 +2,7 @@
 using Phantonia.Historia.Language.FlowAnalysis;
 using Phantonia.Historia.Language.GrammaticalAnalysis;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
+using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 using Phantonia.Historia.Language.LexicalAnalysis;
 using System.Collections.Immutable;
 using System.Linq;
@@ -78,23 +79,39 @@ public sealed class FlowAnalyzerTests
         Assert.AreEqual(5, flowGraph.Vertices.Count);
         Assert.AreEqual(5, flowGraph.OutgoingEdges.Count);
 
+        void AssertHasOutputValue(int vertex, int value)
+        {
+            switch (flowGraph.Vertices[vertex].AssociatedStatement)
+            {
+                case OutputStatementNode { OutputExpression: IntegerLiteralExpressionNode { Value: var val } }:
+                    Assert.AreEqual(value, val);
+                    break;
+                case SwitchStatementNode { OutputExpression: IntegerLiteralExpressionNode { Value: var val } }:
+                    Assert.AreEqual(value, val);
+                    break;
+                default:
+                    Assert.Fail();
+                    break;
+            }
+        }
+
         // switch (4)
         int startVertex = flowGraph.StartVertex;
-        Assert.IsTrue(flowGraph.Vertices[startVertex].OutputExpression is IntegerLiteralExpressionNode { Value: 4 });
+        AssertHasOutputValue(startVertex, 4);
         Assert.AreEqual(2, flowGraph.OutgoingEdges[flowGraph.StartVertex].Count);
 
         // output 6
         int output6Vertex = flowGraph.OutgoingEdges[startVertex][0];
-        Assert.IsTrue(flowGraph.Vertices[output6Vertex].OutputExpression is IntegerLiteralExpressionNode { Value: 6 });
+        AssertHasOutputValue(output6Vertex, 6);
 
         // output 8
         int output8Vertex = flowGraph.OutgoingEdges[startVertex][1];
-        Assert.IsTrue(flowGraph.Vertices[output8Vertex].OutputExpression is IntegerLiteralExpressionNode { Value: 8 });
+        AssertHasOutputValue(output8Vertex, 8);
         Assert.AreEqual(1, flowGraph.OutgoingEdges[output8Vertex].Count);
 
         // output 9
         int output9Vertex = flowGraph.OutgoingEdges[output8Vertex][0];
-        Assert.IsTrue(flowGraph.Vertices[output9Vertex].OutputExpression is IntegerLiteralExpressionNode { Value: 9 });
+        AssertHasOutputValue(output9Vertex, 9);
 
         // output 10
         Assert.AreEqual(flowGraph.OutgoingEdges[output6Vertex][0], flowGraph.OutgoingEdges[output9Vertex][0]);

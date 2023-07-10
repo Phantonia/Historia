@@ -1,4 +1,5 @@
-﻿using Phantonia.Historia.Language.GrammaticalAnalysis;
+﻿using Phantonia.Historia.Language.FlowAnalysis;
+using Phantonia.Historia.Language.GrammaticalAnalysis;
 using Phantonia.Historia.Language.LexicalAnalysis;
 using System;
 using System.Collections.Immutable;
@@ -18,7 +19,7 @@ public sealed class Compiler
 
     private readonly TextWriter errorOutput;
 
-    public string CompileToCSharpText()
+    public string? CompileToCSharpText()
     {
         Lexer lexer = new(HistoriaText);
         ImmutableArray<Token> tokens = lexer.Lex();
@@ -33,7 +34,13 @@ public sealed class Compiler
         StoryNode boundStory = binder.Bind();
         binder.ErrorFound -= HandleError;
 
-        throw new NotImplementedException();
+        FlowAnalyzer flowAnalyzer = new(boundStory);
+        FlowGraph mainGraph = flowAnalyzer.GenerateMainFlowGraph();
+
+        Emitter emitter = new(mainGraph);
+
+        // we need to not do this when we get any error (or only fatal errors?)
+        return emitter.GenerateCSharpText();
     }
 
     private void HandleError(Error error)

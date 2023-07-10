@@ -171,7 +171,7 @@ public sealed class Parser
 
         return new OutputStatementNode
         {
-            Expression = outputExpression,
+            OutputExpression = outputExpression,
             Index = nodeIndex,
         };
     }
@@ -206,7 +206,7 @@ public sealed class Parser
 
         return new SwitchStatementNode
         {
-            Expression = expression,
+            OutputExpression = expression,
             Options = (ImmutableArray<OptionNode>)optionNodes,
             Index = nodeIndex,
         };
