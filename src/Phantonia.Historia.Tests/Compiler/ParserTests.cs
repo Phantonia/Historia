@@ -4,7 +4,9 @@ using Phantonia.Historia.Language.GrammaticalAnalysis;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
+using Phantonia.Historia.Language.GrammaticalAnalysis.Types;
 using Phantonia.Historia.Language.LexicalAnalysis;
+using System.Collections.Immutable;
 
 namespace Phantonia.Historia.Tests.Compiler;
 
@@ -203,5 +205,114 @@ public sealed class ParserTests
         {
             Assert.Fail();
         }
+    }
+
+    [TestMethod]
+    public void TestSettings()
+    {
+        ImmutableArray<Setting> settings = new[]
+        {
+            new Setting { Kind = SettingKind.TypeArgument, Name = SettingName.OutputType },
+            new Setting { Kind = SettingKind.TypeArgument, Name = SettingName.OptionType },
+        }.ToImmutableArray();
+
+        string code =
+            """
+            setting OutputType: Int;
+            setting OptionType: String;
+
+            scene main { }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex(), settings);
+        parser.ErrorFound += e => Assert.Fail();
+
+        StoryNode story = parser.Parse();
+
+        Assert.AreEqual(3, story.Symbols.Length);
+
+        Assert.IsTrue(story.Symbols is
+        [
+            TypeSettingDeclarationNode
+            {
+                SettingName: SettingName.OutputType,
+                Type: IdentifierTypeNode
+                {
+                    Identifier: "Int",
+                }
+            },
+            TypeSettingDeclarationNode
+            {
+                SettingName: SettingName.OptionType,
+                Type: IdentifierTypeNode
+                {
+                    Identifier: "String",
+                }
+            },
+            SceneSymbolDeclarationNode
+        ]);
+    }
+
+    [TestMethod]
+    public void TestSettingMissingColonErrors()
+    {
+        ImmutableArray<Setting> settings = new[]
+        {
+            new Setting { Kind = SettingKind.TypeArgument, Name = SettingName.OutputType },
+            new Setting { Kind = SettingKind.TypeArgument, Name = SettingName.OptionType },
+        }.ToImmutableArray();
+
+        string code =
+            """
+            setting OutputType Int;
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex(), settings);
+
+        int errorCount = 0;
+
+        parser.ErrorFound += e =>
+        {
+            errorCount++;
+            Assert.AreEqual("Expected a Colon", e.ErrorMessage);
+            Assert.AreEqual(code.IndexOf("Int"), e.Index);
+        };
+
+        _ = parser.Parse();
+
+        Assert.AreEqual(1, errorCount);
+    }
+
+    [TestMethod]
+    public void TestSettingMissingTypeError()
+    {
+        ImmutableArray<Setting> settings = new[]
+        {
+            new Setting { Kind = SettingKind.TypeArgument, Name = SettingName.OutputType },
+            new Setting { Kind = SettingKind.TypeArgument, Name = SettingName.OptionType },
+        }.ToImmutableArray();
+
+        string code =
+            """
+            setting OutputType: ;
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex(), settings);
+
+        int errorCount = 0;
+
+        parser.ErrorFound += e =>
+        {
+            errorCount++;
+            Assert.AreEqual("Unexpected token ';'", e.ErrorMessage);
+            Assert.AreEqual(code.IndexOf(";"), e.Index);
+        };
+
+        _ = parser.Parse();
+
+        Assert.AreEqual(1, errorCount);
     }
 }

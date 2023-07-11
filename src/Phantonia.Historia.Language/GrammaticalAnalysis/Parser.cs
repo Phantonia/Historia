@@ -1,21 +1,25 @@
 ﻿using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
+using Phantonia.Historia.Language.GrammaticalAnalysis.Types;
 using Phantonia.Historia.Language.LexicalAnalysis;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Phantonia.Historia.Language.GrammaticalAnalysis;
 
 public sealed class Parser
 {
-    public Parser(ImmutableArray<Token> tokens)
+    public Parser(ImmutableArray<Token> tokens, ImmutableArray<Setting>? settings = null)
     {
         this.tokens = tokens;
+        this.settings = settings ?? ImmutableArray<Setting>.Empty;
     }
 
     private readonly ImmutableArray<Token> tokens;
+    private readonly ImmutableArray<Setting> settings;
 
     public event Action<Error>? ErrorFound;
 
@@ -24,13 +28,13 @@ public sealed class Parser
         int index = 0;
         ImmutableArray<SymbolDeclarationNode>.Builder symbolBuilder = ImmutableArray.CreateBuilder<SymbolDeclarationNode>();
 
-        SymbolDeclarationNode? nextSymbol = ParseSymbol(ref index);
+        SymbolDeclarationNode? nextSymbol = ParseSymbolDeclaration(ref index);
 
         while (nextSymbol is not null)
         {
             symbolBuilder.Add(nextSymbol);
 
-            nextSymbol = ParseSymbol(ref index);
+            nextSymbol = ParseSymbolDeclaration(ref index);
         }
 
         return new StoryNode
@@ -52,7 +56,7 @@ public sealed class Parser
         }
     }
 
-    private SymbolDeclarationNode? ParseSymbol(ref int index)
+    private SymbolDeclarationNode? ParseSymbolDeclaration(ref int index)
     {
         switch (tokens[index])
         {
@@ -61,19 +65,21 @@ public sealed class Parser
                 // we have an eof too early
                 // however this still means we can return null here
                 // which means we are done parsing
-                return ParseSceneSymbol(ref index);
+                return ParseSceneSymbolDeclaration(ref index);
+            case { Kind: TokenKind.SettingKeyword }:
+                return ParseSettingSymbolDeclaration(ref index);
             case { Kind: TokenKind.EndOfFile }:
                 return null;
             default:
                 {
                     ErrorFound?.Invoke(new Error { ErrorMessage = $"Unexpected token '{tokens[index].Text}'", Index = tokens[index].Index });
                     index++;
-                    return ParseSymbol(ref index);
+                    return ParseSymbolDeclaration(ref index);
                 }
         }
     }
 
-    private SceneSymbolDeclarationNode? ParseSceneSymbol(ref int index)
+    private SceneSymbolDeclarationNode? ParseSceneSymbolDeclaration(ref int index)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.SceneKeyword);
         int nodeIndex = tokens[index].Index;
@@ -94,6 +100,65 @@ public sealed class Parser
             Name = nameToken.Text,
             Index = nodeIndex,
         };
+    }
+
+    private SettingSymbolDeclarationNode? ParseSettingSymbolDeclaration(ref int index)
+    {
+        Debug.Assert(tokens[index].Kind == TokenKind.SettingKeyword);
+
+        int nodeIndex = tokens[index].Index;
+        index++;
+
+        Token identifier = Expect(TokenKind.Identifier, ref index);
+
+        _ = Expect(TokenKind.Colon, ref index);
+
+        if (!settings.Any(s => s.Name.ToString() == identifier.Text))
+        {
+            ErrorFound?.Invoke(new Error { ErrorMessage = $"Setting '{identifier.Text}' does not exist", Index = identifier.Index });
+            return null;
+        }
+
+        switch (settings.First(s => s.Name.ToString() == identifier.Text))
+        {
+            case { Kind: SettingKind.TypeArgument, Name: SettingName name }:
+                {
+                    TypeNode? type = ParseType(ref index);
+                    if (type is null)
+                    {
+                        return null;
+                    }
+
+                    _ = Expect(TokenKind.Semicolon, ref index);
+
+                    return new TypeSettingDeclarationNode
+                    {
+                        Type = type,
+                        SettingName = name,
+                        Index = nodeIndex,
+                    };
+                }
+            case { Kind: SettingKind.ExpressionArgument, Name: SettingName name }:
+                {
+                    ExpressionNode? expression = ParseExpression(ref index);
+                    if (expression is null)
+                    {
+                        return null;
+                    }
+
+                    _ = Expect(TokenKind.Semicolon, ref index);
+
+                    return new ExpressionSettingDeclarationNode
+                    {
+                        Expression = expression,
+                        SettingName = name,
+                        Index = nodeIndex,
+                    };
+                }
+            default:
+                Debug.Assert(false);
+                return null;
+        }
     }
 
     private StatementBodyNode? ParseStatementBody(ref int index)
@@ -290,6 +355,21 @@ public sealed class Parser
                     index++;
                     return ParseExpression(ref index);
                 }
+        }
+    }
+
+    private TypeNode? ParseType(ref int index)
+    {
+        switch (tokens[index])
+        {
+            case { Kind: TokenKind.Identifier, Text: string identifier }:
+                return new IdentifierTypeNode { Identifier = identifier, Index = tokens[index++].Index };
+            case { Kind: TokenKind.EndOfFile }:
+                ErrorFound?.Invoke(new Error { ErrorMessage = "Unexpected end of file", Index = tokens[index].Index });
+                return null;
+            default:
+                ErrorFound?.Invoke(new Error { ErrorMessage = $"Unexpected token '{tokens[index].Text}'", Index = tokens[index].Index });
+                return null;
         }
     }
 }

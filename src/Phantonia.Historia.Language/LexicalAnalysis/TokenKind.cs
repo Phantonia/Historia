@@ -13,9 +13,11 @@ public enum TokenKind
     Semicolon, // ;
     OpenParenthesis, // (
     ClosedParenthesis, // )
+    Colon, // :
 
     // keywords
     SceneKeyword,
+    SettingKeyword,
     OutputKeyword,
     SwitchKeyword,
     OptionKeyword,

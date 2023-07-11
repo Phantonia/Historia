@@ -56,6 +56,7 @@ public sealed class Lexer
             '(' => new Token { Kind = TokenKind.OpenParenthesis, Text = "(", Index = index++ },
             ')' => new Token { Kind = TokenKind.ClosedParenthesis, Text = ")", Index = index++ },
             ';' => new Token { Kind = TokenKind.Semicolon, Text = ";", Index = index++ },
+            ':' => new Token { Kind = TokenKind.Colon, Text = ":", Index = index++ },
             >= '0' and <= '9' => LexIntegerLiteral(ref index),
             >= 'a' and <= 'z' or >= 'A' and <= 'Z' or '_' => LexIdentifierOrKeyword(ref index),
             _ => new Token { Kind = TokenKind.Unknown, Text = historiaText[index].ToString(), Index = index++ },
@@ -100,6 +101,7 @@ public sealed class Lexer
         TokenKind kind = text switch
         {
             "scene" => TokenKind.SceneKeyword,
+            "setting" => TokenKind.SettingKeyword,
             "output" => TokenKind.OutputKeyword,
             "switch" => TokenKind.SwitchKeyword,
             "option" => TokenKind.OptionKeyword,
