@@ -25,4 +25,6 @@ public enum TokenKind
     // literals
     Identifier,
     IntegerLiteral,
+    StringLiteral,
+    BrokenStringLiteral,
 }

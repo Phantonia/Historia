@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Phantonia.Historia.Language.LexicalAnalysis;
 using System.Collections.Immutable;
+using System.Linq;
 
 namespace Phantonia.Historia.Tests.Compiler;
 
@@ -120,5 +121,70 @@ public sealed class LexerTests
         Assert.AreEqual(TokenKind.Semicolon, tokens[4].Kind);
         Assert.AreEqual(TokenKind.Colon, tokens[5].Kind);
         Assert.AreEqual(TokenKind.EndOfFile, tokens[6].Kind);
+    }
+
+    [TestMethod]
+    public void TestStringLiterals()
+    {
+        string code =
+            """"""
+            "a" 'b' "cde" 'fghijk' ""lmn"" ''opq'' """rst""" '''uvw''' """"xyz""""
+            """""";
+
+        Lexer lexer = new(code);
+        ImmutableArray<Token> tokens = lexer.Lex();
+
+        Assert.AreEqual(10, tokens.Length);
+        string[] literals = code.Split(' ');
+
+        for (int i = 0; i < 9; i++)
+        {
+            Token t = tokens[i];
+            Assert.AreEqual(TokenKind.StringLiteral, t.Kind);
+            Assert.AreEqual(literals[i], tokens[i].Text);
+        }
+    }
+
+    [TestMethod]
+    public void TestBrokenStringLiterals()
+    {
+        string code =
+            """
+            "a
+            "b
+            """;
+
+        Lexer lexer = new(code);
+        ImmutableArray<Token> tokens = lexer.Lex();
+
+        Assert.AreEqual(3, tokens.Length);
+
+        Assert.AreEqual(TokenKind.BrokenStringLiteral, tokens[0].Kind);
+        Assert.AreEqual(TokenKind.BrokenStringLiteral, tokens[1].Kind);
+        Assert.AreEqual(TokenKind.EndOfFile, tokens[2].Kind);
+
+        Assert.AreEqual("\"a", tokens[0].Text);
+        Assert.AreEqual("\"b", tokens[1].Text);
+    }
+
+    [TestMethod]
+    public void TestStringDelimiterMess()
+    {
+        string code =
+            """"
+            ""That is "nonsense" tbh""
+            ''Hey, I'm cool''
+            """";
+
+        Lexer lexer = new(code);
+        ImmutableArray<Token> tokens = lexer.Lex();
+
+        Assert.AreEqual(3, tokens.Length);
+
+        Assert.AreEqual(TokenKind.StringLiteral, tokens[0].Kind);
+        Assert.AreEqual("\"\"That is \"nonsense\" tbh\"\"", tokens[0].Text);
+
+        Assert.AreEqual(TokenKind.StringLiteral, tokens[1].Kind);
+        Assert.AreEqual("''Hey, I'm cool''", tokens[1].Text);
     }
 }
