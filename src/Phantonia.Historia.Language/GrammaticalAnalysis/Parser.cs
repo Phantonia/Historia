@@ -25,6 +25,8 @@ public sealed class Parser
 
     public StoryNode Parse()
     {
+        ScanForBrokenTokens();
+
         int index = 0;
         ImmutableArray<SymbolDeclarationNode>.Builder symbolBuilder = ImmutableArray.CreateBuilder<SymbolDeclarationNode>();
 
@@ -41,6 +43,28 @@ public sealed class Parser
         {
             Symbols = symbolBuilder.ToImmutable(),
         };
+    }
+
+    private void ScanForBrokenTokens()
+    {
+        foreach (Token token in tokens)
+        {
+            switch (token.Kind)
+            {
+                //case TokenKind.Unknown:
+                //    ErrorFound?.Invoke(new Error { ErrorMessage = $"Unknown token '{token.Text}'", Index = token.Index });
+                //    continue;
+                case TokenKind.BrokenStringLiteral:
+                    ErrorFound?.Invoke(new Error { ErrorMessage = $"Broken string literal {token.Text}", Index = token.Index });
+                    continue;
+                default:
+                    if (token.Kind == TokenKind.Empty || !Enum.IsDefined(token.Kind))
+                    {
+                        throw new UnreachableException();
+                    }
+                    continue;
+            }
+        }
     }
 
     private Token Expect(TokenKind kind, ref int index)
@@ -323,7 +347,17 @@ public sealed class Parser
         switch (tokens[index])
         {
             case { Kind: TokenKind.IntegerLiteral, IntegerValue: int value }:
-                return new IntegerLiteralExpressionNode { Value = value, Index = tokens[index++].Index };
+                return new IntegerLiteralExpressionNode
+                {
+                    Value = value,
+                    Index = tokens[index++].Index,
+                };
+            case { Kind: TokenKind.StringLiteral, Text: string literal }:
+                return new StringLiteralExpressionNode
+                {
+                    StringLiteral = literal,
+                    Index = tokens[index++].Index,
+                };
             case { Kind: TokenKind.OpenParenthesis }:
                 {
                     index++;
@@ -342,7 +376,7 @@ public sealed class Parser
                 ErrorFound?.Invoke(new Error
                 {
                     ErrorMessage = "Unexpected end of file",
-                    Index = tokens[index].Index
+                    Index = tokens[index].Index,
                 });
                 return null;
             default:

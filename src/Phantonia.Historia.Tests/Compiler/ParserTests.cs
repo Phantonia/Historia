@@ -6,6 +6,7 @@ using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Types;
 using Phantonia.Historia.Language.LexicalAnalysis;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 
 namespace Phantonia.Historia.Tests.Compiler;
@@ -314,5 +315,52 @@ public sealed class ParserTests
         _ = parser.Parse();
 
         Assert.AreEqual(1, errorCount);
+    }
+
+    [TestMethod]
+    public void TestParseStringLiteralExpression()
+    {
+        string code =
+            """
+            scene main
+            {
+                output "String";
+                output 'Another String';
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail("Got error when none was expected");
+
+        StoryNode story = parser.Parse();
+
+        Assert.IsTrue(story is
+        {
+            Symbols:
+            [
+                SceneSymbolDeclarationNode
+                {
+                    Name: "main",
+                    Body.Statements:
+                    [
+                        OutputStatementNode
+                        {
+                            OutputExpression: StringLiteralExpressionNode
+                            {
+                                StringLiteral: "\"String\"",
+                            }
+                        },
+                        OutputStatementNode
+                        {
+                            OutputExpression: StringLiteralExpressionNode
+                            {
+                                StringLiteral: "'Another String'",
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
     }
 }
