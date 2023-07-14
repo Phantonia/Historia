@@ -363,4 +363,48 @@ public sealed class ParserTests
             ]
         });
     }
+
+    [TestMethod]
+    public void TestRecordDeclaration()
+    {
+        string code =
+            """
+            record Line
+            {
+                Text: String;
+                Character: Int;
+            }
+
+            scene main { }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
+
+        StoryNode story = parser.Parse();
+
+        Assert.AreEqual(2, story.Symbols.Length);
+        Assert.IsTrue(story.Symbols[0] is RecordSymbolDeclarationNode
+        {
+            Name: "Line",
+            Properties:
+            [
+                {
+                    Name: "Text",
+                    Type: IdentifierTypeNode
+                    {
+                        Identifier: "String",
+                    }
+                },
+                {
+                    Name: "Character",
+                    Type: IdentifierTypeNode
+                    {
+                        Identifier: "Int",
+                    }
+                },
+            ]
+        });
+    }
 }

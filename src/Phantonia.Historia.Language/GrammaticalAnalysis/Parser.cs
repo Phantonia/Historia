@@ -90,6 +90,8 @@ public sealed class Parser
                 // however this still means we can return null here
                 // which means we are done parsing
                 return ParseSceneSymbolDeclaration(ref index);
+            case { Kind: TokenKind.RecordKeyword }:
+                return ParseRecordSymbolDeclaration(ref index);
             case { Kind: TokenKind.SettingKeyword }:
                 return ParseSettingSymbolDeclaration(ref index);
             case { Kind: TokenKind.EndOfFile }:
@@ -122,6 +124,47 @@ public sealed class Parser
         {
             Body = body,
             Name = nameToken.Text,
+            Index = nodeIndex,
+        };
+    }
+
+    private RecordSymbolDeclarationNode? ParseRecordSymbolDeclaration(ref int index)
+    {
+        Debug.Assert(tokens[index] is { Kind: TokenKind.RecordKeyword });
+
+        int nodeIndex = tokens[index].Index;
+
+        index++;
+
+        Token identifierToken = Expect(TokenKind.Identifier, ref index);
+
+        _ = Expect(TokenKind.OpenBrace, ref index);
+
+        ImmutableArray<RecordPropertyDeclarationNode>.Builder propertyDeclarations = ImmutableArray.CreateBuilder<RecordPropertyDeclarationNode>();
+
+        while (tokens[index] is not { Kind: TokenKind.ClosedBrace })
+        {
+            Token propertyIdentifierToken = Expect(TokenKind.Identifier, ref index);
+            _ = Expect(TokenKind.Colon, ref index);
+
+            TypeNode? type = ParseType(ref index);
+            if (type is null)
+            {
+                return null;
+            }
+
+            _ = Expect(TokenKind.Semicolon, ref index);
+
+            propertyDeclarations.Add(new RecordPropertyDeclarationNode { Name = propertyIdentifierToken.Text, Type = type, Index = propertyIdentifierToken.Index });
+        }
+
+        // this is a closed brace
+        index++;
+
+        return new RecordSymbolDeclarationNode
+        {
+            Name = identifierToken.Text,
+            Properties = propertyDeclarations.ToImmutable(),
             Index = nodeIndex,
         };
     }

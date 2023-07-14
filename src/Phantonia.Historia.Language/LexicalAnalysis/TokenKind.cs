@@ -18,6 +18,7 @@ public enum TokenKind
     // keywords
     SceneKeyword,
     SettingKeyword,
+    RecordKeyword,
     OutputKeyword,
     SwitchKeyword,
     OptionKeyword,

@@ -162,6 +162,7 @@ public sealed class Lexer
         {
             "scene" => TokenKind.SceneKeyword,
             "setting" => TokenKind.SettingKeyword,
+            "record" => TokenKind.RecordKeyword,
             "output" => TokenKind.OutputKeyword,
             "switch" => TokenKind.SwitchKeyword,
             "option" => TokenKind.OptionKeyword,

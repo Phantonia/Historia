@@ -90,19 +90,20 @@ public sealed class LexerTests
     [TestMethod]
     public void TestKeywords()
     {
-        string code = "scene output switch option setting blablabla";
+        string code = "scene output switch option setting record blablabla";
 
         Lexer lexer = new(code);
         ImmutableArray<Token> tokens = lexer.Lex();
 
-        Assert.AreEqual(7, tokens.Length);
+        Assert.AreEqual(8, tokens.Length);
         Assert.AreEqual(TokenKind.SceneKeyword, tokens[0].Kind);
         Assert.AreEqual(TokenKind.OutputKeyword, tokens[1].Kind);
         Assert.AreEqual(TokenKind.SwitchKeyword, tokens[2].Kind);
         Assert.AreEqual(TokenKind.OptionKeyword, tokens[3].Kind);
         Assert.AreEqual(TokenKind.SettingKeyword, tokens[4].Kind);
-        Assert.AreEqual(TokenKind.Identifier, tokens[5].Kind);
-        Assert.AreEqual(TokenKind.EndOfFile, tokens[6].Kind);
+        Assert.AreEqual(TokenKind.RecordKeyword, tokens[5].Kind);
+        Assert.AreEqual(TokenKind.Identifier, tokens[6].Kind);
+        Assert.AreEqual(TokenKind.EndOfFile, tokens[7].Kind);
     }
 
     [TestMethod]
