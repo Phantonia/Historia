@@ -2,9 +2,9 @@
 
 namespace Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
 
-public sealed record RecordPropertyDeclarationNode : SyntaxNode
+public sealed record PropertyDeclarationNode : SyntaxNode
 {
-    public RecordPropertyDeclarationNode() { }
+    public PropertyDeclarationNode() { }
 
     public required string Name { get; init; }
 

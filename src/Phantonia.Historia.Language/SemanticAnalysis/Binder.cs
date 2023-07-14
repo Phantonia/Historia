@@ -3,7 +3,10 @@ using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Types;
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 
@@ -77,12 +80,30 @@ public sealed class Binder
         {
             case SceneSymbolDeclarationNode { Name: string name }:
                 return new SceneSymbol { Name = name };
+            case RecordSymbolDeclarationNode recordDeclaration:
+                return CreateRecordSymbolFromDeclaration(recordDeclaration);
             case SettingSymbolDeclarationNode:
                 return null;
             default:
                 Debug.Assert(false);
                 return null;
         }
+    }
+
+    private static RecordTypeSymbol CreateRecordSymbolFromDeclaration(RecordSymbolDeclarationNode recordDeclaration)
+    {
+        ImmutableArray<PropertySymbol>.Builder properties = ImmutableArray.CreateBuilder<PropertySymbol>();
+
+        foreach (PropertyDeclarationNode propertyDeclaration in recordDeclaration.Properties)
+        {
+            properties.Add(new PropertySymbol { Name = propertyDeclaration.Name, Type = propertyDeclaration.Type });
+        }
+
+        return new RecordTypeSymbol
+        {
+            Name = recordDeclaration.Name,
+            Properties = properties.ToImmutable(),
+        };
     }
 
     private (SymbolTable, StoryNode) BindTree(SymbolTable table)
@@ -108,12 +129,41 @@ public sealed class Binder
             // this will get more complicated very soon
             case SceneSymbolDeclarationNode:
                 return (table, declaration);
+            case RecordSymbolDeclarationNode recordDeclaration:
+                return BindRecordDeclaration(recordDeclaration, table);
             case SettingSymbolDeclarationNode setting:
                 return BindSetting(setting, table);
             default:
                 Debug.Assert(false);
                 return default;
         }
+    }
+
+    private (SymbolTable, SymbolDeclarationNode) BindRecordDeclaration(RecordSymbolDeclarationNode recordDeclaration, SymbolTable table)
+    {
+        List<PropertyDeclarationNode> properties = recordDeclaration.Properties.ToList();
+
+        for (int i = 0; i < properties.Count; i++)
+        {
+            (table, TypeNode boundType) = BindType(properties[i].Type, table);
+            properties[i] = properties[i] with
+            {
+                Type = boundType,
+            };
+        }
+
+        BoundSymbolDeclarationNode boundDeclaration = new()
+        {
+            Name = recordDeclaration.Name,
+            Declaration = recordDeclaration with
+            {
+                Properties = properties.ToImmutableArray(),
+            },
+            Symbol = table[recordDeclaration.Name],
+            Index = recordDeclaration.Index,
+        };
+
+        return (table, boundDeclaration);
     }
 
     private (SymbolTable, SettingSymbolDeclarationNode) BindSetting(SettingSymbolDeclarationNode setting, SymbolTable table)

@@ -140,7 +140,7 @@ public sealed class Parser
 
         _ = Expect(TokenKind.OpenBrace, ref index);
 
-        ImmutableArray<RecordPropertyDeclarationNode>.Builder propertyDeclarations = ImmutableArray.CreateBuilder<RecordPropertyDeclarationNode>();
+        ImmutableArray<PropertyDeclarationNode>.Builder propertyDeclarations = ImmutableArray.CreateBuilder<PropertyDeclarationNode>();
 
         while (tokens[index] is not { Kind: TokenKind.ClosedBrace })
         {
@@ -155,7 +155,7 @@ public sealed class Parser
 
             _ = Expect(TokenKind.Semicolon, ref index);
 
-            propertyDeclarations.Add(new RecordPropertyDeclarationNode { Name = propertyIdentifierToken.Text, Type = type, Index = propertyIdentifierToken.Index });
+            propertyDeclarations.Add(new PropertyDeclarationNode { Name = propertyIdentifierToken.Text, Type = type, Index = propertyIdentifierToken.Index });
         }
 
         // this is a closed brace

@@ -6,5 +6,5 @@ public sealed record RecordSymbolDeclarationNode : NamedSymbolDeclarationNode
 {
     public RecordSymbolDeclarationNode() { }
 
-    public required ImmutableArray<RecordPropertyDeclarationNode> Properties { get; init; }
+    public required ImmutableArray<PropertyDeclarationNode> Properties { get; init; }
 }

@@ -160,4 +160,54 @@ public sealed class BinderTests
         _ = binder.Bind();
         Assert.AreEqual(1, errorCount);
     }
+
+    [TestMethod]
+    public void TestRecordDeclarations()
+    {
+        string code =
+            """
+            record Line
+            {
+                Text: String;
+                Character: Int;
+            }
+
+            scene main { }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
+
+        Binder binder = new(parser.Parse());
+        binder.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
+
+        (StoryNode boundStory, SymbolTable symbolTable) = binder.Bind();
+
+        Assert.AreEqual(2, boundStory.Symbols.Length);
+
+        Assert.IsTrue(boundStory.Symbols[0] is BoundSymbolDeclarationNode
+        {
+            Symbol: RecordTypeSymbol
+            {
+                Name: "Line",
+                Properties.Length: 2,
+            },
+            Declaration: RecordSymbolDeclarationNode
+            {
+                Name: "Line",
+                Properties:
+                [
+                    PropertyDeclarationNode
+                    {
+                        Type: BoundTypeNode
+                    },
+                    PropertyDeclarationNode
+                    {
+                        Type: BoundTypeNode
+                    }
+                ]
+            }
+        });
+    }
 }
