@@ -2,6 +2,7 @@
 using Phantonia.Historia.Language;
 using Phantonia.Historia.Language.GrammaticalAnalysis;
 using Phantonia.Historia.Language.LexicalAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis;
 
 namespace Phantonia.Historia.Tests.Compiler;
 

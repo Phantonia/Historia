@@ -2,7 +2,7 @@
 using Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
 using System;
 
-namespace Phantonia.Historia.Language;
+namespace Phantonia.Historia.Language.SemanticAnalysis;
 
 // boobies begone
 public sealed class Binder
@@ -47,5 +47,14 @@ public sealed class Binder
         }
 
         return story;
+    }
+
+    private SymbolTable GetBuiltinSymbolTable()
+    {
+        SymbolTable symbolTable = new();
+        symbolTable = symbolTable.OpenScope()
+                                 .Declare(new BuiltinTypeSymbol { Name = "Int", Type = BuiltinType.Int })
+                                 .Declare(new BuiltinTypeSymbol { Name = "String", Type = BuiltinType.String });
+        return symbolTable;
     }
 }
