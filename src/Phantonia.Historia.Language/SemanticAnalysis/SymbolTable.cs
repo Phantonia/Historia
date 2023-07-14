@@ -28,14 +28,14 @@ public sealed record SymbolTable
         }
     }
 
-    public bool ContainsKey(string name)
+    public bool IsDeclared(string name)
     {
         return Table.Any(s => s.ContainsKey(name));
     }
 
     public SymbolTable Declare(Symbol symbol)
     {
-        if (ContainsKey(symbol.Name))
+        if (IsDeclared(symbol.Name))
         {
             throw new ArgumentException($"Name '{symbol.Name}' already exists in this symbol table");
         }

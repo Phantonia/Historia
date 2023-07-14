@@ -32,7 +32,7 @@ public sealed class Compiler
 
         Binder binder = new(story);
         binder.ErrorFound += HandleError;
-        StoryNode boundStory = binder.Bind();
+        (StoryNode boundStory, SymbolTable symbolTable) = binder.Bind();
         binder.ErrorFound -= HandleError;
 
         FlowAnalyzer flowAnalyzer = new(boundStory);

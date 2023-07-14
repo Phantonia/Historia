@@ -1,6 +1,9 @@
 ﻿using Phantonia.Historia.Language.GrammaticalAnalysis;
+using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
+using Phantonia.Historia.Language.GrammaticalAnalysis.Types;
 using System;
+using System.Diagnostics;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 
@@ -16,40 +19,23 @@ public sealed class Binder
 
     public event Action<Error>? ErrorFound;
 
-    public StoryNode Bind()
+    // the resulting symbol table is supposed to include all top-level symbols, not in any deeper scope
+    public BindingResult Bind()
     {
-        // this will get significantly more complicated once we actually get symbols to bind to...
+        SymbolTable table = GetBuiltinSymbolTable();
+        table = CollectTopLevelSymbols(table);
 
-        // right now we do not allow any scenes beside the main scene, but we require a main scene
-        int mainCount = 0;
-        int? secondMainIndex = null;
-
-        foreach (SymbolDeclarationNode symbolDeclaration in story.Symbols)
+        if (!table.IsDeclared("main") || table["main"] is not SceneSymbol)
         {
-            if (symbolDeclaration is SceneSymbolDeclarationNode { Name: "main" })
-            {
-                mainCount++;
-
-                if (mainCount == 2)
-                {
-                    secondMainIndex = symbolDeclaration.Index;
-                }
-            }
-            else
-            {
-                throw new NotImplementedException();
-            }
+            ErrorFound?.Invoke(new Error { ErrorMessage = "A story needs a main scene", Index = 0 });
         }
 
-        if (mainCount != 1)
-        {
-            ErrorFound?.Invoke(new Error { ErrorMessage = $"A story needs exactly one main scene (has {mainCount})", Index = secondMainIndex ?? 0 });
-        }
+        (table, StoryNode boundStory) = BindTree(table);
 
-        return story;
+        return new BindingResult(boundStory, table);
     }
 
-    private SymbolTable GetBuiltinSymbolTable()
+    private static SymbolTable GetBuiltinSymbolTable()
     {
         SymbolTable symbolTable = new();
         symbolTable = symbolTable.OpenScope()
@@ -57,4 +43,123 @@ public sealed class Binder
                                  .Declare(new BuiltinTypeSymbol { Name = "String", Type = BuiltinType.String });
         return symbolTable;
     }
+
+    private SymbolTable CollectTopLevelSymbols(SymbolTable table)
+    {
+        table = table.OpenScope();
+
+        foreach (SymbolDeclarationNode declaration in story.Symbols)
+        {
+            Symbol? newSymbol = CreateSymbolFromDeclaration(declaration);
+
+            if (newSymbol is null)
+            {
+                // this is not a symbol we need to but into the symbol table
+                continue;
+            }
+
+            if (table.IsDeclared(newSymbol.Name))
+            {
+                ErrorFound?.Invoke(new Error { ErrorMessage = $"Duplicated symbol name '{newSymbol.Name}'", Index = declaration.Index });
+            }
+            else
+            {
+                table = table.Declare(newSymbol);
+            }
+        }
+
+        return table;
+    }
+
+    private static Symbol? CreateSymbolFromDeclaration(SymbolDeclarationNode declaration)
+    {
+        switch (declaration)
+        {
+            case SceneSymbolDeclarationNode { Name: string name }:
+                return new SceneSymbol { Name = name };
+            case SettingSymbolDeclarationNode:
+                return null;
+            default:
+                Debug.Assert(false);
+                return null;
+        }
+    }
+
+    private (SymbolTable, StoryNode) BindTree(SymbolTable table)
+    {
+        StoryNode boundStory = story;
+
+        foreach (SymbolDeclarationNode declaration in story.Symbols)
+        {
+            (table, SymbolDeclarationNode boundDeclaration) = BindDeclaration(declaration, table);
+            boundStory = boundStory with
+            {
+                Symbols = boundStory.Symbols.Replace(declaration, boundDeclaration),
+            };
+        }
+
+        return (table, boundStory);
+    }
+
+    private (SymbolTable, SymbolDeclarationNode) BindDeclaration(SymbolDeclarationNode declaration, SymbolTable table)
+    {
+        switch (declaration)
+        {
+            // this will get more complicated very soon
+            case SceneSymbolDeclarationNode:
+                return (table, declaration);
+            case SettingSymbolDeclarationNode setting:
+                return BindSetting(setting, table);
+            default:
+                Debug.Assert(false);
+                return default;
+        }
+    }
+
+    private (SymbolTable, SettingSymbolDeclarationNode) BindSetting(SettingSymbolDeclarationNode setting, SymbolTable table)
+    {
+        switch (setting)
+        {
+            case TypeSettingDeclarationNode typeSetting:
+                (table, TypeNode boundType) = BindType(typeSetting.Type, table);
+                return (table, typeSetting with { Type = boundType });
+            case ExpressionSettingDeclarationNode expressionSetting:
+                (table, ExpressionNode boundExpression) = BindExpression(expressionSetting.Expression, table);
+                return (table, expressionSetting with { Expression = boundExpression });
+            default:
+                Debug.Assert(false);
+                return default;
+        }
+    }
+
+    private (SymbolTable, TypeNode) BindType(TypeNode type, SymbolTable table)
+    {
+        switch (type)
+        {
+            case IdentifierTypeNode identifierType:
+                {
+                    if (!table.IsDeclared(identifierType.Identifier))
+                    {
+                        ErrorFound?.Invoke(new Error { ErrorMessage = $"Symbol '{identifierType.Identifier}' does not exist in this scope", Index = identifierType.Index });
+                        return (table, type);
+                    }
+
+                    Symbol symbol = table[identifierType.Identifier];
+
+                    if (symbol is not TypeSymbol typeSymbol)
+                    {
+                        ErrorFound?.Invoke(new Error { ErrorMessage = $"Symbol '{identifierType.Identifier}' is not a type but is used like one", Index = identifierType.Index });
+                        return (table, type);
+                    }
+
+                    BoundTypeNode boundType = new() { Node = type, Symbol = typeSymbol, Index = type.Index };
+                    return (table, boundType);
+                }
+            default:
+                Debug.Assert(false);
+                return default;
+        }
+    }
+
+    private (SymbolTable, ExpressionNode) BindExpression(ExpressionNode expression, SymbolTable table) => (table, expression); // stub
 }
