@@ -4,6 +4,7 @@ using Phantonia.Historia.Language.GrammaticalAnalysis;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
 using Phantonia.Historia.Language.LexicalAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 
@@ -99,9 +100,12 @@ public sealed class BinderTests
         parser.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
 
         Binder binder = new(parser.Parse());
-        (StoryNode boundStory, SymbolTable symbolTable) = binder.Bind();
 
-        Assert.AreEqual(3, boundStory.Symbols.Length);
+        BindingResult result = binder.Bind();
+        Assert.IsTrue(result.IsValid);
+        (StoryNode? boundStory, SymbolTable? symbolTable) = result;
+
+        Assert.AreEqual(3, boundStory!.Symbols.Length);
 
         Assert.IsTrue(boundStory.Symbols[0] is TypeSettingDeclarationNode
         {
@@ -125,7 +129,7 @@ public sealed class BinderTests
             }
         });
 
-        Assert.IsTrue(symbolTable.IsDeclared("main"));
+        Assert.IsTrue(symbolTable!.IsDeclared("main"));
     }
 
     [TestMethod]
@@ -182,16 +186,36 @@ public sealed class BinderTests
         Binder binder = new(parser.Parse());
         binder.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
 
-        (StoryNode boundStory, SymbolTable symbolTable) = binder.Bind();
+        BindingResult result = binder.Bind();
+        Assert.IsTrue(result.IsValid);
+        (StoryNode? boundStory, SymbolTable? symbolTable) = result;
 
-        Assert.AreEqual(2, boundStory.Symbols.Length);
+        Assert.AreEqual(2, boundStory!.Symbols.Length);
 
         Assert.IsTrue(boundStory.Symbols[0] is BoundSymbolDeclarationNode
         {
             Symbol: RecordTypeSymbol
             {
                 Name: "Line",
-                Properties.Length: 2,
+                Properties:
+                [
+                    PropertySymbol
+                    {
+                        Name: "Text",
+                        Type: BuiltinTypeSymbol
+                        {
+                            Type: BuiltinType.String,
+                        }
+                    },
+                    PropertySymbol
+                    {
+                        Name: "Character",
+                        Type: BuiltinTypeSymbol
+                        {
+                            Type: BuiltinType.Int,
+                        }
+                    }
+                ]
             },
             Declaration: RecordSymbolDeclarationNode
             {
@@ -205,6 +229,168 @@ public sealed class BinderTests
                     PropertyDeclarationNode
                     {
                         Type: BoundTypeNode
+                    }
+                ]
+            }
+        });
+    }
+
+    [TestMethod]
+    public void TestCyclicRecords()
+    {
+        string code =
+            """
+            scene main { }
+
+            record A
+            {
+                B: B;
+            }
+
+            record B
+            {
+                A: A;
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
+
+        Binder binder = new(parser.Parse());
+
+        List<Error> errors = new();
+        binder.ErrorFound += errors.Add;
+
+        BindingResult result = binder.Bind();
+        Assert.IsFalse(result.IsValid);
+
+        Assert.AreEqual(1, errors.Count);
+        Assert.AreEqual("Cyclic record definition", errors[0].ErrorMessage);
+        Assert.IsTrue(errors[0].Index == code.IndexOf("record A") || errors[0].Index == code.IndexOf("record B"));
+    }
+
+    [TestMethod]
+    public void TestSelfRecursiveRecord()
+    {
+        string code =
+            """
+            scene main { }
+
+            record A
+            {
+                Self: A;
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
+
+        Binder binder = new(parser.Parse());
+
+        List<Error> errors = new();
+        binder.ErrorFound += errors.Add;
+
+        BindingResult result = binder.Bind();
+        Assert.IsFalse(result.IsValid);
+
+        Assert.AreEqual(1, errors.Count);
+        Assert.AreEqual("Cyclic record definition", errors[0].ErrorMessage);
+        Assert.AreEqual(code.IndexOf("record A"), errors[0].Index);
+    }
+
+    [TestMethod]
+    public void TestMoreComplexRecords()
+    {
+        string code =
+            """
+            scene main { }
+
+            record Line
+            {
+                Text: String;
+                Character: Int;
+            }
+
+            record StageDirection
+            {
+                Direction: String;
+                Character: Int;
+            }
+
+            record Moment
+            {
+                Line: Line;
+                StageDirection: StageDirection;
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
+
+        Binder binder = new(parser.Parse());
+
+        binder.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
+
+        BindingResult result = binder.Bind();
+        Assert.IsTrue(result.IsValid);
+
+        Assert.AreEqual(4, result.BoundStory.Symbols.Length);
+
+        Assert.IsTrue(result.BoundStory.Symbols[1] is BoundSymbolDeclarationNode
+        {
+            Declaration: RecordSymbolDeclarationNode
+            {
+                Name: "Line",
+                Properties.Length: 2,
+            },
+            Symbol: RecordTypeSymbol
+            {
+                Name: "Line",
+                Properties.Length: 2,
+            }
+        });
+
+        Assert.IsTrue(result.BoundStory.Symbols[2] is BoundSymbolDeclarationNode
+        {
+            Declaration: RecordSymbolDeclarationNode,
+            Symbol: RecordTypeSymbol,
+        });
+
+        Assert.IsTrue(result.BoundStory.Symbols[3] is BoundSymbolDeclarationNode
+        {
+            Declaration: RecordSymbolDeclarationNode
+            {
+                Name: "Moment",
+                Properties:
+                [
+                    BoundPropertyDeclarationNode
+                    {
+                        Name: "Line",
+                        Symbol: PropertySymbol
+                        {
+                            Name: "Line",
+                            Type: RecordTypeSymbol
+                            {
+                                Name: "Line",
+                                Properties.Length: 2,
+                            }
+                        }
+                    },
+                    BoundPropertyDeclarationNode
+                    {
+                        Name: "StageDirection",
+                        Symbol: PropertySymbol
+                        {
+                            Name: "StageDirection",
+                            Type: RecordTypeSymbol
+                            {
+                                Name: "StageDirection",
+                                Properties.Length: 2,
+                            }
+                        }
                     }
                 ]
             }

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 
@@ -88,7 +89,10 @@ public sealed class DependencyGraph
             }
         }
 
-        return postOrder;
+        // the way topological sort is implemented, we expect vertex A to be output before vertex B, if A directly or indirectly points to B
+        // we assume the difference: vertex A has to be output before vertex B, if B directly or indirectly points to A, as it depends on A
+        // reversing does the trick
+        return postOrder.Reverse();
 
         void DepthFirstSearch(int vertex)
         {

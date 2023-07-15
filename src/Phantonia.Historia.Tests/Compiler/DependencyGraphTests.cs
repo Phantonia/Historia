@@ -15,15 +15,15 @@ public sealed class DependencyGraphTests
     {
         Dictionary<int, Symbol> symbols = new()
         {
-            [17] = new RecordTypeSymbol { Name = "Abc", Properties = ImmutableArray<PropertySymbol>.Empty },
-            [26] = new RecordTypeSymbol { Name = "Def", Properties = ImmutableArray<PropertySymbol>.Empty },
-            [43] = new RecordTypeSymbol { Name = "Ghi", Properties = ImmutableArray<PropertySymbol>.Empty },
-            [55] = new RecordTypeSymbol { Name = "Jkl", Properties = ImmutableArray<PropertySymbol>.Empty },
-            [70] = new RecordTypeSymbol { Name = "Mno", Properties = ImmutableArray<PropertySymbol>.Empty },
-            [89] = new RecordTypeSymbol { Name = "Pqr", Properties = ImmutableArray<PropertySymbol>.Empty },
-            [105] = new RecordTypeSymbol { Name = "Stu", Properties = ImmutableArray<PropertySymbol>.Empty },
-            [117] = new RecordTypeSymbol { Name = "Vw", Properties = ImmutableArray<PropertySymbol>.Empty }, // no ad
-            [123] = new RecordTypeSymbol { Name = "Xyz", Properties = ImmutableArray<PropertySymbol>.Empty },
+            [17] = new PseudoRecordTypeSymbol { Name = "Abc", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 17, },
+            [26] = new PseudoRecordTypeSymbol { Name = "Def", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 26, },
+            [43] = new PseudoRecordTypeSymbol { Name = "Ghi", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 43, },
+            [55] = new PseudoRecordTypeSymbol { Name = "Jkl", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 55, },
+            [70] = new PseudoRecordTypeSymbol { Name = "Mno", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 70, },
+            [89] = new PseudoRecordTypeSymbol { Name = "Pqr", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 89, },
+            [105] = new PseudoRecordTypeSymbol { Name = "Stu", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 105, },
+            [117] = new PseudoRecordTypeSymbol { Name = "Vw", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 117, }, // no ad
+            [123] = new PseudoRecordTypeSymbol { Name = "Xyz", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 123, },
         };
 
         Dictionary<int, IReadOnlyList<int>> dependencies = new()
@@ -68,15 +68,15 @@ public sealed class DependencyGraphTests
     {
         Dictionary<int, Symbol> symbols = new()
         {
-            [17] = new RecordTypeSymbol { Name = "Abc", Properties = ImmutableArray<PropertySymbol>.Empty },
-            [26] = new RecordTypeSymbol { Name = "Def", Properties = ImmutableArray<PropertySymbol>.Empty },
-            [43] = new RecordTypeSymbol { Name = "Ghi", Properties = ImmutableArray<PropertySymbol>.Empty },
-            [55] = new RecordTypeSymbol { Name = "Jkl", Properties = ImmutableArray<PropertySymbol>.Empty },
-            [70] = new RecordTypeSymbol { Name = "Mno", Properties = ImmutableArray<PropertySymbol>.Empty },
-            [89] = new RecordTypeSymbol { Name = "Pqr", Properties = ImmutableArray<PropertySymbol>.Empty },
-            [105] = new RecordTypeSymbol { Name = "Stu", Properties = ImmutableArray<PropertySymbol>.Empty },
-            [117] = new RecordTypeSymbol { Name = "Vw", Properties = ImmutableArray<PropertySymbol>.Empty }, // no ad
-            [123] = new RecordTypeSymbol { Name = "Xyz", Properties = ImmutableArray<PropertySymbol>.Empty },
+            [17] = new PseudoRecordTypeSymbol { Name = "Abc", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 17, },
+            [26] = new PseudoRecordTypeSymbol { Name = "Def", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 26, },
+            [43] = new PseudoRecordTypeSymbol { Name = "Ghi", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 43, },
+            [55] = new PseudoRecordTypeSymbol { Name = "Jkl", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 55, },
+            [70] = new PseudoRecordTypeSymbol { Name = "Mno", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 70, },
+            [89] = new PseudoRecordTypeSymbol { Name = "Pqr", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 89, },
+            [105] = new PseudoRecordTypeSymbol { Name = "Stu", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 105, },
+            [117] = new PseudoRecordTypeSymbol { Name = "Vw", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 117, }, // no ad
+            [123] = new PseudoRecordTypeSymbol { Name = "Xyz", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 123, },
         };
 
         Dictionary<int, IReadOnlyList<int>> dependencies = new()
@@ -106,6 +106,6 @@ public sealed class DependencyGraphTests
         // only in our specific case do we assume that a vertex only points at higher indexed vertices
         // in reality this might not be the case
         // however, we start our ordering with the vertex without any outgoing edges
-        Assert.IsTrue(topologicalOrdering.Order().SequenceEqual(topologicalOrdering.Reverse()));
+        Assert.IsTrue(topologicalOrdering.Order().SequenceEqual(topologicalOrdering));
     }
 }

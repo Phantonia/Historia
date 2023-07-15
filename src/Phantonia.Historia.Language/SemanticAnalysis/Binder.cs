@@ -1,18 +1,25 @@
 ﻿using Phantonia.Historia.Language.GrammaticalAnalysis;
-using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Types;
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Linq;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 
 // boobies begone
-public sealed class Binder
+// sanity also begone
+public sealed partial class Binder
 {
+    // binding procedure
+    /* 1. collect top level symbols
+     * 2. bind everything except for scene bodies into pseudo symbols
+     * 3. build dependency graph + check it is not cyclic
+     * 4. fix pseudo symbols into true symbols
+     * 5. bind whole tree
+     * for whole explanation see notion
+     */
+
     public Binder(StoryNode story)
     {
         this.story = story;
@@ -25,6 +32,7 @@ public sealed class Binder
     // the resulting symbol table is supposed to include all top-level symbols, not in any deeper scope
     public BindingResult Bind()
     {
+        // 1. collect top level symbols
         SymbolTable table = GetBuiltinSymbolTable();
         table = CollectTopLevelSymbols(table);
 
@@ -33,7 +41,22 @@ public sealed class Binder
             ErrorFound?.Invoke(new Error { ErrorMessage = "A story needs a main scene", Index = 0 });
         }
 
-        (table, StoryNode boundStory) = BindTree(table);
+        // 2. bind everything except for scene bodies into pseudo symbols
+        (table, StoryNode halfboundStory) = BindPseudoSymbols(table);
+
+        // 3. build dependency graph + check it is not cyclic
+        DependencyGraph? dependencyGraph = BuildTypeDependencyGraph(halfboundStory, table);
+        if (dependencyGraph is null)
+        {
+            // return early - cyclic dependency
+            return BindingResult.Invalid;
+        }
+
+        // 4. fix pseudo symbols into true symbols
+        table = FixPseudoSymbols(dependencyGraph, table);
+
+        // 5. bind whole tree
+        (table, StoryNode boundStory) = BindTree(halfboundStory, table);
 
         return new BindingResult(boundStory, table);
     }
@@ -42,8 +65,8 @@ public sealed class Binder
     {
         SymbolTable symbolTable = new();
         symbolTable = symbolTable.OpenScope()
-                                 .Declare(new BuiltinTypeSymbol { Name = "Int", Type = BuiltinType.Int })
-                                 .Declare(new BuiltinTypeSymbol { Name = "String", Type = BuiltinType.String });
+                                 .Declare(new BuiltinTypeSymbol { Name = "Int", Type = BuiltinType.Int, Index = -1 })
+                                 .Declare(new BuiltinTypeSymbol { Name = "String", Type = BuiltinType.String, Index = -2 });
         return symbolTable;
     }
 
@@ -57,7 +80,7 @@ public sealed class Binder
 
             if (newSymbol is null)
             {
-                // this is not a symbol we need to but into the symbol table
+                // this is not a symbol we need to put into the symbol table
                 continue;
             }
 
@@ -78,8 +101,8 @@ public sealed class Binder
     {
         switch (declaration)
         {
-            case SceneSymbolDeclarationNode { Name: string name }:
-                return new SceneSymbol { Name = name };
+            case SceneSymbolDeclarationNode { Name: string name, Index: int index }:
+                return new SceneSymbol { Name = name, Index = index };
             case RecordSymbolDeclarationNode recordDeclaration:
                 return CreateRecordSymbolFromDeclaration(recordDeclaration);
             case SettingSymbolDeclarationNode:
@@ -90,126 +113,38 @@ public sealed class Binder
         }
     }
 
-    private static RecordTypeSymbol CreateRecordSymbolFromDeclaration(RecordSymbolDeclarationNode recordDeclaration)
+    private static PseudoRecordTypeSymbol CreateRecordSymbolFromDeclaration(RecordSymbolDeclarationNode recordDeclaration)
     {
-        ImmutableArray<PropertySymbol>.Builder properties = ImmutableArray.CreateBuilder<PropertySymbol>();
+        ImmutableArray<PseudoPropertySymbol>.Builder properties = ImmutableArray.CreateBuilder<PseudoPropertySymbol>();
 
         foreach (PropertyDeclarationNode propertyDeclaration in recordDeclaration.Properties)
         {
-            properties.Add(new PropertySymbol { Name = propertyDeclaration.Name, Type = propertyDeclaration.Type });
+            properties.Add(new PseudoPropertySymbol
+            {
+                Name = propertyDeclaration.Name,
+                Type = propertyDeclaration.Type,
+                Index = propertyDeclaration.Index,
+            });
         }
 
-        return new RecordTypeSymbol
+        return new PseudoRecordTypeSymbol
         {
             Name = recordDeclaration.Name,
             Properties = properties.ToImmutable(),
-        };
-    }
-
-    private (SymbolTable, StoryNode) BindTree(SymbolTable table)
-    {
-        StoryNode boundStory = story;
-
-        foreach (SymbolDeclarationNode declaration in story.Symbols)
-        {
-            (table, SymbolDeclarationNode boundDeclaration) = BindDeclaration(declaration, table);
-            boundStory = boundStory with
-            {
-                Symbols = boundStory.Symbols.Replace(declaration, boundDeclaration),
-            };
-        }
-
-        return (table, boundStory);
-    }
-
-    private (SymbolTable, SymbolDeclarationNode) BindDeclaration(SymbolDeclarationNode declaration, SymbolTable table)
-    {
-        switch (declaration)
-        {
-            // this will get more complicated very soon
-            case SceneSymbolDeclarationNode:
-                return (table, declaration);
-            case RecordSymbolDeclarationNode recordDeclaration:
-                return BindRecordDeclaration(recordDeclaration, table);
-            case SettingSymbolDeclarationNode setting:
-                return BindSetting(setting, table);
-            default:
-                Debug.Assert(false);
-                return default;
-        }
-    }
-
-    private (SymbolTable, SymbolDeclarationNode) BindRecordDeclaration(RecordSymbolDeclarationNode recordDeclaration, SymbolTable table)
-    {
-        List<PropertyDeclarationNode> properties = recordDeclaration.Properties.ToList();
-
-        for (int i = 0; i < properties.Count; i++)
-        {
-            (table, TypeNode boundType) = BindType(properties[i].Type, table);
-            properties[i] = properties[i] with
-            {
-                Type = boundType,
-            };
-        }
-
-        BoundSymbolDeclarationNode boundDeclaration = new()
-        {
-            Name = recordDeclaration.Name,
-            Declaration = recordDeclaration with
-            {
-                Properties = properties.ToImmutableArray(),
-            },
-            Symbol = table[recordDeclaration.Name],
             Index = recordDeclaration.Index,
         };
-
-        return (table, boundDeclaration);
     }
 
-    private (SymbolTable, SettingSymbolDeclarationNode) BindSetting(SettingSymbolDeclarationNode setting, SymbolTable table)
+    private static TypeSymbol GetTypeSymbol(TypeNode typeNode, SymbolTable table)
     {
-        switch (setting)
+        switch (typeNode)
         {
-            case TypeSettingDeclarationNode typeSetting:
-                (table, TypeNode boundType) = BindType(typeSetting.Type, table);
-                return (table, typeSetting with { Type = boundType });
-            case ExpressionSettingDeclarationNode expressionSetting:
-                (table, ExpressionNode boundExpression) = BindExpression(expressionSetting.Expression, table);
-                return (table, expressionSetting with { Expression = boundExpression });
+            case IdentifierTypeNode { Identifier: string identifier }:
+                // we already bound so we can safely cast here
+                return (TypeSymbol)table[identifier];
             default:
                 Debug.Assert(false);
-                return default;
+                return null;
         }
     }
-
-    private (SymbolTable, TypeNode) BindType(TypeNode type, SymbolTable table)
-    {
-        switch (type)
-        {
-            case IdentifierTypeNode identifierType:
-                {
-                    if (!table.IsDeclared(identifierType.Identifier))
-                    {
-                        ErrorFound?.Invoke(new Error { ErrorMessage = $"Symbol '{identifierType.Identifier}' does not exist in this scope", Index = identifierType.Index });
-                        return (table, type);
-                    }
-
-                    Symbol symbol = table[identifierType.Identifier];
-
-                    if (symbol is not TypeSymbol typeSymbol)
-                    {
-                        ErrorFound?.Invoke(new Error { ErrorMessage = $"Symbol '{identifierType.Identifier}' is not a type but is used like one", Index = identifierType.Index });
-                        return (table, type);
-                    }
-
-                    BoundTypeNode boundType = new() { Node = type, Symbol = typeSymbol, Index = type.Index };
-                    return (table, boundType);
-                }
-            default:
-                Debug.Assert(false);
-                return default;
-        }
-    }
-
-    private (SymbolTable, ExpressionNode) BindExpression(ExpressionNode expression, SymbolTable table) => (table, expression); // stub
 }

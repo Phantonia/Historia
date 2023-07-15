@@ -2,7 +2,7 @@
 
 namespace Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
 
-public sealed record RecordSymbolDeclarationNode : NamedSymbolDeclarationNode
+public sealed record RecordSymbolDeclarationNode : TypeSymbolDeclarationNode
 {
     public RecordSymbolDeclarationNode() { }
 
