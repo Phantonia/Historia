@@ -147,4 +147,14 @@ public sealed partial class Binder
                 return null;
         }
     }
+
+    private static bool TypesAreCompatible(TypeSymbol sourceType, TypeSymbol targetType)
+    {
+        // we will get more complicated cases soon
+        // - anonymous types like arrays
+        // - subtype relationships
+        // for now we can just check for equality
+        // and two symbols are equals iff their indices are equal
+        return sourceType.Index == targetType.Index;
+    }
 }

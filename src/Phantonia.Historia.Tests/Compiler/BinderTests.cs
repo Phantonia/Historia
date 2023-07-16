@@ -6,13 +6,22 @@ using Phantonia.Historia.Language.LexicalAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Diagnostics;
 
 namespace Phantonia.Historia.Tests.Compiler;
 
 [TestClass]
 public sealed class BinderTests
 {
+    private Binder PrepareBinder(string code, ImmutableArray<Setting>? settings = null)
+    {
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex(), settings);
+        parser.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
+
+        Binder binder = new(parser.Parse());
+        return binder;
+    }
+
     [TestMethod]
     public void TestNoMain()
     {
@@ -21,9 +30,7 @@ public sealed class BinderTests
             option OutputType: String;
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
-        Binder binder = new(parser.Parse());
+        Binder binder = PrepareBinder(code);
 
         int errorCount = 0;
 
@@ -55,9 +62,7 @@ public sealed class BinderTests
                       scene main {}
                       """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
-        Binder binder = new(parser.Parse());
+        Binder binder = PrepareBinder(code);
 
         int errorCount = 0;
 
@@ -95,11 +100,7 @@ public sealed class BinderTests
             scene main { }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex(), settings);
-        parser.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
-
-        Binder binder = new(parser.Parse());
+        Binder binder = PrepareBinder(code);
 
         BindingResult result = binder.Bind();
         Assert.IsTrue(result.IsValid);
@@ -142,11 +143,7 @@ public sealed class BinderTests
             scene main { }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
-        parser.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
-
-        Binder binder = new(parser.Parse());
+        Binder binder = PrepareBinder(code);
 
         int errorCount = 0;
         binder.ErrorFound += e =>
@@ -179,11 +176,7 @@ public sealed class BinderTests
             scene main { }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
-        parser.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
-
-        Binder binder = new(parser.Parse());
+        Binder binder = PrepareBinder(code);
         binder.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
 
         BindingResult result = binder.Bind();
@@ -200,21 +193,21 @@ public sealed class BinderTests
                 Properties:
                 [
                     PropertySymbol
+                {
+                    Name: "Text",
+                    Type: BuiltinTypeSymbol
                     {
-                        Name: "Text",
-                        Type: BuiltinTypeSymbol
-                        {
-                            Type: BuiltinType.String,
-                        }
-                    },
-                    PropertySymbol
-                    {
-                        Name: "Character",
-                        Type: BuiltinTypeSymbol
-                        {
-                            Type: BuiltinType.Int,
-                        }
+                        Type: BuiltinType.String,
                     }
+                },
+                    PropertySymbol
+                {
+                    Name: "Character",
+                    Type: BuiltinTypeSymbol
+                    {
+                        Type: BuiltinType.Int,
+                    }
+                }
                 ]
             },
             Declaration: RecordSymbolDeclarationNode
@@ -223,13 +216,13 @@ public sealed class BinderTests
                 Properties:
                 [
                     PropertyDeclarationNode
-                    {
-                        Type: BoundTypeNode
-                    },
+                {
+                    Type: BoundTypeNode
+                },
                     PropertyDeclarationNode
-                    {
-                        Type: BoundTypeNode
-                    }
+                {
+                    Type: BoundTypeNode
+                }
                 ]
             }
         });
@@ -253,11 +246,7 @@ public sealed class BinderTests
             }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
-        parser.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
-
-        Binder binder = new(parser.Parse());
+        Binder binder = PrepareBinder(code);
 
         List<Error> errors = new();
         binder.ErrorFound += errors.Add;
@@ -283,11 +272,7 @@ public sealed class BinderTests
             }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
-        parser.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
-
-        Binder binder = new(parser.Parse());
+        Binder binder = PrepareBinder(code);
 
         List<Error> errors = new();
         binder.ErrorFound += errors.Add;
@@ -326,11 +311,7 @@ public sealed class BinderTests
             }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
-        parser.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
-
-        Binder binder = new(parser.Parse());
+        Binder binder = PrepareBinder(code);
 
         binder.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
 
@@ -367,33 +348,59 @@ public sealed class BinderTests
                 Properties:
                 [
                     BoundPropertyDeclarationNode
+                {
+                    Name: "Line",
+                    Symbol: PropertySymbol
                     {
                         Name: "Line",
-                        Symbol: PropertySymbol
+                        Type: RecordTypeSymbol
                         {
                             Name: "Line",
-                            Type: RecordTypeSymbol
-                            {
-                                Name: "Line",
-                                Properties.Length: 2,
-                            }
-                        }
-                    },
-                    BoundPropertyDeclarationNode
-                    {
-                        Name: "StageDirection",
-                        Symbol: PropertySymbol
-                        {
-                            Name: "StageDirection",
-                            Type: RecordTypeSymbol
-                            {
-                                Name: "StageDirection",
-                                Properties.Length: 2,
-                            }
+                            Properties.Length: 2,
                         }
                     }
+                },
+                    BoundPropertyDeclarationNode
+                {
+                    Name: "StageDirection",
+                    Symbol: PropertySymbol
+                    {
+                        Name: "StageDirection",
+                        Type: RecordTypeSymbol
+                        {
+                            Name: "StageDirection",
+                            Properties.Length: 2,
+                        }
+                    }
+                }
                 ]
             }
         });
+    }
+
+    [TestMethod]
+    public void TestBindingAndTypeChecking()
+    {
+        string code =
+            """
+            record Line
+            {
+                Text: String;
+                Character: Int;
+            }
+
+            scene main
+            {
+                output Line("Hello, is anybody there?", 1);
+                output Line("Hello, echo!", 1);
+                output Line("Echo, hello", 2);
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+
+        BindingResult result = binder.Bind();
+
+        // TODO: actually test this
     }
 }

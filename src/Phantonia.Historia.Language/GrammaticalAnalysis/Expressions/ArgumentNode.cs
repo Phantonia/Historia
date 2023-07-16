@@ -1,6 +1,6 @@
 ﻿namespace Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 
-public sealed record ArgumentNode : SyntaxNode
+public record ArgumentNode : SyntaxNode
 {
     public ArgumentNode() { }
 
