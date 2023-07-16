@@ -401,6 +401,8 @@ public sealed class Parser
                     StringLiteral = literal,
                     Index = tokens[index++].Index,
                 };
+            case { Kind: TokenKind.Identifier, Text: string identifier }:
+                return ParseIdentifierExpression(ref index);
             case { Kind: TokenKind.OpenParenthesis }:
                 {
                     index++;
@@ -433,6 +435,76 @@ public sealed class Parser
                     return ParseExpression(ref index);
                 }
         }
+    }
+
+    private ExpressionNode? ParseIdentifierExpression(ref int index)
+    {
+        Debug.Assert(tokens[index] is { Kind: TokenKind.Identifier });
+
+        string recordName = tokens[index].Text;
+        int nodeIndex = tokens[index].Index;
+        index++;
+
+        // once we add variables, there will be simple identifier expressions
+        // right now, we only have record creation expressions
+
+        _ = Expect(TokenKind.OpenParenthesis, ref index);
+
+        ImmutableArray<ArgumentNode>.Builder arguments = ImmutableArray.CreateBuilder<ArgumentNode>();
+
+        while (index < tokens.Length)
+        {
+            int argumentIndex = tokens[index].Index;
+
+            if (index < tokens.Length - 1 && tokens[index].Kind == TokenKind.Identifier && tokens[index + 1].Kind == TokenKind.Equals)
+            {
+                // named argument
+                string name = tokens[index].Text;
+                index += 2;
+
+                ExpressionNode? expression = ParseExpression(ref index);
+                if (expression is null)
+                {
+                    return null;
+                }
+
+                arguments.Add(new ArgumentNode
+                {
+                    Expression = expression,
+                    PropertyName = name,
+                    Index = argumentIndex,
+                });
+            }
+            else if (tokens[index].Kind != TokenKind.ClosedParenthesis)
+            {
+                ExpressionNode? expression = ParseExpression(ref index);
+                if (expression is null)
+                {
+                    return null;
+                }
+
+                arguments.Add(new ArgumentNode
+                {
+                    Expression = expression,
+                    Index = expression.Index,
+                });
+            }
+
+            if (tokens[index].Kind == TokenKind.ClosedParenthesis)
+            {
+                index++;
+                break;
+            }
+
+            _ = Expect(TokenKind.Comma, ref index);
+        }
+
+        return new RecordCreationExpressionNode
+        {
+            Arguments = arguments.ToImmutable(),
+            RecordName = recordName,
+            Index = nodeIndex,
+        };
     }
 
     private TypeNode? ParseType(ref int index)

@@ -1,5 +1,5 @@
 ﻿// uncomment this to see the example story class below
-#define EXAMPLE_STORY
+// #define EXAMPLE_STORY
 
 using Phantonia.Historia.Language.FlowAnalysis;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;

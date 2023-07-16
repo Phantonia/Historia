@@ -109,19 +109,21 @@ public sealed class LexerTests
     [TestMethod]
     public void TestPunctuation()
     {
-        string code = "{}();:";
+        string code = "{}();:,=";
 
         Lexer lexer = new(code);
         ImmutableArray<Token> tokens = lexer.Lex();
 
-        Assert.AreEqual(7, tokens.Length);
+        Assert.AreEqual(9, tokens.Length);
         Assert.AreEqual(TokenKind.OpenBrace, tokens[0].Kind);
         Assert.AreEqual(TokenKind.ClosedBrace, tokens[1].Kind);
         Assert.AreEqual(TokenKind.OpenParenthesis, tokens[2].Kind);
         Assert.AreEqual(TokenKind.ClosedParenthesis, tokens[3].Kind);
         Assert.AreEqual(TokenKind.Semicolon, tokens[4].Kind);
         Assert.AreEqual(TokenKind.Colon, tokens[5].Kind);
-        Assert.AreEqual(TokenKind.EndOfFile, tokens[6].Kind);
+        Assert.AreEqual(TokenKind.Comma, tokens[6].Kind);
+        Assert.AreEqual(TokenKind.Equals, tokens[7].Kind);
+        Assert.AreEqual(TokenKind.EndOfFile, tokens[8].Kind);
     }
 
     [TestMethod]

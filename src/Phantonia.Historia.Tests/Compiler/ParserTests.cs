@@ -407,4 +407,57 @@ public sealed class ParserTests
             ]
         });
     }
+
+    [TestMethod]
+    public void TestRecordCreationExpressions()
+    {
+        string code =
+            """
+            scene main
+            {
+                output Line("Hello world!", Character = 4, Metadata(CameraPerspective = "Near", Effect = "None"));
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
+
+        StoryNode story = parser.Parse();
+
+        Assert.AreEqual(1, story.Symbols.Length);
+
+        SceneSymbolDeclarationNode? mainScene = story.Symbols[0] as SceneSymbolDeclarationNode;
+        Assert.IsNotNull(mainScene);
+        Assert.AreEqual(1, mainScene.Body.Statements.Length);
+
+        OutputStatementNode? outputStatement = mainScene.Body.Statements[0] as OutputStatementNode;
+        Assert.IsNotNull(outputStatement);
+
+        RecordCreationExpressionNode? recordCreation = outputStatement.OutputExpression as RecordCreationExpressionNode;
+        Assert.IsNotNull(recordCreation);
+
+        Assert.AreEqual(3, recordCreation.Arguments.Length);
+
+        Assert.IsTrue(recordCreation.Arguments[0] is
+        {
+            Expression: StringLiteralExpressionNode,
+            PropertyName: null,
+        });
+
+        Assert.IsTrue(recordCreation.Arguments[1] is
+        {
+            Expression: IntegerLiteralExpressionNode,
+            PropertyName: "Character",
+        });
+
+        Assert.IsTrue(recordCreation.Arguments[2] is
+        {
+            Expression: RecordCreationExpressionNode
+            {
+                Arguments.Length: 2,
+            },
+            PropertyName: null,
+        });
+    }
 }

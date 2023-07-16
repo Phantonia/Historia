@@ -14,6 +14,8 @@ public enum TokenKind
     OpenParenthesis, // (
     ClosedParenthesis, // )
     Colon, // :
+    Comma, // ,
+    Equals, // =
 
     // keywords
     SceneKeyword,

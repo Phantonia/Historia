@@ -57,6 +57,8 @@ public sealed class Lexer
             ')' => new Token { Kind = TokenKind.ClosedParenthesis, Text = ")", Index = index++ },
             ';' => new Token { Kind = TokenKind.Semicolon, Text = ";", Index = index++ },
             ':' => new Token { Kind = TokenKind.Colon, Text = ":", Index = index++ },
+            ',' => new Token { Kind = TokenKind.Comma, Text = ",", Index = index++ },
+            '=' => new Token { Kind = TokenKind.Equals, Text = "=", Index = index++ },
             '"' or '\'' => LexStringLiteral(ref index),
             >= '0' and <= '9' => LexIntegerLiteral(ref index),
             >= 'a' and <= 'z' or >= 'A' and <= 'Z' or '_' => LexIdentifierOrKeyword(ref index),
