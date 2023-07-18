@@ -1,7 +1,7 @@
 ﻿using Phantonia.Historia.Language.FlowAnalysis;
 using Phantonia.Historia.Language.GrammaticalAnalysis;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
-using Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
+using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
 using System;
 using System.Diagnostics;
 
@@ -20,7 +20,7 @@ public sealed class FlowAnalyzer
 
     public FlowGraph GenerateMainFlowGraph()
     {
-        foreach (SymbolDeclarationNode symbolDeclaration in story.Symbols)
+        foreach (TopLevelNode symbolDeclaration in story.TopLevelNodes)
         {
             if (symbolDeclaration is SceneSymbolDeclarationNode { Name: "main" } mainScene)
             {

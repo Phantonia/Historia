@@ -3,7 +3,7 @@ using Phantonia.Historia.Language;
 using Phantonia.Historia.Language.GrammaticalAnalysis;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
-using Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
+using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Types;
 using Phantonia.Historia.Language.LexicalAnalysis;
 using System.Collections.Generic;
@@ -30,8 +30,8 @@ public sealed class ParserTests
 
         StoryNode story = parser.Parse();
 
-        Assert.AreEqual(1, story.Symbols.Length);
-        SceneSymbolDeclarationNode? scene = story.Symbols[0] as SceneSymbolDeclarationNode;
+        Assert.AreEqual(1, story.TopLevelNodes.Length);
+        SceneSymbolDeclarationNode? scene = story.TopLevelNodes[0] as SceneSymbolDeclarationNode;
         Assert.IsNotNull(scene);
 
         Assert.AreEqual(2, scene.Body.Statements.Length);
@@ -132,7 +132,7 @@ public sealed class ParserTests
         // actually that's very cool, it's just that we have a lot of nesting
         if (story is not
             {
-                Symbols:
+                TopLevelNodes:
                 [
                     SceneSymbolDeclarationNode
                 {
@@ -211,12 +211,6 @@ public sealed class ParserTests
     [TestMethod]
     public void TestSettings()
     {
-        ImmutableArray<Setting> settings = new[]
-        {
-            new Setting { Kind = SettingKind.TypeArgument, Name = SettingName.OutputType },
-            new Setting { Kind = SettingKind.TypeArgument, Name = SettingName.OptionType },
-        }.ToImmutableArray();
-
         string code =
             """
             setting OutputType: Int;
@@ -226,26 +220,26 @@ public sealed class ParserTests
             """;
 
         Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex(), settings);
+        Parser parser = new(lexer.Lex());
         parser.ErrorFound += e => Assert.Fail();
 
         StoryNode story = parser.Parse();
 
-        Assert.AreEqual(3, story.Symbols.Length);
+        Assert.AreEqual(3, story.TopLevelNodes.Length);
 
-        Assert.IsTrue(story.Symbols is
+        Assert.IsTrue(story.TopLevelNodes is
         [
-            TypeSettingDeclarationNode
+            TypeSettingDirectiveNode
             {
-                SettingName: SettingName.OutputType,
+                SettingName: nameof(Settings.OutputType),
                 Type: IdentifierTypeNode
                 {
                     Identifier: "Int",
                 }
             },
-            TypeSettingDeclarationNode
+            TypeSettingDirectiveNode
             {
-                SettingName: SettingName.OptionType,
+                SettingName: nameof(Settings.OptionType),
                 Type: IdentifierTypeNode
                 {
                     Identifier: "String",
@@ -258,19 +252,13 @@ public sealed class ParserTests
     [TestMethod]
     public void TestSettingMissingColonErrors()
     {
-        ImmutableArray<Setting> settings = new[]
-        {
-            new Setting { Kind = SettingKind.TypeArgument, Name = SettingName.OutputType },
-            new Setting { Kind = SettingKind.TypeArgument, Name = SettingName.OptionType },
-        }.ToImmutableArray();
-
         string code =
             """
             setting OutputType Int;
             """;
 
         Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex(), settings);
+        Parser parser = new(lexer.Lex());
 
         int errorCount = 0;
 
@@ -289,19 +277,13 @@ public sealed class ParserTests
     [TestMethod]
     public void TestSettingMissingTypeError()
     {
-        ImmutableArray<Setting> settings = new[]
-        {
-            new Setting { Kind = SettingKind.TypeArgument, Name = SettingName.OutputType },
-            new Setting { Kind = SettingKind.TypeArgument, Name = SettingName.OptionType },
-        }.ToImmutableArray();
-
         string code =
             """
             setting OutputType: ;
             """;
 
         Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex(), settings);
+        Parser parser = new(lexer.Lex());
 
         int errorCount = 0;
 
@@ -337,7 +319,7 @@ public sealed class ParserTests
 
         Assert.IsTrue(story is
         {
-            Symbols:
+            TopLevelNodes:
             [
                 SceneSymbolDeclarationNode
                 {
@@ -384,8 +366,8 @@ public sealed class ParserTests
 
         StoryNode story = parser.Parse();
 
-        Assert.AreEqual(2, story.Symbols.Length);
-        Assert.IsTrue(story.Symbols[0] is RecordSymbolDeclarationNode
+        Assert.AreEqual(2, story.TopLevelNodes.Length);
+        Assert.IsTrue(story.TopLevelNodes[0] is RecordSymbolDeclarationNode
         {
             Name: "Line",
             Properties:
@@ -425,9 +407,9 @@ public sealed class ParserTests
 
         StoryNode story = parser.Parse();
 
-        Assert.AreEqual(1, story.Symbols.Length);
+        Assert.AreEqual(1, story.TopLevelNodes.Length);
 
-        SceneSymbolDeclarationNode? mainScene = story.Symbols[0] as SceneSymbolDeclarationNode;
+        SceneSymbolDeclarationNode? mainScene = story.TopLevelNodes[0] as SceneSymbolDeclarationNode;
         Assert.IsNotNull(mainScene);
         Assert.AreEqual(1, mainScene.Body.Statements.Length);
 

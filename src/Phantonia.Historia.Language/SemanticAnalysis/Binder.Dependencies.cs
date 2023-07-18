@@ -1,4 +1,4 @@
-﻿using Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
+﻿using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Types;
 using Phantonia.Historia.Language.GrammaticalAnalysis;
 using System.Collections.Generic;
@@ -32,7 +32,7 @@ public sealed partial class Binder
         Dictionary<int, Symbol> symbols = new(); ;
         Dictionary<int, IReadOnlyList<int>> dependencies = new();
 
-        foreach (SymbolDeclarationNode declaration in story.Symbols)
+        foreach (TopLevelNode declaration in story.TopLevelNodes)
         {
             //Debug.Assert(declaration is SettingSymbolDeclarationNode or BoundSymbolDeclarationNode);
 

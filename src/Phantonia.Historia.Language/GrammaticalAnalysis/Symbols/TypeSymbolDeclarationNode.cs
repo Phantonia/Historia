@@ -1,6 +1,6 @@
-﻿namespace Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
+﻿namespace Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
 
-public abstract record TypeSymbolDeclarationNode : NamedSymbolDeclarationNode
+public abstract record TypeSymbolDeclarationNode : SymbolDeclarationNode
 {
     protected TypeSymbolDeclarationNode() { }
 }

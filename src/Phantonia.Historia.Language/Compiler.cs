@@ -4,6 +4,7 @@ using Phantonia.Historia.Language.LexicalAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis;
 using System;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.IO;
 
 namespace Phantonia.Historia.Language;
@@ -32,8 +33,18 @@ public sealed class Compiler
 
         Binder binder = new(story);
         binder.ErrorFound += HandleError;
-        (StoryNode boundStory, SymbolTable symbolTable) = binder.Bind();
+        BindingResult result = binder.Bind();
         binder.ErrorFound -= HandleError;
+
+        if (!result.IsValid)
+        {
+            throw new NotImplementedException("Invalid binding result");
+        }
+
+        (StoryNode? boundStory, SymbolTable? symbolTable) = result;
+
+        Debug.Assert(boundStory is not null);
+        Debug.Assert(symbolTable is not null);
 
         FlowAnalyzer flowAnalyzer = new(boundStory);
         FlowGraph mainGraph = flowAnalyzer.GenerateMainFlowGraph();

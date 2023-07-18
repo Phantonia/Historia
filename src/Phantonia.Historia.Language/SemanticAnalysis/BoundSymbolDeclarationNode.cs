@@ -1,12 +1,12 @@
-﻿using Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
+﻿using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 
-public sealed record BoundSymbolDeclarationNode : NamedSymbolDeclarationNode
+public sealed record BoundSymbolDeclarationNode : SymbolDeclarationNode
 {
     public BoundSymbolDeclarationNode() { }
 
-    public required NamedSymbolDeclarationNode Declaration { get; init; }
+    public required SymbolDeclarationNode Declaration { get; init; }
 
     public required Symbol Symbol { get; init; }
 }

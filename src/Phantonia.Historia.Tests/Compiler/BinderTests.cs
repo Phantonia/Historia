@@ -1,7 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Phantonia.Historia.Language;
 using Phantonia.Historia.Language.GrammaticalAnalysis;
-using Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
+using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
 using Phantonia.Historia.Language.LexicalAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis;
 using System.Collections.Generic;
@@ -12,10 +12,10 @@ namespace Phantonia.Historia.Tests.Compiler;
 [TestClass]
 public sealed class BinderTests
 {
-    private Binder PrepareBinder(string code, ImmutableArray<Setting>? settings = null)
+    private Binder PrepareBinder(string code)
     {
         Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex(), settings);
+        Parser parser = new(lexer.Lex());
         parser.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
 
         Binder binder = new(parser.Parse());
@@ -27,7 +27,7 @@ public sealed class BinderTests
     {
         string code =
             """
-            option OutputType: String;
+            setting OutputType: String;
             """;
 
         Binder binder = PrepareBinder(code);
@@ -40,7 +40,7 @@ public sealed class BinderTests
 
             const string ErrorMessage = """
                                         Error: A story needs a main scene
-                                        option OutputType: String;
+                                        setting OutputType: String;
                                         ^
                                         """;
 
@@ -87,12 +87,6 @@ public sealed class BinderTests
     [TestMethod]
     public void TestTypeSettings()
     {
-        ImmutableArray<Setting> settings = new[]
-        {
-            new Setting { Kind = SettingKind.TypeArgument, Name = SettingName.OptionType },
-            new Setting { Kind = SettingKind.TypeArgument, Name = SettingName.OutputType },
-        }.ToImmutableArray();
-
         string code =
             """
             setting OutputType: String;
@@ -106,9 +100,9 @@ public sealed class BinderTests
         Assert.IsTrue(result.IsValid);
         (StoryNode? boundStory, SymbolTable? symbolTable) = result;
 
-        Assert.AreEqual(3, boundStory!.Symbols.Length);
+        Assert.AreEqual(3, boundStory!.TopLevelNodes.Length);
 
-        Assert.IsTrue(boundStory.Symbols[0] is TypeSettingDeclarationNode
+        Assert.IsTrue(boundStory.TopLevelNodes[0] is TypeSettingDirectiveNode
         {
             Type: BoundTypeNode
             {
@@ -119,7 +113,7 @@ public sealed class BinderTests
             }
         });
 
-        Assert.IsTrue(boundStory.Symbols[1] is TypeSettingDeclarationNode
+        Assert.IsTrue(boundStory.TopLevelNodes[1] is TypeSettingDirectiveNode
         {
             Type: BoundTypeNode
             {
@@ -183,9 +177,9 @@ public sealed class BinderTests
         Assert.IsTrue(result.IsValid);
         (StoryNode? boundStory, SymbolTable? symbolTable) = result;
 
-        Assert.AreEqual(2, boundStory!.Symbols.Length);
+        Assert.AreEqual(2, boundStory!.TopLevelNodes.Length);
 
-        Assert.IsTrue(boundStory.Symbols[0] is BoundSymbolDeclarationNode
+        Assert.IsTrue(boundStory.TopLevelNodes[0] is BoundSymbolDeclarationNode
         {
             Symbol: RecordTypeSymbol
             {
@@ -318,9 +312,9 @@ public sealed class BinderTests
         BindingResult result = binder.Bind();
         Assert.IsTrue(result.IsValid);
 
-        Assert.AreEqual(4, result.BoundStory.Symbols.Length);
+        Assert.AreEqual(4, result.BoundStory.TopLevelNodes.Length);
 
-        Assert.IsTrue(result.BoundStory.Symbols[1] is BoundSymbolDeclarationNode
+        Assert.IsTrue(result.BoundStory.TopLevelNodes[1] is BoundSymbolDeclarationNode
         {
             Declaration: RecordSymbolDeclarationNode
             {
@@ -334,13 +328,13 @@ public sealed class BinderTests
             }
         });
 
-        Assert.IsTrue(result.BoundStory.Symbols[2] is BoundSymbolDeclarationNode
+        Assert.IsTrue(result.BoundStory.TopLevelNodes[2] is BoundSymbolDeclarationNode
         {
             Declaration: RecordSymbolDeclarationNode,
             Symbol: RecordTypeSymbol,
         });
 
-        Assert.IsTrue(result.BoundStory.Symbols[3] is BoundSymbolDeclarationNode
+        Assert.IsTrue(result.BoundStory.TopLevelNodes[3] is BoundSymbolDeclarationNode
         {
             Declaration: RecordSymbolDeclarationNode
             {
@@ -348,31 +342,31 @@ public sealed class BinderTests
                 Properties:
                 [
                     BoundPropertyDeclarationNode
-                {
-                    Name: "Line",
-                    Symbol: PropertySymbol
                     {
                         Name: "Line",
-                        Type: RecordTypeSymbol
+                        Symbol: PropertySymbol
                         {
                             Name: "Line",
-                            Properties.Length: 2,
+                            Type: RecordTypeSymbol
+                            {
+                                Name: "Line",
+                                Properties.Length: 2,
+                            }
                         }
-                    }
-                },
+                    },
                     BoundPropertyDeclarationNode
-                {
-                    Name: "StageDirection",
-                    Symbol: PropertySymbol
                     {
                         Name: "StageDirection",
-                        Type: RecordTypeSymbol
+                        Symbol: PropertySymbol
                         {
                             Name: "StageDirection",
-                            Properties.Length: 2,
+                            Type: RecordTypeSymbol
+                            {
+                                Name: "StageDirection",
+                                Properties.Length: 2,
+                            }
                         }
                     }
-                }
                 ]
             }
         });
@@ -383,6 +377,8 @@ public sealed class BinderTests
     {
         string code =
             """
+            setting OutputType: Line;
+
             record Line
             {
                 Text: String;
@@ -400,6 +396,43 @@ public sealed class BinderTests
         Binder binder = PrepareBinder(code);
 
         BindingResult result = binder.Bind();
+
+        // TODO: actually test this
+    }
+
+    [TestMethod]
+    public void TestTypeErrors()
+    {
+        string code =
+            """
+            setting OutputType: Line;
+
+            record Line
+            {
+                Text: String;
+                Character: Int;
+            }
+
+            scene main
+            {
+                output 2;
+                output "xyz";
+                output Line(2, 1);
+                output Line("Hello");
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+        List<Error> errors = new();
+        binder.ErrorFound += errors.Add;
+
+        BindingResult bindingResult = binder.Bind();
+
+        //Assert.IsFalse(bindingResult.IsValid);
+        //Assert.IsNull(bindingResult.BoundStory);
+        //Assert.IsNull(bindingResult.SymbolTable);
+
+        //Assert.IsTrue(errors.Count > 0);
 
         // TODO: actually test this
     }

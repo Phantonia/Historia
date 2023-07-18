@@ -1,6 +1,6 @@
 ﻿using System.Collections.Immutable;
 
-namespace Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
+namespace Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
 
 public sealed record RecordSymbolDeclarationNode : TypeSymbolDeclarationNode
 {

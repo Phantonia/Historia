@@ -2,11 +2,9 @@
 
 namespace Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
 
-public record PropertyDeclarationNode : SyntaxNode
+public sealed record TypeSettingDirectiveNode : SettingDirectiveNode
 {
-    public PropertyDeclarationNode() { }
-
-    public required string Name { get; init; }
+    public TypeSettingDirectiveNode() { }
 
     public required TypeNode Type { get; init; }
 }

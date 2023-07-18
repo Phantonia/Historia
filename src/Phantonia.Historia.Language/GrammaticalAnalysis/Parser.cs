@@ -1,25 +1,24 @@
 ﻿using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
-using Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
+using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Types;
 using Phantonia.Historia.Language.LexicalAnalysis;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Xml.Linq;
 
 namespace Phantonia.Historia.Language.GrammaticalAnalysis;
 
 public sealed class Parser
 {
-    public Parser(ImmutableArray<Token> tokens, ImmutableArray<Setting>? settings = null)
+    public Parser(ImmutableArray<Token> tokens)
     {
         this.tokens = tokens;
-        this.settings = settings ?? ImmutableArray<Setting>.Empty;
     }
 
     private readonly ImmutableArray<Token> tokens;
-    private readonly ImmutableArray<Setting> settings;
 
     public event Action<Error>? ErrorFound;
 
@@ -28,9 +27,9 @@ public sealed class Parser
         ScanForBrokenTokens();
 
         int index = 0;
-        ImmutableArray<SymbolDeclarationNode>.Builder symbolBuilder = ImmutableArray.CreateBuilder<SymbolDeclarationNode>();
+        ImmutableArray<TopLevelNode>.Builder symbolBuilder = ImmutableArray.CreateBuilder<TopLevelNode>();
 
-        SymbolDeclarationNode? nextSymbol = ParseSymbolDeclaration(ref index);
+        TopLevelNode? nextSymbol = ParseSymbolDeclaration(ref index);
 
         while (nextSymbol is not null)
         {
@@ -41,7 +40,7 @@ public sealed class Parser
 
         return new StoryNode
         {
-            Symbols = symbolBuilder.ToImmutable(),
+            TopLevelNodes = symbolBuilder.ToImmutable(),
         };
     }
 
@@ -80,7 +79,7 @@ public sealed class Parser
         }
     }
 
-    private SymbolDeclarationNode? ParseSymbolDeclaration(ref int index)
+    private TopLevelNode? ParseSymbolDeclaration(ref int index)
     {
         switch (tokens[index])
         {
@@ -169,7 +168,7 @@ public sealed class Parser
         };
     }
 
-    private SettingSymbolDeclarationNode? ParseSettingSymbolDeclaration(ref int index)
+    private SettingDirectiveNode? ParseSettingSymbolDeclaration(ref int index)
     {
         Debug.Assert(tokens[index].Kind == TokenKind.SettingKeyword);
 
@@ -180,52 +179,49 @@ public sealed class Parser
 
         _ = Expect(TokenKind.Colon, ref index);
 
-        if (!settings.Any(s => s.Name.ToString() == identifier.Text))
+        if (!Settings.AllSettings.Contains(identifier.Text))
         {
             ErrorFound?.Invoke(new Error { ErrorMessage = $"Setting '{identifier.Text}' does not exist", Index = identifier.Index });
             return null;
         }
 
-        switch (settings.First(s => s.Name.ToString() == identifier.Text))
+        if (Settings.TypeSettings.Contains(identifier.Text))
         {
-            case { Kind: SettingKind.TypeArgument, Name: SettingName name }:
-                {
-                    TypeNode? type = ParseType(ref index);
-                    if (type is null)
-                    {
-                        return null;
-                    }
-
-                    _ = Expect(TokenKind.Semicolon, ref index);
-
-                    return new TypeSettingDeclarationNode
-                    {
-                        Type = type,
-                        SettingName = name,
-                        Index = nodeIndex,
-                    };
-                }
-            case { Kind: SettingKind.ExpressionArgument, Name: SettingName name }:
-                {
-                    ExpressionNode? expression = ParseExpression(ref index);
-                    if (expression is null)
-                    {
-                        return null;
-                    }
-
-                    _ = Expect(TokenKind.Semicolon, ref index);
-
-                    return new ExpressionSettingDeclarationNode
-                    {
-                        Expression = expression,
-                        SettingName = name,
-                        Index = nodeIndex,
-                    };
-                }
-            default:
-                Debug.Assert(false);
+            TypeNode? type = ParseType(ref index);
+            if (type is null)
+            {
                 return null;
+            }
+
+            _ = Expect(TokenKind.Semicolon, ref index);
+
+            return new TypeSettingDirectiveNode
+            {
+                Type = type,
+                SettingName = identifier.Text,
+                Index = nodeIndex,
+            };
         }
+        else if (Settings.ExpressionSettings.Contains(identifier.Text))
+        {
+            ExpressionNode? expression = ParseExpression(ref index);
+            if (expression is null)
+            {
+                return null;
+            }
+
+            _ = Expect(TokenKind.Semicolon, ref index);
+
+            return new ExpressionSettingDirectiveNode
+            {
+                Expression = expression,
+                SettingName = identifier.Text,
+                Index = nodeIndex,
+            };
+        }
+
+        Debug.Assert(false);
+        return null;
     }
 
     private StatementBodyNode? ParseStatementBody(ref int index)

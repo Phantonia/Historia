@@ -14,7 +14,6 @@ public readonly record struct BindingResult
         IsValid = true;
     }
 
-    [MemberNotNullWhen(returnValue: true, nameof(BoundStory), nameof(SymbolTable))]
     public bool IsValid { get; init; }
 
     public StoryNode? BoundStory { get; init; }

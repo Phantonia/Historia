@@ -1,7 +1,7 @@
 ﻿using Phantonia.Historia.Language.GrammaticalAnalysis;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
-using Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
+using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Types;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -16,24 +16,24 @@ public sealed partial class Binder
     {
         StoryNode boundStory = story;
 
-        foreach (SymbolDeclarationNode declaration in story.Symbols)
+        foreach (TopLevelNode declaration in story.TopLevelNodes)
         {
             if (declaration is not TypeSymbolDeclarationNode)
             {
                 continue;
             }
 
-            (table, SymbolDeclarationNode boundDeclaration) = BindPseudoDeclaration(declaration, table);
+            (table, TopLevelNode boundDeclaration) = BindPseudoDeclaration(declaration, table);
             boundStory = boundStory with
             {
-                Symbols = boundStory.Symbols.Replace(declaration, boundDeclaration),
+                TopLevelNodes = boundStory.TopLevelNodes.Replace(declaration, boundDeclaration),
             };
         }
 
         return (table, boundStory);
     }
 
-    private (SymbolTable, SymbolDeclarationNode) BindPseudoDeclaration(SymbolDeclarationNode declaration, SymbolTable table)
+    private (SymbolTable, TopLevelNode) BindPseudoDeclaration(TopLevelNode declaration, SymbolTable table)
     {
         switch (declaration)
         {
@@ -45,7 +45,7 @@ public sealed partial class Binder
         }
     }
 
-    private (SymbolTable, SymbolDeclarationNode) BindPseudoRecordDeclaration(RecordSymbolDeclarationNode recordDeclaration, SymbolTable table)
+    private (SymbolTable, TopLevelNode) BindPseudoRecordDeclaration(RecordSymbolDeclarationNode recordDeclaration, SymbolTable table)
     {
         List<PropertyDeclarationNode> properties = recordDeclaration.Properties.ToList();
 
@@ -72,44 +72,87 @@ public sealed partial class Binder
         return (table, boundDeclaration);
     }
 
-    private (SymbolTable, StoryNode) BindTree(StoryNode halfboundStory, SymbolTable table)
+    private (SymbolTable, Settings, StoryNode) BindSettingDirectives(StoryNode halfboundStory, SymbolTable table)
     {
-        List<SymbolDeclarationNode> symbolDeclarations = halfboundStory.Symbols.ToList();
+        List<TopLevelNode> topLevelNodes = halfboundStory.TopLevelNodes.ToList();
 
-        for (int i = 0; i < symbolDeclarations.Count; i++)
+        for (int i = 0; i < topLevelNodes.Count; i++)
         {
-            SymbolDeclarationNode declaration = symbolDeclarations[i];
+            TopLevelNode topLevelNode = topLevelNodes[i];
 
-            if (declaration is TypeSymbolDeclarationNode)
+            if (topLevelNode is not SettingDirectiveNode directive)
             {
                 // already bound these
                 continue;
             }
 
-            (table, SymbolDeclarationNode boundDeclaration) = BindDeclaration(declaration, table);
-            symbolDeclarations[i] = boundDeclaration;
+            (table, SettingDirectiveNode boundDirective) = BindSingleSettingDirective(directive, table);
+            topLevelNodes[i] = boundDirective;
         }
 
-        StoryNode boundStory = halfboundStory with { Symbols = symbolDeclarations.ToImmutableArray() };
+        halfboundStory = halfboundStory with { TopLevelNodes = topLevelNodes.ToImmutableArray() };
+
+        Settings settings = new();
+
+        foreach (SettingDirectiveNode directive in topLevelNodes.OfType<SettingDirectiveNode>())
+        {
+            switch (directive)
+            {
+                case TypeSettingDirectiveNode
+                {
+                    SettingName: nameof(Settings.OutputType),
+                    Type: BoundTypeNode { Symbol: TypeSymbol outputType }
+                }:
+                    settings = settings with { OutputType = outputType };
+                    break;
+                case TypeSettingDirectiveNode
+                {
+                    SettingName: nameof(Settings.OptionType),
+                    Type: BoundTypeNode { Symbol: TypeSymbol optionType }
+                }:
+                    settings = settings with { OptionType = optionType };
+                    break;
+            }
+        }
+
+        return (table, settings, halfboundStory);
+    }
+
+    private (SymbolTable, StoryNode) BindTree(StoryNode halfboundStory, Settings settings, SymbolTable table)
+    {
+        List<TopLevelNode> topLevelNodes = halfboundStory.TopLevelNodes.ToList();
+
+        for (int i = 0; i < topLevelNodes.Count; i++)
+        {
+            TopLevelNode topLevelNode = topLevelNodes[i];
+
+            if (topLevelNode is TypeSymbolDeclarationNode or SettingDirectiveNode)
+            {
+                // already bound these
+                continue;
+            }
+
+            (table, TopLevelNode boundDeclaration) = BindTopLevelNode(topLevelNode, settings, table);
+            topLevelNodes[i] = boundDeclaration;
+        }
+
+        StoryNode boundStory = halfboundStory with { TopLevelNodes = topLevelNodes.ToImmutableArray() };
         return (table, boundStory);
     }
 
-    private (SymbolTable, SymbolDeclarationNode) BindDeclaration(SymbolDeclarationNode declaration, SymbolTable table)
+    private (SymbolTable, TopLevelNode) BindTopLevelNode(TopLevelNode declaration, Settings settings, SymbolTable table)
     {
         if (declaration is BoundSymbolDeclarationNode { Declaration: var innerDeclaration })
         {
-            return BindDeclaration(innerDeclaration, table);
+            return BindTopLevelNode(innerDeclaration, settings, table);
         }
 
         switch (declaration)
         {
-            // this will get more complicated very soon
             case SceneSymbolDeclarationNode sceneDeclaration:
-                return BindSceneDeclaration(sceneDeclaration, table);
+                return BindSceneDeclaration(sceneDeclaration, settings, table);
             case RecordSymbolDeclarationNode recordDeclaration:
                 return BindRecordDeclaration(recordDeclaration, table);
-            case SettingSymbolDeclarationNode setting:
-                return BindSetting(setting, table);
             default:
                 Debug.Assert(false);
                 return default;
@@ -152,14 +195,14 @@ public sealed partial class Binder
         return (table, boundRecordDeclaration);
     }
 
-    private (SymbolTable, SettingSymbolDeclarationNode) BindSetting(SettingSymbolDeclarationNode setting, SymbolTable table)
+    private (SymbolTable, SettingDirectiveNode) BindSingleSettingDirective(SettingDirectiveNode directive, SymbolTable table)
     {
-        switch (setting)
+        switch (directive)
         {
-            case TypeSettingDeclarationNode typeSetting:
+            case TypeSettingDirectiveNode typeSetting:
                 (table, TypeNode boundType) = BindType(typeSetting.Type, table);
                 return (table, typeSetting with { Type = boundType });
-            case ExpressionSettingDeclarationNode expressionSetting:
+            case ExpressionSettingDirectiveNode expressionSetting:
                 (table, ExpressionNode boundExpression) = BindAndTypeExpression(expressionSetting.Expression, table);
                 return (table, expressionSetting with { Expression = boundExpression });
             default:
@@ -197,13 +240,13 @@ public sealed partial class Binder
         }
     }
 
-    private (SymbolTable, BoundSymbolDeclarationNode) BindSceneDeclaration(SceneSymbolDeclarationNode sceneDeclaration, SymbolTable table)
+    private (SymbolTable, BoundSymbolDeclarationNode) BindSceneDeclaration(SceneSymbolDeclarationNode sceneDeclaration, Settings settings, SymbolTable table)
     {
         Debug.Assert(table.IsDeclared(sceneDeclaration.Name) && table[sceneDeclaration.Name] is SceneSymbol);
 
         SceneSymbol sceneSymbol = (SceneSymbol)table[sceneDeclaration.Name];
 
-        (table, StatementBodyNode boundBody) = BindStatementBody(sceneDeclaration.Body, table);
+        (table, StatementBodyNode boundBody) = BindStatementBody(sceneDeclaration.Body, settings, table);
 
         BoundSymbolDeclarationNode boundSceneDeclaration = new()
         {
@@ -219,7 +262,7 @@ public sealed partial class Binder
         return (table, boundSceneDeclaration);
     }
 
-    private (SymbolTable, StatementBodyNode) BindStatementBody(StatementBodyNode body, SymbolTable table)
+    private (SymbolTable, StatementBodyNode) BindStatementBody(StatementBodyNode body, Settings settings, SymbolTable table)
     {
         table = table.OpenScope();
 
@@ -228,7 +271,7 @@ public sealed partial class Binder
         for (int i = 0; i < statements.Count; i++)
         {
             StatementNode statement = statements[i];
-            (table, StatementNode boundStatement) = BindStatement(statement, table);
+            (table, StatementNode boundStatement) = BindStatement(statement, settings, table);
             statements[i] = boundStatement;
         }
 
@@ -240,7 +283,7 @@ public sealed partial class Binder
         });
     }
 
-    private (SymbolTable, StatementNode) BindStatement(StatementNode statement, SymbolTable table)
+    private (SymbolTable, StatementNode) BindStatement(StatementNode statement, Settings settings, SymbolTable table)
     {
         switch (statement)
         {
@@ -250,8 +293,16 @@ public sealed partial class Binder
 
                     if (boundExpression is TypedExpressionNode { Type: TypeSymbol sourceType })
                     {
-                        // we need to get access to the output type here, important
-                        // check if that stuff is compatible
+                        if (!TypesAreCompatible(sourceType, settings.OutputType))
+                        {
+                            ErrorFound?.Invoke(new Error
+                            {
+                                ErrorMessage = $"Type '{sourceType.Name}' is not compatible with output type '{settings.OutputType.Name}'",
+                                Index = boundExpression.Index
+                            });
+
+                            return (table, statement);
+                        }
                     }
 
                     OutputStatementNode boundStatement = outputStatement with
@@ -268,8 +319,16 @@ public sealed partial class Binder
                     {
                         if (outputExpression is TypedExpressionNode { Type: TypeSymbol sourceType })
                         {
-                            // we need to get access to the output type here, important
-                            // check if that stuff is compatible
+                            if (!TypesAreCompatible(sourceType, settings.OutputType))
+                            {
+                                ErrorFound?.Invoke(new Error
+                                {
+                                    ErrorMessage = $"Type '{sourceType.Name}' is not compatible with output type '{settings.OutputType.Name}'",
+                                    Index = outputExpression.Index
+                                });
+
+                                return (table, statement);
+                            }
                         }
                     }
 
@@ -281,11 +340,19 @@ public sealed partial class Binder
 
                         if (optionExpression is TypedExpressionNode { Type: TypeSymbol sourceType })
                         {
-                            // we need to get access to the option type here, important
-                            // check if that stuff is compatible
+                            if (!TypesAreCompatible(sourceType, settings.OptionType))
+                            {
+                                ErrorFound?.Invoke(new Error
+                                {
+                                    ErrorMessage = $"Type '{sourceType.Name}' is not compatible with option type '{settings.OutputType.Name}'",
+                                    Index = optionExpression.Index
+                                });
+
+                                return (table, statement);
+                            }
                         }
 
-                        (table, StatementBodyNode optionBody) = BindStatementBody(boundOptions[i].Body, table);
+                        (table, StatementBodyNode optionBody) = BindStatementBody(boundOptions[i].Body, settings, table);
 
                         boundOptions[i] = boundOptions[i] with
                         {

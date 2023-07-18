@@ -1,5 +1,5 @@
 ﻿using Phantonia.Historia.Language.GrammaticalAnalysis;
-using Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
+using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Types;
 using System;
 using System.Collections.Immutable;
@@ -55,8 +55,11 @@ public sealed partial class Binder
         // 4. fix pseudo symbols into true symbols
         table = FixPseudoSymbols(dependencyGraph, table);
 
+        // 5. bind settings
+        (table, Settings settings, halfboundStory) = BindSettingDirectives(halfboundStory, table);
+
         // 5. bind whole tree
-        (table, StoryNode boundStory) = BindTree(halfboundStory, table);
+        (table, StoryNode boundStory) = BindTree(halfboundStory, settings, table);
 
         return new BindingResult(boundStory, table);
     }
@@ -74,7 +77,7 @@ public sealed partial class Binder
     {
         table = table.OpenScope();
 
-        foreach (SymbolDeclarationNode declaration in story.Symbols)
+        foreach (TopLevelNode declaration in story.TopLevelNodes)
         {
             Symbol? newSymbol = CreateSymbolFromDeclaration(declaration);
 
@@ -97,7 +100,7 @@ public sealed partial class Binder
         return table;
     }
 
-    private static Symbol? CreateSymbolFromDeclaration(SymbolDeclarationNode declaration)
+    private static Symbol? CreateSymbolFromDeclaration(TopLevelNode declaration)
     {
         switch (declaration)
         {
@@ -105,7 +108,7 @@ public sealed partial class Binder
                 return new SceneSymbol { Name = name, Index = index };
             case RecordSymbolDeclarationNode recordDeclaration:
                 return CreateRecordSymbolFromDeclaration(recordDeclaration);
-            case SettingSymbolDeclarationNode:
+            case SettingDirectiveNode:
                 return null;
             default:
                 Debug.Assert(false);
@@ -147,6 +150,8 @@ public sealed partial class Binder
                 return null;
         }
     }
+
+
 
     private static bool TypesAreCompatible(TypeSymbol sourceType, TypeSymbol targetType)
     {

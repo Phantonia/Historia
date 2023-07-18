@@ -1,8 +1,8 @@
 ﻿using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 
-namespace Phantonia.Historia.Language.GrammaticalAnalysis.Symbols;
+namespace Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
 
-public sealed record SceneSymbolDeclarationNode : NamedSymbolDeclarationNode
+public sealed record SceneSymbolDeclarationNode : SymbolDeclarationNode
 {
     public SceneSymbolDeclarationNode() { }
 
