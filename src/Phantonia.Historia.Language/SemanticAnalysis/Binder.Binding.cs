@@ -219,7 +219,7 @@ public sealed partial class Binder
                 {
                     if (!table.IsDeclared(identifierType.Identifier))
                     {
-                        ErrorFound?.Invoke(new Error { ErrorMessage = $"Symbol '{identifierType.Identifier}' does not exist in this scope", Index = identifierType.Index });
+                        ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(identifierType.Identifier, identifierType.Index));
                         return (table, type);
                     }
 
@@ -227,7 +227,7 @@ public sealed partial class Binder
 
                     if (symbol is not TypeSymbol typeSymbol)
                     {
-                        ErrorFound?.Invoke(new Error { ErrorMessage = $"Symbol '{identifierType.Identifier}' is not a type but is used like one", Index = identifierType.Index });
+                        ErrorFound?.Invoke(Errors.NonTypeSymbolUsedAsType(identifierType.Identifier, identifierType.Index));
                         return (table, type);
                     }
 
@@ -295,11 +295,7 @@ public sealed partial class Binder
                     {
                         if (!TypesAreCompatible(sourceType, settings.OutputType))
                         {
-                            ErrorFound?.Invoke(new Error
-                            {
-                                ErrorMessage = $"Type '{sourceType.Name}' is not compatible with output type '{settings.OutputType.Name}'",
-                                Index = boundExpression.Index
-                            });
+                            ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, settings.OutputType, "output", boundExpression.Index));
 
                             return (table, statement);
                         }
@@ -321,11 +317,7 @@ public sealed partial class Binder
                         {
                             if (!TypesAreCompatible(sourceType, settings.OutputType))
                             {
-                                ErrorFound?.Invoke(new Error
-                                {
-                                    ErrorMessage = $"Type '{sourceType.Name}' is not compatible with output type '{settings.OutputType.Name}'",
-                                    Index = outputExpression.Index
-                                });
+                                ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, settings.OutputType, "output", outputExpression.Index));
 
                                 return (table, statement);
                             }
@@ -342,11 +334,7 @@ public sealed partial class Binder
                         {
                             if (!TypesAreCompatible(sourceType, settings.OptionType))
                             {
-                                ErrorFound?.Invoke(new Error
-                                {
-                                    ErrorMessage = $"Type '{sourceType.Name}' is not compatible with option type '{settings.OutputType.Name}'",
-                                    Index = optionExpression.Index
-                                });
+                                ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, settings.OutputType, "option", optionExpression.Index));
 
                                 return (table, statement);
                             }
@@ -421,23 +409,19 @@ public sealed partial class Binder
     {
         if (!table.IsDeclared(recordCreation.RecordName))
         {
-            ErrorFound?.Invoke(new Error { ErrorMessage = $"Record named '{recordCreation.RecordName}' does not exist", Index = recordCreation.Index });
+            ErrorFound?.Invoke(Errors.RecordDoesNotExist(recordCreation.RecordName, recordCreation.Index));
             return (table, recordCreation);
         }
 
         if (table[recordCreation.RecordName] is not RecordTypeSymbol recordSymbol)
         {
-            ErrorFound?.Invoke(new Error { ErrorMessage = $"Symbol named '{recordCreation.RecordName}' is not a record", Index = recordCreation.Index });
+            ErrorFound?.Invoke(Errors.SymbolIsNotRecord(recordCreation.RecordName, recordCreation.Index));
             return (table, recordCreation);
         }
 
         if (recordCreation.Arguments.Length != recordSymbol.Properties.Length)
         {
-            ErrorFound?.Invoke(new Error
-            {
-                ErrorMessage = $"Record '{recordSymbol.Name}' has {recordSymbol.Properties.Length} properties, but {recordCreation.Arguments.Length} arguments were provided",
-                Index = recordCreation.Arguments[0].Index
-            });
+            ErrorFound?.Invoke(Errors.WrongAmountOfArguments(recordSymbol.Name, recordCreation.Arguments.Length, recordSymbol.Properties.Length, recordCreation.Index));
 
             TypedExpressionNode incompleteTypedExpression = new()
             {
@@ -455,11 +439,7 @@ public sealed partial class Binder
         {
             if (recordCreation.Arguments[i].PropertyName != null && recordCreation.Arguments[i].PropertyName != recordSymbol.Properties[i].Name)
             {
-                ErrorFound?.Invoke(new Error
-                {
-                    ErrorMessage = $"Property '{recordCreation.Arguments[i].PropertyName}' either does not exist or is not in that position",
-                    Index = recordCreation.Arguments[i].Index,
-                });
+                ErrorFound?.Invoke(Errors.WrongPropertyInRecordCreation(recordCreation.Arguments[i].PropertyName!, recordCreation.Arguments[i].Index));
 
                 continue;
             }
@@ -475,11 +455,7 @@ public sealed partial class Binder
 
             if (!TypesAreCompatible(typedExpression.Type, propertyType))
             {
-                ErrorFound?.Invoke(new Error
-                {
-                    ErrorMessage = $"Expression type '{typedExpression.Type.Name}' is incompatible with property type '{propertyType.Name}'",
-                    Index = recordCreation.Arguments[i].Index,
-                });
+                ErrorFound?.Invoke(Errors.IncompatibleType(typedExpression.Type, propertyType, "property", recordCreation.Arguments[i].Index));
                 continue;
             }
 

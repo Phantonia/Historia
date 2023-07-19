@@ -6,8 +6,6 @@ using Phantonia.Historia.Language.LexicalAnalysis;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Linq;
-using System.Xml.Linq;
 
 namespace Phantonia.Historia.Language.GrammaticalAnalysis;
 
@@ -50,11 +48,8 @@ public sealed class Parser
         {
             switch (token.Kind)
             {
-                //case TokenKind.Unknown:
-                //    ErrorFound?.Invoke(new Error { ErrorMessage = $"Unknown token '{token.Text}'", Index = token.Index });
-                //    continue;
                 case TokenKind.BrokenStringLiteral:
-                    ErrorFound?.Invoke(new Error { ErrorMessage = $"Broken string literal {token.Text}", Index = token.Index });
+                    ErrorFound?.Invoke(Errors.BrokenStringLiteral(token));
                     continue;
                 default:
                     if (token.Kind == TokenKind.Empty || !Enum.IsDefined(token.Kind))
@@ -74,7 +69,7 @@ public sealed class Parser
         }
         else
         {
-            ErrorFound?.Invoke(new Error { ErrorMessage = $"Expected a {kind}", Index = tokens[index].Index });
+            ErrorFound?.Invoke(Errors.ExpectedToken(tokens[index], kind));
             return new Token { Kind = TokenKind.Empty, Index = tokens[index].Index, Text = "" };
         }
     }
@@ -97,7 +92,7 @@ public sealed class Parser
                 return null;
             default:
                 {
-                    ErrorFound?.Invoke(new Error { ErrorMessage = $"Unexpected token '{tokens[index].Text}'", Index = tokens[index].Index });
+                    ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index]));
                     index++;
                     return ParseSymbolDeclaration(ref index);
                 }
@@ -181,7 +176,7 @@ public sealed class Parser
 
         if (!Settings.AllSettings.Contains(identifier.Text))
         {
-            ErrorFound?.Invoke(new Error { ErrorMessage = $"Setting '{identifier.Text}' does not exist", Index = identifier.Index });
+            ErrorFound?.Invoke(Errors.SettingDoesNotExist(identifier));
             return null;
         }
 
@@ -262,19 +257,11 @@ public sealed class Parser
             case { Kind: TokenKind.SwitchKeyword }:
                 return ParseSwitchStatement(ref index);
             case { Kind: TokenKind.EndOfFile }:
-                ErrorFound?.Invoke(new Error
-                {
-                    ErrorMessage = "Unexpected end of file",
-                    Index = tokens[index].Index
-                });
+                ErrorFound?.Invoke(Errors.UnexpectedEndOfFile(tokens[index]));
                 return null;
             default:
                 {
-                    ErrorFound?.Invoke(new Error
-                    {
-                        ErrorMessage = $"Unexpected token '{tokens[index].Text}'",
-                        Index = tokens[index].Index
-                    });
+                    ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index]));
                     index++;
                     return ParseStatement(ref index);
                 }
@@ -414,19 +401,11 @@ public sealed class Parser
                     return expression;
                 }
             case { Kind: TokenKind.EndOfFile }:
-                ErrorFound?.Invoke(new Error
-                {
-                    ErrorMessage = "Unexpected end of file",
-                    Index = tokens[index].Index,
-                });
+                ErrorFound?.Invoke(Errors.UnexpectedEndOfFile(tokens[index]));
                 return null;
             default:
                 {
-                    ErrorFound?.Invoke(new Error
-                    {
-                        ErrorMessage = $"Unexpected token '{tokens[index].Text}'",
-                        Index = tokens[index].Index
-                    });
+                    ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index]));
                     index++;
                     return ParseExpression(ref index);
                 }
@@ -510,10 +489,10 @@ public sealed class Parser
             case { Kind: TokenKind.Identifier, Text: string identifier }:
                 return new IdentifierTypeNode { Identifier = identifier, Index = tokens[index++].Index };
             case { Kind: TokenKind.EndOfFile }:
-                ErrorFound?.Invoke(new Error { ErrorMessage = "Unexpected end of file", Index = tokens[index].Index });
+                ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index]));
                 return null;
             default:
-                ErrorFound?.Invoke(new Error { ErrorMessage = $"Unexpected token '{tokens[index].Text}'", Index = tokens[index].Index });
+                ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index]));
                 return null;
         }
     }

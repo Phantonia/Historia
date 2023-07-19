@@ -38,7 +38,7 @@ public sealed partial class Binder
 
         if (!table.IsDeclared("main") || table["main"] is not SceneSymbol)
         {
-            ErrorFound?.Invoke(new Error { ErrorMessage = "A story needs a main scene", Index = 0 });
+            ErrorFound?.Invoke(Errors.NoMainScene());
         }
 
         // 2. bind everything except for scene bodies into pseudo symbols
@@ -89,7 +89,7 @@ public sealed partial class Binder
 
             if (table.IsDeclared(newSymbol.Name))
             {
-                ErrorFound?.Invoke(new Error { ErrorMessage = $"Duplicated symbol name '{newSymbol.Name}'", Index = declaration.Index });
+                ErrorFound?.Invoke(Errors.DuplicatedSymbolName(newSymbol.Name, declaration.Index));
             }
             else
             {

@@ -54,25 +54,30 @@ public sealed class ParserTests
         Lexer lexer = new(code);
         Parser parser = new(lexer.Lex());
 
-        bool foundError = false;
+        List<Error> errors = new();
 
-        parser.ErrorFound += e =>
-        {
-            if (!foundError)
-            {
-                Assert.AreEqual("Error: Unexpected token 'hello'\r\nhello!\r\n^", Errors.GenerateFullMessage(code, e));
-            }
-            else
-            {
-                Assert.AreEqual("Error: Unexpected token '!'\r\nhello!\r\n     ^", Errors.GenerateFullMessage(code, e));
-            }
-
-            foundError = true;
-        };
+        parser.ErrorFound += errors.Add;
 
         _ = parser.Parse();
 
-        Assert.IsTrue(foundError);
+        Assert.AreEqual(2, errors.Count);
+
+        Error firstError = Errors.UnexpectedToken(new Token
+        {
+            Kind = TokenKind.Identifier,
+            Text = "hello",
+            Index = code.IndexOf("hello!"),
+        });
+
+        Error secondError = Errors.UnexpectedToken(new Token
+        {
+            Kind = TokenKind.Unknown,
+            Text = "!",
+            Index = code.IndexOf("!"),
+        });
+
+        Assert.AreEqual(firstError, errors[0]);
+        Assert.AreEqual(secondError, errors[1]);
     }
 
     [TestMethod]
@@ -91,7 +96,14 @@ public sealed class ParserTests
 
         parser.ErrorFound += e =>
         {
-            Assert.AreEqual("Error: Unexpected end of file\r\n    output 0;\r\n             ^", Errors.GenerateFullMessage(code, e));
+            Error expectedError = Errors.UnexpectedEndOfFile(new Token
+            {
+                Kind = TokenKind.EndOfFile,
+                Index = code.Length,
+                Text = "",
+            });
+
+            Assert.AreEqual(expectedError, e);
             errorCount++;
         };
 
@@ -124,7 +136,7 @@ public sealed class ParserTests
 
         Lexer lexer = new(code);
         Parser parser = new(lexer.Lex());
-        parser.ErrorFound += e => Assert.Fail();
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
 
@@ -221,7 +233,7 @@ public sealed class ParserTests
 
         Lexer lexer = new(code);
         Parser parser = new(lexer.Lex());
-        parser.ErrorFound += e => Assert.Fail();
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
 
@@ -265,7 +277,15 @@ public sealed class ParserTests
         parser.ErrorFound += e =>
         {
             errorCount++;
-            Assert.AreEqual("Expected a Colon", e.ErrorMessage);
+
+            Error expectedError = Errors.ExpectedToken(unexpectedToken: new Token
+            {
+                Kind = TokenKind.Identifier,
+                Text = "Int",
+                Index = code.IndexOf("Int"),
+            }, TokenKind.Colon);
+
+            Assert.AreEqual(expectedError, e);
             Assert.AreEqual(code.IndexOf("Int"), e.Index);
         };
 
@@ -290,7 +310,15 @@ public sealed class ParserTests
         parser.ErrorFound += e =>
         {
             errorCount++;
-            Assert.AreEqual("Unexpected token ';'", e.ErrorMessage);
+
+            Error expectedError = Errors.UnexpectedToken(new Token
+            {
+                Kind = TokenKind.Semicolon,
+                Text = ";",
+                Index = code.IndexOf(";"),
+            });
+
+            Assert.AreEqual(expectedError, e);
             Assert.AreEqual(code.IndexOf(";"), e.Index);
         };
 
@@ -313,7 +341,7 @@ public sealed class ParserTests
 
         Lexer lexer = new(code);
         Parser parser = new(lexer.Lex());
-        parser.ErrorFound += e => Assert.Fail("Got error when none was expected");
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
 
@@ -362,7 +390,7 @@ public sealed class ParserTests
 
         Lexer lexer = new(code);
         Parser parser = new(lexer.Lex());
-        parser.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
 
@@ -403,7 +431,7 @@ public sealed class ParserTests
 
         Lexer lexer = new(code);
         Parser parser = new(lexer.Lex());
-        parser.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
 

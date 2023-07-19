@@ -1,6 +1,8 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Phantonia.Historia.Language;
 using Phantonia.Historia.Language.GrammaticalAnalysis;
+using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
+using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
 using Phantonia.Historia.Language.LexicalAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis;
@@ -236,6 +238,11 @@ public sealed class BinderTests
 
             record B
             {
+                C: C;
+            }
+
+            record C
+            {
                 A: A;
             }
             """;
@@ -248,9 +255,11 @@ public sealed class BinderTests
         BindingResult result = binder.Bind();
         Assert.IsFalse(result.IsValid);
 
+        Error expectedError = Errors.CyclicRecordDeclaration(new[] { "C", "A", "B", "C" }, code.IndexOf("record C"));
+
         Assert.AreEqual(1, errors.Count);
-        Assert.AreEqual("Cyclic record definition", errors[0].ErrorMessage);
-        Assert.IsTrue(errors[0].Index == code.IndexOf("record A") || errors[0].Index == code.IndexOf("record B"));
+        Assert.AreEqual(expectedError, errors[0]);
+        Assert.IsTrue(errors[0].Index == code.IndexOf("record C"));
     }
 
     [TestMethod]
@@ -274,8 +283,10 @@ public sealed class BinderTests
         BindingResult result = binder.Bind();
         Assert.IsFalse(result.IsValid);
 
+        Error expectedError = Errors.CyclicRecordDeclaration(new[] { "A", "A" }, index: code.IndexOf("record A"));
+
         Assert.AreEqual(1, errors.Count);
-        Assert.AreEqual("Cyclic record definition", errors[0].ErrorMessage);
+        Assert.AreEqual(expectedError, errors[0]);
         Assert.AreEqual(code.IndexOf("record A"), errors[0].Index);
     }
 
@@ -311,6 +322,8 @@ public sealed class BinderTests
 
         BindingResult result = binder.Bind();
         Assert.IsTrue(result.IsValid);
+
+        Assert.IsNotNull(result.BoundStory);
 
         Assert.AreEqual(4, result.BoundStory.TopLevelNodes.Length);
 
@@ -394,10 +407,96 @@ public sealed class BinderTests
             """;
 
         Binder binder = PrepareBinder(code);
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         BindingResult result = binder.Bind();
 
-        // TODO: actually test this
+        Assert.IsTrue(result.IsValid);
+        Assert.IsNotNull(result.BoundStory);
+
+        Assert.AreEqual(3, result.BoundStory.TopLevelNodes.Length);
+
+        {
+            SettingDirectiveNode? outputTypeSetting = result.BoundStory.TopLevelNodes[0] as SettingDirectiveNode;
+            Assert.IsNotNull(outputTypeSetting);
+
+            Assert.IsTrue(outputTypeSetting is TypeSettingDirectiveNode
+            {
+                SettingName: "OutputType",
+                Type: BoundTypeNode
+                {
+                    Symbol: RecordTypeSymbol
+                    {
+                        Name: "Line",
+                    }
+                }
+            });
+        }
+
+        {
+            BoundSymbolDeclarationNode? recordDeclaration = result.BoundStory.TopLevelNodes[1] as BoundSymbolDeclarationNode;
+            Assert.IsNotNull(recordDeclaration);
+
+            Assert.IsTrue(recordDeclaration is
+            {
+                Symbol: RecordTypeSymbol
+                {
+                    Name: "Line",
+                    Properties.Length: 2,
+                },
+                Declaration: RecordSymbolDeclarationNode
+                {
+                    Name: "Line",
+                    Properties.Length: 2,
+                }
+            });
+        }
+
+        {
+            BoundSymbolDeclarationNode? mainSceneDeclaration = result.BoundStory.TopLevelNodes[2] as BoundSymbolDeclarationNode;
+            Assert.IsNotNull(mainSceneDeclaration);
+
+            Assert.IsTrue(mainSceneDeclaration.Symbol is SceneSymbol { Name: "main" });
+
+            SceneSymbolDeclarationNode? sceneDeclaration = mainSceneDeclaration.Declaration as SceneSymbolDeclarationNode;
+            Assert.IsNotNull(sceneDeclaration);
+
+            Assert.AreEqual(3, sceneDeclaration.Body.Statements.Length);
+
+            OutputStatementNode? outputStatement = sceneDeclaration.Body.Statements[0] as OutputStatementNode;
+            Assert.IsNotNull(outputStatement);
+
+            TypedExpressionNode? typedExpression = outputStatement.OutputExpression as TypedExpressionNode;
+            Assert.IsNotNull(typedExpression);
+
+            Assert.IsTrue(typedExpression.Type is RecordTypeSymbol
+            {
+                Name: "Line",
+                Properties.Length: 2,
+            });
+
+            Assert.IsTrue(typedExpression.Expression is BoundRecordCreationExpressionNode
+            {
+                Record: RecordTypeSymbol
+                {
+                    Name: "Line"
+                },
+                BoundArguments:
+                [
+                    {
+                        Expression: TypedExpressionNode
+                        {
+                            Expression: StringLiteralExpressionNode,
+                            Type: BuiltinTypeSymbol
+                            {
+                                Type: BuiltinType.String,
+                            }
+                        }
+                    },
+                    BoundArgumentNode,
+                ]
+            });
+        }
     }
 
     [TestMethod]
@@ -428,12 +527,39 @@ public sealed class BinderTests
 
         BindingResult bindingResult = binder.Bind();
 
-        //Assert.IsFalse(bindingResult.IsValid);
-        //Assert.IsNull(bindingResult.BoundStory);
-        //Assert.IsNull(bindingResult.SymbolTable);
+        BuiltinTypeSymbol intType = new()
+        {
+            Name = "Int",
+            Index = Constants.IntTypeIndex,
+            Type = BuiltinType.Int,
+        };
 
-        //Assert.IsTrue(errors.Count > 0);
+        BuiltinTypeSymbol stringType = new()
+        {
+            Name = "String",
+            Index = Constants.StringTypeIndex,
+            Type = BuiltinType.String,
+        };
 
-        // TODO: actually test this
+        RecordTypeSymbol lineType = new()
+        {
+            Name = "Line",
+            Index = code.IndexOf("record Line"),
+            Properties = ImmutableArray<PropertySymbol>.Empty,
+        };
+
+        Assert.AreEqual(4, errors.Count);
+
+        Error firstError = Errors.IncompatibleType(sourceType: intType, targetType: lineType, "output", code.IndexOf("2;"));
+        Assert.AreEqual(firstError, errors[0]);
+
+        Error secondError = Errors.IncompatibleType(sourceType: stringType, targetType: lineType, "output", code.IndexOf("\"xyz\""));
+        Assert.AreEqual(secondError, errors[1]);
+
+        Error thirdError = Errors.IncompatibleType(sourceType: intType, targetType: stringType, "property", code.IndexOf("2, 1"));
+        Assert.AreEqual(thirdError, errors[2]);
+
+        Error fourthError = Errors.WrongAmountOfArguments("Line", givenAmount: 1, expectedAmount: 2, code.IndexOf("Line(\"Hello\");"));
+        Assert.AreEqual(fourthError, errors[3]);
     }
 }

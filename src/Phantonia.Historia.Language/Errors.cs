@@ -1,9 +1,157 @@
-﻿using System;
+﻿using Phantonia.Historia.Language.LexicalAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 
 namespace Phantonia.Historia.Language;
 
 public static class Errors
 {
+    public static Error BrokenStringLiteral(Token brokenToken)
+    {
+        Debug.Assert(brokenToken is { Kind: TokenKind.BrokenStringLiteral });
+
+        return new Error
+        {
+            ErrorMessage = $"Broken string literaral {brokenToken.Text}",
+            Index = brokenToken.Index,
+        };
+    }
+
+    public static Error ExpectedToken(Token unexpectedToken, TokenKind expectedKind)
+    {
+        Debug.Assert(unexpectedToken.Kind != expectedKind);
+
+        return new Error
+        {
+            ErrorMessage = $"Expected a {expectedKind} token, instead got '{unexpectedToken}'",
+            Index = unexpectedToken.Index,
+        };
+    }
+
+    public static Error UnexpectedToken(Token unexpectedToken)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Unexpected token '{unexpectedToken.Text}'",
+            Index = unexpectedToken.Index,
+        };
+    }
+
+    public static Error SettingDoesNotExist(Token identifierToken)
+    {
+        Debug.Assert(identifierToken is { Kind: TokenKind.Identifier });
+
+        return new Error
+        {
+            ErrorMessage = $"Setting '{identifierToken.Text}' does not exist",
+            Index = identifierToken.Index,
+        };
+    }
+
+    public static Error UnexpectedEndOfFile(Token endOfFileToken)
+    {
+        Debug.Assert(endOfFileToken is { Kind: TokenKind.EndOfFile });
+
+        return new Error
+        {
+            ErrorMessage = "Unexpected end of file",
+            Index = endOfFileToken.Index,
+        };
+    }
+
+    public static Error SymbolDoesNotExistInScope(string identifier, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Symbol '{identifier}' does not exist in this scope",
+            Index = index,
+        };
+    }
+
+    public static Error NonTypeSymbolUsedAsType(string identifier, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Symbol '{identifier}' is not a type but is used like one",
+            Index = index,
+        };
+    }
+
+    public static Error IncompatibleType(TypeSymbol sourceType, TypeSymbol targetType, string context, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Type '{sourceType.Name}' is not compatible with {context} type '{targetType.Name}'",
+            Index = index,
+        };
+    }
+
+    public static Error RecordDoesNotExist(string recordName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Record named '{recordName}' does not exist",
+            Index = index,
+        };
+    }
+
+    public static Error SymbolIsNotRecord(string symbolName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Symbol named '{symbolName}' is not a record",
+            Index = index
+        };
+    }
+
+    public static Error WrongAmountOfArguments(string recordName, int givenAmount, int expectedAmount, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Record '{recordName}' has {expectedAmount} propert{(expectedAmount != 1 ? "ies" : "y")}, but {givenAmount} argument{(expectedAmount != 1 ? "s were" : " was")} provided",
+            Index = index,
+        };
+    }
+
+    public static Error WrongPropertyInRecordCreation(string propertyName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Property '{propertyName}' either does not exist or is not in that position",
+            Index = index,
+        };
+    }
+
+    public static Error NoMainScene()
+    {
+        return new Error
+        {
+            ErrorMessage = "A story needs a main scene",
+            Index = 0,
+        };
+    }
+
+    public static Error DuplicatedSymbolName(string name, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Duplicated symbol name '{name}'",
+            Index = index,
+        };
+    }
+
+    public static Error CyclicRecordDeclaration(IEnumerable<string> cycle, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Cyclic record definition: {string.Join(", ", cycle.Select(s => s))}",
+            Index = index,
+        };
+    }
+
     public static string GenerateFullMessage(string text, Error error)
     {
         (string wholeLine, int column) = FindLine(text, error.Index);

@@ -53,11 +53,7 @@ public sealed partial class Binder
 
         if (dependencyGraph.IsCyclic(out IEnumerable<int>? cycle))
         {
-            ErrorFound?.Invoke(new Error
-            {
-                ErrorMessage = $"Cyclic record definition",
-                Index = cycle.First(),
-            });
+            ErrorFound?.Invoke(Errors.CyclicRecordDeclaration(cycle.Select(i => dependencyGraph.Symbols[i].Name), dependencyGraph.Symbols[cycle.First()].Index));
 
             return null;
         }
