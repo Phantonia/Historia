@@ -3,6 +3,7 @@ using Phantonia.Historia.Language.GrammaticalAnalysis;
 using Phantonia.Historia.Language.LexicalAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis;
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
@@ -14,15 +15,22 @@ public sealed class Compiler
     public Compiler(string historiaText)
     {
         HistoriaText = historiaText;
-        errorOutput = Console.Error;
     }
 
     public string HistoriaText { get; }
 
-    private readonly TextWriter errorOutput;
-
-    public string? CompileToCSharpText()
+    public CompilationResult CompileToCSharpText()
     {
+        List<Error> errors = new();
+
+        void HandleError(Error error)
+        {
+            Debug.WriteLine(Errors.GenerateFullMessage(HistoriaText, error));
+            Debug.WriteLine("");
+
+            errors.Add(error);
+        }
+
         Lexer lexer = new(HistoriaText);
         ImmutableArray<Token> tokens = lexer.Lex();
 
@@ -36,9 +44,12 @@ public sealed class Compiler
         BindingResult result = binder.Bind();
         binder.ErrorFound -= HandleError;
 
-        if (!result.IsValid)
+        if (!result.IsValid || errors.Count > 0)
         {
-            throw new NotImplementedException("Invalid binding result");
+            return new CompilationResult
+            {
+                Errors = errors.ToImmutableArray(),
+            };
         }
 
         (StoryNode? boundStory, SymbolTable? symbolTable) = result;
@@ -51,13 +62,11 @@ public sealed class Compiler
 
         Emitter emitter = new(mainGraph);
 
-        // we need to not do this when we get any error (or only fatal errors?)
-        return emitter.GenerateCSharpText();
-    }
+        string csharpText = emitter.GenerateCSharpText();
 
-    private void HandleError(Error error)
-    {
-        string fullMessage = Errors.GenerateFullMessage(HistoriaText, error);
-        errorOutput.WriteLine(fullMessage);
+        return new CompilationResult
+        {
+            CSharpText = csharpText,
+        };
     }
 }

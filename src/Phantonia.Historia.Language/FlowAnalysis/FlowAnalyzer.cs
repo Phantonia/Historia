@@ -2,6 +2,7 @@
 using Phantonia.Historia.Language.GrammaticalAnalysis;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
+using Phantonia.Historia.Language.SemanticAnalysis;
 using System;
 using System.Diagnostics;
 
@@ -22,9 +23,16 @@ public sealed class FlowAnalyzer
     {
         foreach (TopLevelNode symbolDeclaration in story.TopLevelNodes)
         {
-            if (symbolDeclaration is SceneSymbolDeclarationNode { Name: "main" } mainScene)
+            if (symbolDeclaration is BoundSymbolDeclarationNode
+                {
+                    Name: "main",
+                    Declaration: SceneSymbolDeclarationNode
+                    {
+                        Body: StatementBodyNode body,
+                    }
+                } mainScene)
             {
-                return GenerateBodyFlowGraph(mainScene.Body);
+                return GenerateBodyFlowGraph(body);
             }
         }
 

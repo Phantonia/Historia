@@ -1,9 +1,11 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Phantonia.Historia.Language;
 using Phantonia.Historia.Language.FlowAnalysis;
 using Phantonia.Historia.Language.GrammaticalAnalysis;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 using Phantonia.Historia.Language.LexicalAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis;
 using System.Collections.Immutable;
 using System.Linq;
 
@@ -25,7 +27,14 @@ public sealed class FlowAnalyzerTests
                       }
                       """;
 
-        FlowAnalyzer flowAnalyzer = new(new Parser(new Lexer(code).Lex()).Parse());
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        Binder binder = new(parser.Parse());
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        FlowAnalyzer flowAnalyzer = new(binder.Bind().BoundStory!);
 
         FlowGraph graph = flowAnalyzer.GenerateMainFlowGraph();
 
@@ -72,7 +81,12 @@ public sealed class FlowAnalyzerTests
 
         Lexer lexer = new(code);
         Parser parser = new(lexer.Lex());
-        FlowAnalyzer flowAnalyzer = new(parser.Parse());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        Binder binder = new(parser.Parse());
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        FlowAnalyzer flowAnalyzer = new(binder.Bind().BoundStory!);
 
         FlowGraph flowGraph = flowAnalyzer.GenerateMainFlowGraph();
 
@@ -83,10 +97,22 @@ public sealed class FlowAnalyzerTests
         {
             switch (flowGraph.Vertices[vertex].AssociatedStatement)
             {
-                case OutputStatementNode { OutputExpression: IntegerLiteralExpressionNode { Value: var val } }:
+                case OutputStatementNode
+                {
+                    OutputExpression: TypedExpressionNode
+                    {
+                        Expression: IntegerLiteralExpressionNode { Value: var val }
+                    }
+                }:
                     Assert.AreEqual(value, val);
                     break;
-                case SwitchStatementNode { OutputExpression: IntegerLiteralExpressionNode { Value: var val } }:
+                case SwitchStatementNode
+                {
+                    OutputExpression: TypedExpressionNode
+                    {
+                        Expression: IntegerLiteralExpressionNode { Value: var val }
+                    }
+                }:
                     Assert.AreEqual(value, val);
                     break;
                 default:

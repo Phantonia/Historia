@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Phantonia.Historia.Language;
 using System;
 
 namespace Phantonia.Historia.Tests.Compiler;
@@ -6,9 +7,9 @@ namespace Phantonia.Historia.Tests.Compiler;
 [TestClass]
 public sealed class EmitterTests
 {
-    // uncomment this and then debug to generate the class
+    // debug this to generate the class
     // less than ideal i know
-    //[TestMethod]
+    // [TestMethod] // emitter not ready for this
     public void PrivateClassGenerator()
     {
         string code =
@@ -47,7 +48,12 @@ public sealed class EmitterTests
             """;
 
         Language.Compiler comp = new(code);
-        string output = comp.CompileToCSharpText()!;
+        CompilationResult result = comp.CompileToCSharpText();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.IsNotNull(result.CSharpText);
+
+        string csharpText = result.CSharpText;
     }
 
     // this is copy pasted
