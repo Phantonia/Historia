@@ -1,5 +1,4 @@
 ﻿using Phantonia.Historia.Language.GrammaticalAnalysis;
-using System.Diagnostics.CodeAnalysis;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 
@@ -7,9 +6,10 @@ public readonly record struct BindingResult
 {
     public static BindingResult Invalid => default;
 
-    public BindingResult(StoryNode boundStory, SymbolTable symbolTable)
+    public BindingResult(StoryNode boundStory, Settings settings, SymbolTable symbolTable)
     {
         BoundStory = boundStory;
+        Settings = settings;
         SymbolTable = symbolTable;
         IsValid = true;
     }
@@ -18,11 +18,14 @@ public readonly record struct BindingResult
 
     public StoryNode? BoundStory { get; init; }
 
+    public Settings? Settings { get; init; }
+
     public SymbolTable? SymbolTable { get; init; }
 
-    public void Deconstruct(out StoryNode? boundStory, out SymbolTable? symbolTable)
+    public void Deconstruct(out StoryNode? boundStory, out Settings? settings, out SymbolTable? symbolTable)
     {
         boundStory = BoundStory;
+        settings = Settings;
         symbolTable = SymbolTable;
     }
 }

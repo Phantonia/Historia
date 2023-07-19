@@ -100,7 +100,7 @@ public sealed class BinderTests
 
         BindingResult result = binder.Bind();
         Assert.IsTrue(result.IsValid);
-        (StoryNode? boundStory, SymbolTable? symbolTable) = result;
+        (StoryNode? boundStory, _, SymbolTable? symbolTable) = result;
 
         Assert.AreEqual(3, boundStory!.TopLevelNodes.Length);
 
@@ -177,7 +177,7 @@ public sealed class BinderTests
 
         BindingResult result = binder.Bind();
         Assert.IsTrue(result.IsValid);
-        (StoryNode? boundStory, SymbolTable? symbolTable) = result;
+        (StoryNode? boundStory, _, SymbolTable? symbolTable) = result;
 
         Assert.AreEqual(2, boundStory!.TopLevelNodes.Length);
 

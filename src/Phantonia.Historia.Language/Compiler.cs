@@ -52,15 +52,16 @@ public sealed class Compiler
             };
         }
 
-        (StoryNode? boundStory, SymbolTable? symbolTable) = result;
+        (StoryNode? boundStory, Settings? settings, SymbolTable? symbolTable) = result;
 
         Debug.Assert(boundStory is not null);
+        Debug.Assert(settings is not null);
         Debug.Assert(symbolTable is not null);
 
         FlowAnalyzer flowAnalyzer = new(boundStory);
         FlowGraph mainGraph = flowAnalyzer.GenerateMainFlowGraph();
 
-        Emitter emitter = new(mainGraph);
+        Emitter emitter = new(boundStory, settings, mainGraph);
 
         string csharpText = emitter.GenerateCSharpText();
 

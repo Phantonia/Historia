@@ -61,7 +61,7 @@ public sealed partial class Binder
         // 5. bind whole tree
         (table, StoryNode boundStory) = BindTree(halfboundStory, settings, table);
 
-        return new BindingResult(boundStory, table);
+        return new BindingResult(boundStory, settings, table);
     }
 
     private static SymbolTable GetBuiltinSymbolTable()
