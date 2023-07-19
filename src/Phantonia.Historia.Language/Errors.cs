@@ -26,7 +26,7 @@ public static class Errors
 
         return new Error
         {
-            ErrorMessage = $"Expected a {expectedKind} token, instead got '{unexpectedToken}'",
+            ErrorMessage = $"Expected a {expectedKind} token, instead got '{unexpectedToken.Text}'",
             Index = unexpectedToken.Index,
         };
     }

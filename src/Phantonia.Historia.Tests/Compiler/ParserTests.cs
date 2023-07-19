@@ -470,4 +470,23 @@ public sealed class ParserTests
             PropertyName: null,
         });
     }
+
+    [TestMethod]
+    public void TestCompleteNonsense()
+    {
+        string code =
+            """
+            6 ; = Hello scene output { ("Hey") setting { }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+
+        List<Error> errors = new();
+        parser.ErrorFound += errors.Add;
+
+        _ = parser.Parse();
+
+        Assert.IsTrue(errors.Count > 0);
+    }
 }
