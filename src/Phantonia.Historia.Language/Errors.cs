@@ -1,4 +1,5 @@
-﻿using Phantonia.Historia.Language.LexicalAnalysis;
+﻿using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
+using Phantonia.Historia.Language.LexicalAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis;
 using System;
 using System.Collections.Generic;
@@ -148,6 +149,24 @@ public static class Errors
         return new Error
         {
             ErrorMessage = $"Cyclic record definition: {string.Join(", ", cycle.Select(s => s))}",
+            Index = index,
+        };
+    }
+
+    public static Error InconsistentNamedSwitch(int index)
+    {
+        return new Error
+        {
+            ErrorMessage = "Every option of a named switch must also be named",
+            Index = index,
+        };
+    }
+
+    public static Error InconsistentUnnamedSwitch(int index)
+    {
+        return new Error
+        {
+            ErrorMessage = "No option of an unnamed switch may be named",
             Index = index,
         };
     }

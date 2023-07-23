@@ -221,6 +221,52 @@ public sealed class ParserTests
     }
 
     [TestMethod]
+    public void TestNamedSwitchParsing()
+    {
+        string code =
+            """
+            scene main
+            {
+                switch MySwitch (4)
+                {
+                    option MyOptionA (5)
+                    {
+                        output 6;
+                    }
+
+                    option MyOptionB (7)
+                    {
+                        output 8;
+                        output 9;
+                    }
+                }
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = parser.Parse();
+
+        Assert.AreEqual(1, story.TopLevelNodes.Length);
+
+        SceneSymbolDeclarationNode? mainScene = story.TopLevelNodes[0] as SceneSymbolDeclarationNode;
+        Assert.IsNotNull(mainScene);
+        Assert.AreEqual("main", mainScene.Name);
+
+        Assert.AreEqual(1, mainScene.Body.Statements.Length);
+
+        SwitchStatementNode? switchStatement = mainScene.Body.Statements[0] as SwitchStatementNode;
+        Assert.IsNotNull(switchStatement);
+
+        Assert.AreEqual("MySwitch", switchStatement.Name);
+        Assert.AreEqual(2, switchStatement.Options.Length);
+        Assert.AreEqual("MyOptionA", switchStatement.Options[0].Name);
+        Assert.AreEqual("MyOptionB", switchStatement.Options[1].Name);
+    }
+
+    [TestMethod]
     public void TestSettings()
     {
         string code =

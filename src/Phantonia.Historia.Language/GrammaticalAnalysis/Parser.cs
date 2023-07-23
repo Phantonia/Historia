@@ -299,6 +299,14 @@ public sealed class Parser
 
         index++;
 
+        string? name = null;
+
+        if (tokens[index].Kind == TokenKind.Identifier)
+        {
+            name = tokens[index].Text;
+            index++;
+        }
+
         _ = Expect(TokenKind.OpenParenthesis, ref index);
 
         ExpressionNode? expression = ParseExpression(ref index);
@@ -321,6 +329,7 @@ public sealed class Parser
 
         return new SwitchStatementNode
         {
+            Name = name,
             OutputExpression = expression,
             Options = (ImmutableArray<OptionNode>)optionNodes,
             Index = nodeIndex,
@@ -336,6 +345,14 @@ public sealed class Parser
             int nodeIndex = tokens[index].Index;
 
             _ = Expect(TokenKind.OptionKeyword, ref index);
+
+            string? name = null;
+
+            if (tokens[index].Kind == TokenKind.Identifier)
+            {
+                name = tokens[index].Text;
+                index++;
+            }
 
             _ = Expect(TokenKind.OpenParenthesis, ref index);
 
@@ -357,9 +374,10 @@ public sealed class Parser
 
             OptionNode optionNode = new()
             {
-                Index = nodeIndex,
-                Body = body,
+                Name = name,
                 Expression = expression,
+                Body = body,
+                Index = nodeIndex,
             };
 
             optionBuilder.Add(optionNode);

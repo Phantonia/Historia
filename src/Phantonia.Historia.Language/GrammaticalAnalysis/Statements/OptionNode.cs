@@ -7,7 +7,9 @@ public sealed record OptionNode : SyntaxNode
 {
     public OptionNode() { }
 
-    public required StatementBodyNode Body { get; init; }
+    public string? Name { get; init; }
 
     public required ExpressionNode Expression { get; init; }
+
+    public required StatementBodyNode Body { get; init; }
 }

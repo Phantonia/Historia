@@ -309,58 +309,76 @@ public sealed partial class Binder
                     return (table, boundStatement);
                 }
             case SwitchStatementNode switchStatement:
-                {
-                    (table, ExpressionNode outputExpression) = BindAndTypeExpression(switchStatement.OutputExpression, table);
-
-                    {
-                        if (outputExpression is TypedExpressionNode { Type: TypeSymbol sourceType })
-                        {
-                            if (!TypesAreCompatible(sourceType, settings.OutputType))
-                            {
-                                ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, settings.OutputType, "output", outputExpression.Index));
-
-                                return (table, statement);
-                            }
-                        }
-                    }
-
-                    List<OptionNode> boundOptions = switchStatement.Options.ToList();
-
-                    for (int i = 0; i < boundOptions.Count; i++)
-                    {
-                        (table, ExpressionNode optionExpression) = BindAndTypeExpression(boundOptions[i].Expression, table);
-
-                        if (optionExpression is TypedExpressionNode { Type: TypeSymbol sourceType })
-                        {
-                            if (!TypesAreCompatible(sourceType, settings.OptionType))
-                            {
-                                ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, settings.OutputType, "option", optionExpression.Index));
-
-                                return (table, statement);
-                            }
-                        }
-
-                        (table, StatementBodyNode optionBody) = BindStatementBody(boundOptions[i].Body, settings, table);
-
-                        boundOptions[i] = boundOptions[i] with
-                        {
-                            Expression = optionExpression,
-                            Body = optionBody,
-                        };
-                    }
-
-                    SwitchStatementNode boundStatement = switchStatement with
-                    {
-                        OutputExpression = outputExpression,
-                        Options = boundOptions.ToImmutableArray(),
-                    };
-
-                    return (table, boundStatement);
-                }
+                return BindSwitchStatement(switchStatement, settings, table);
             default:
                 Debug.Assert(false);
                 return default;
         }
+    }
+
+    private (SymbolTable, StatementNode) BindSwitchStatement(SwitchStatementNode switchStatement, Settings settings, SymbolTable table)
+    {
+        if (switchStatement.Name is not null)
+        {
+            if (switchStatement.Options.Any(o => o.Name is null))
+            {
+                ErrorFound?.Invoke(Errors.InconsistentNamedSwitch(switchStatement.Index));
+            }
+        }
+        else
+        {
+            if (switchStatement.Options.Any(o => o.Name is not null))
+            {
+                ErrorFound?.Invoke(Errors.InconsistentUnnamedSwitch(switchStatement.Index));
+            }
+        }
+
+        (table, ExpressionNode outputExpression) = BindAndTypeExpression(switchStatement.OutputExpression, table);
+
+        {
+            if (outputExpression is TypedExpressionNode { Type: TypeSymbol sourceType })
+            {
+                if (!TypesAreCompatible(sourceType, settings.OutputType))
+                {
+                    ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, settings.OutputType, "output", outputExpression.Index));
+
+                    return (table, switchStatement);
+                }
+            }
+        }
+
+        List<OptionNode> boundOptions = switchStatement.Options.ToList();
+
+        for (int i = 0; i < boundOptions.Count; i++)
+        {
+            (table, ExpressionNode optionExpression) = BindAndTypeExpression(boundOptions[i].Expression, table);
+
+            if (optionExpression is TypedExpressionNode { Type: TypeSymbol sourceType })
+            {
+                if (!TypesAreCompatible(sourceType, settings.OptionType))
+                {
+                    ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, settings.OutputType, "option", optionExpression.Index));
+
+                    return (table, switchStatement);
+                }
+            }
+
+            (table, StatementBodyNode optionBody) = BindStatementBody(boundOptions[i].Body, settings, table);
+
+            boundOptions[i] = boundOptions[i] with
+            {
+                Expression = optionExpression,
+                Body = optionBody,
+            };
+        }
+
+        SwitchStatementNode boundStatement = switchStatement with
+        {
+            OutputExpression = outputExpression,
+            Options = boundOptions.ToImmutableArray(),
+        };
+
+        return (table, boundStatement);
     }
 
     private (SymbolTable, ExpressionNode) BindAndTypeExpression(ExpressionNode expression, SymbolTable table)
