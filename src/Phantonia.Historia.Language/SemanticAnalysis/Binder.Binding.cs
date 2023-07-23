@@ -318,21 +318,6 @@ public sealed partial class Binder
 
     private (SymbolTable, StatementNode) BindSwitchStatement(SwitchStatementNode switchStatement, Settings settings, SymbolTable table)
     {
-        if (switchStatement.Name is not null)
-        {
-            if (switchStatement.Options.Any(o => o.Name is null))
-            {
-                ErrorFound?.Invoke(Errors.InconsistentNamedSwitch(switchStatement.Index));
-            }
-        }
-        else
-        {
-            if (switchStatement.Options.Any(o => o.Name is not null))
-            {
-                ErrorFound?.Invoke(Errors.InconsistentUnnamedSwitch(switchStatement.Index));
-            }
-        }
-
         (table, ExpressionNode outputExpression) = BindAndTypeExpression(switchStatement.OutputExpression, table);
 
         {
@@ -344,6 +329,46 @@ public sealed partial class Binder
 
                     return (table, switchStatement);
                 }
+            }
+        }
+
+        if (switchStatement.Name is not null)
+        {
+            if (switchStatement.Options.Any(o => o.Name is null))
+            {
+                ErrorFound?.Invoke(Errors.InconsistentNamedSwitch(switchStatement.Index));
+            }
+            else if (table.IsDeclared(switchStatement.Name))
+            {
+                ErrorFound?.Invoke(Errors.DuplicatedSymbolName(switchStatement.Name, switchStatement.Index));
+            }
+            else
+            {
+                HashSet<string> optionNames = new();
+
+                foreach (OptionNode option in switchStatement.Options)
+                {
+                    if (!optionNames.Add(option.Name!))
+                    {
+                        ErrorFound?.Invoke(Errors.DuplicatedOptionInNamedSwitch(option.Name!, option.Index));
+                    }
+                }
+
+                NamedSwitchSymbol symbol = new()
+                {
+                    Name = switchStatement.Name,
+                    OptionNames = optionNames.ToImmutableArray(),
+                    Index = switchStatement.Index,
+                };
+
+                table = table.Declare(symbol);
+            }
+        }
+        else
+        {
+            if (switchStatement.Options.Any(o => o.Name is not null))
+            {
+                ErrorFound?.Invoke(Errors.InconsistentUnnamedSwitch(switchStatement.Index));
             }
         }
 

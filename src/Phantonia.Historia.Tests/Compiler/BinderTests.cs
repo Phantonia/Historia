@@ -562,4 +562,47 @@ public sealed class BinderTests
         Error fourthError = Errors.WrongAmountOfArguments("Line", givenAmount: 1, expectedAmount: 2, code.IndexOf("Line(\"Hello\");"));
         Assert.AreEqual(fourthError, errors[3]);
     }
+
+    [TestMethod]
+    public void TestInconsistentNamedSwitches()
+    {
+        string code =
+            """
+            scene main
+            {
+                switch MySwitch (4)
+                {
+                    option (5)
+                    { }
+
+                    option MyOption (6)
+                    { }
+                }
+
+                switch (7)
+                {
+                    option MyOption (8)
+                    { }
+
+                    option (9)
+                    { }
+                }
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+
+        List<Error> errors = new();
+        binder.ErrorFound += errors.Add;
+
+        _ = binder.Bind();
+
+        Assert.AreEqual(2, errors.Count);
+
+        Error firstError = Errors.InconsistentNamedSwitch(code.IndexOf("switch MySwitch (4)"));
+        Error secondError = Errors.InconsistentUnnamedSwitch(code.IndexOf("switch (7)"));
+
+        Assert.AreEqual(firstError, errors[0]);
+        Assert.AreEqual(secondError, errors[1]);
+    }
 }

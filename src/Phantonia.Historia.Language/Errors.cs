@@ -171,6 +171,15 @@ public static class Errors
         };
     }
 
+    public static Error DuplicatedOptionInNamedSwitch(string optionName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Option name '{optionName}' appears more than once",
+            Index = index,
+        };
+    }
+
     public static string GenerateFullMessage(string text, Error error)
     {
         (string wholeLine, int column) = FindLine(text, error.Index);
