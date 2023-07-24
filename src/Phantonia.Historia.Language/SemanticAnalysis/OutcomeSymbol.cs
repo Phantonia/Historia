@@ -2,9 +2,11 @@
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 
-public sealed record NamedSwitchSymbol : Symbol
+public sealed record OutcomeSymbol : Symbol
 {
-    public NamedSwitchSymbol() { }
+    public OutcomeSymbol() { }
 
     public required ImmutableArray<string> OptionNames { get; init; }
+
+    public string? DefaultOption { get; init; }
 }

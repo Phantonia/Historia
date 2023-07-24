@@ -8,6 +8,8 @@ using Phantonia.Historia.Language.LexicalAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
+using System.Linq;
 
 namespace Phantonia.Historia.Tests.Compiler;
 
@@ -604,5 +606,182 @@ public sealed class BinderTests
 
         Assert.AreEqual(firstError, errors[0]);
         Assert.AreEqual(secondError, errors[1]);
+    }
+
+    [TestMethod]
+    public void TestBranchOn()
+    {
+        string code =
+            """
+            scene main
+            {
+                switch MySwitch (4)
+                {
+                    option A (5) { }
+                    option B (6) { }
+                    option C (7) { }
+                    option D (8) { }
+                    option E (9) { }
+                }
+
+                branchon MySwitch
+                {
+                    option C { }
+                    option A { }
+                    option B { }
+                    other { }
+                }
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode boundStory = binder.Bind().BoundStory!;
+
+        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)((BoundSymbolDeclarationNode)boundStory.TopLevelNodes[0]).Declaration;
+        BoundBranchOnStatementNode branchOnStatement = (BoundBranchOnStatementNode)mainScene.Body.Statements[1];
+
+        Assert.AreEqual("MySwitch", branchOnStatement.OutcomeName);
+        Assert.AreEqual("MySwitch", branchOnStatement.Outcome.Name);
+
+        Assert.IsTrue(new[] { "C", "A", "B" }.SequenceEqual(branchOnStatement.Options.OfType<NamedBranchOnOptionNode>().Select(o => o.OptionName)));
+    }
+
+    [TestMethod]
+    public void TestWrongBranchOns()
+    {
+        void TestForError(string code, Error expectedError)
+        {
+            Binder binder = PrepareBinder(code);
+
+            List<Error> errors = new();
+            binder.ErrorFound += errors.Add;
+
+            _ = binder.Bind();
+
+            Assert.AreEqual(1, errors.Count);
+            Assert.AreEqual(expectedError, errors[0]);
+
+            Debug.WriteLine(Errors.GenerateFullMessage(code, errors[0]));
+        }
+
+        string code0 =
+            """
+            scene main
+            {
+                branchon NonexistentOutcome
+                {
+                    option A { }
+                    option B { }
+                }
+            }
+            """;
+
+        TestForError(code0, Errors.SymbolDoesNotExistInScope("NonexistentOutcome", code0.IndexOf("branchon")));
+
+        string code1 =
+            """
+            record NotOutcome
+            {
+                Stuff: Int;
+            }
+
+            scene main
+            {
+                branchon NotOutcome
+                {
+                    option A { }
+                    option B { }
+                }
+            }
+            """;
+
+        TestForError(code1, Errors.SymbolIsNotOutcome("NotOutcome", code1.IndexOf("branchon")));
+
+        string code2 =
+            """
+            scene main
+            {
+                switch Outcome (0)
+                {
+                    option A (0) { }
+                    option B (0) { }
+                }
+
+                branchon Outcome
+                {
+                    option A { }
+                    option B { }
+                    option C { }
+                }
+            }
+            """;
+
+        TestForError(code2, Errors.OptionDoesNotExistInOutcome("Outcome", "C", code2.IndexOf("option C")));
+
+        string code3 =
+            """
+            scene main
+            {
+                switch Outcome (0)
+                {
+                    option A (0) { }
+                    option B (0) { }
+                }
+            
+                branchon Outcome
+                {
+                    option A { }
+                    option A{ }
+                    option B { }
+                }
+            }
+            """;
+
+        TestForError(code3, Errors.BranchOnDuplicateOption("Outcome", "A", code3.IndexOf("option A{")));
+
+        string code4 =
+            """
+            scene main
+            {
+                switch Outcome (0)
+                {
+                    option A (0) { }
+                    option B (0) { }
+                    option C (0) { }
+                    option D (0) { }
+                }
+            
+                branchon Outcome
+                {
+                    option A { }
+                    option B { }
+                }
+            }
+            """;
+
+        TestForError(code4, Errors.BranchOnIsNotExhaustive("Outcome", new[] { "C", "D" }, code4.IndexOf("branchon")));
+
+        string code5 =
+            """
+            scene main
+            {
+                switch Outcome (0)
+                {
+                    option A (0) { }
+                    option B (0) { }
+                }
+            
+                branchon Outcome
+                {
+                    option A { }
+                    option B { }
+                    other { }
+                }
+            }
+            """;
+
+        TestForError(code5, Errors.BranchOnIsExhaustiveAndHasOtherBranch("Outcome", code5.IndexOf("branchon")));
     }
 }

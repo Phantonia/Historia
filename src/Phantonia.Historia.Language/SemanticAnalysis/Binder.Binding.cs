@@ -3,6 +3,7 @@ using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Types;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -310,6 +311,8 @@ public sealed partial class Binder
                 }
             case SwitchStatementNode switchStatement:
                 return BindSwitchStatement(switchStatement, settings, table);
+            case BranchOnStatementNode branchOnStatement:
+                return BindBranchOnStatement(branchOnStatement, settings, table);
             default:
                 Debug.Assert(false);
                 return default;
@@ -354,7 +357,7 @@ public sealed partial class Binder
                     }
                 }
 
-                NamedSwitchSymbol symbol = new()
+                OutcomeSymbol symbol = new()
                 {
                     Name = switchStatement.Name,
                     OptionNames = optionNames.ToImmutableArray(),
@@ -401,6 +404,80 @@ public sealed partial class Binder
         {
             OutputExpression = outputExpression,
             Options = boundOptions.ToImmutableArray(),
+        };
+
+        return (table, boundStatement);
+    }
+
+    private (SymbolTable, StatementNode) BindBranchOnStatement(BranchOnStatementNode branchOnStatement, Settings settings, SymbolTable table)
+    {
+        if (!table.IsDeclared(branchOnStatement.OutcomeName))
+        {
+            ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(branchOnStatement.OutcomeName, branchOnStatement.Index));
+            return (table, branchOnStatement);
+        }
+
+        if (table[branchOnStatement.OutcomeName] is not OutcomeSymbol outcomeSymbol)
+        {
+            ErrorFound?.Invoke(Errors.SymbolIsNotOutcome(branchOnStatement.OutcomeName, branchOnStatement.Index));
+            return (table, branchOnStatement);
+        }
+
+        HashSet<string> uniqueOptionNames = new();
+        List<BranchOnOptionNode> boundOptions = new();
+
+        bool errorWithOptions = false;
+
+        foreach (BranchOnOptionNode option in branchOnStatement.Options)
+        {
+            bool error = false;
+
+            if (option is NamedBranchOnOptionNode { OptionName: string optionName })
+            {
+                if (!outcomeSymbol.OptionNames.Contains(optionName))
+                {
+                    ErrorFound?.Invoke(Errors.OptionDoesNotExistInOutcome(outcomeSymbol.Name, optionName, option.Index));
+                    error = true;
+                    errorWithOptions = true;
+                }
+                else if (!uniqueOptionNames.Add(optionName))
+                {
+                    ErrorFound?.Invoke(Errors.BranchOnDuplicateOption(outcomeSymbol.Name, optionName, option.Index));
+                    error = true;
+                    errorWithOptions = true;
+                }
+            }
+
+            (table, StatementBodyNode boundBody) = BindStatementBody(option.Body, settings, table);
+
+            if (!error)
+            {
+                boundOptions.Add(option with { Body = boundBody });
+            }
+        }
+
+        if (!errorWithOptions)
+        {
+            if (branchOnStatement.Options.Length == 0 || (branchOnStatement.Options.Length < outcomeSymbol.OptionNames.Length && branchOnStatement.Options[^1] is not OtherBranchOnOptionNode))
+            {
+                IEnumerable<string> missingOptionNames = outcomeSymbol.OptionNames.Except(branchOnStatement.Options.OfType<NamedBranchOnOptionNode>().Select(o => o.OptionName));
+                ErrorFound?.Invoke(Errors.BranchOnIsNotExhaustive(outcomeSymbol.Name, missingOptionNames, branchOnStatement.Index));
+            }
+            else if (branchOnStatement.Options.Length == uniqueOptionNames.Count + 1 && branchOnStatement.Options.Length == outcomeSymbol.OptionNames.Length + 1)
+            {
+                // this should only be able to happen if we cover every option and also have an other branch
+                Debug.Assert(branchOnStatement.Options[^1] is OtherBranchOnOptionNode);
+
+                ErrorFound?.Invoke(Errors.BranchOnIsExhaustiveAndHasOtherBranch(outcomeSymbol.Name, branchOnStatement.Index));
+            }
+        }
+
+        BoundBranchOnStatementNode boundStatement = new()
+        {
+            Outcome = outcomeSymbol,
+            OutcomeName = outcomeSymbol.Name,
+            Options = boundOptions.ToImmutableArray(),
+            Index = branchOnStatement.Index,
         };
 
         return (table, boundStatement);

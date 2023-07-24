@@ -2,7 +2,7 @@
 
 namespace Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 
-public sealed record BranchOnStatementNode : StatementNode
+public record BranchOnStatementNode : StatementNode
 {
     public BranchOnStatementNode() { }
 
