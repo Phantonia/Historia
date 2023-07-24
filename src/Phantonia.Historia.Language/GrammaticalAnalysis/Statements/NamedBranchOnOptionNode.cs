@@ -1,4 +1,6 @@
-﻿namespace Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
+﻿using System.Collections.Generic;
+
+namespace Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 
 public sealed record NamedBranchOnOptionNode : BranchOnOptionNode
 {

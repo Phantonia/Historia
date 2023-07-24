@@ -3,7 +3,6 @@ using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Types;
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -400,11 +399,29 @@ public sealed partial class Binder
             };
         }
 
-        SwitchStatementNode boundStatement = switchStatement with
+        SwitchStatementNode boundStatement;
+
+        if (switchStatement.Name is not null && table.IsDeclared(switchStatement.Name) && table[switchStatement.Name] is OutcomeSymbol)
         {
-            OutputExpression = outputExpression,
-            Options = boundOptions.ToImmutableArray(),
-        };
+            OutcomeSymbol outcome = (OutcomeSymbol)table[switchStatement.Name];
+
+            boundStatement = new BoundNamedSwitchStatementNode
+            {
+                Name = switchStatement.Name,
+                OutputExpression = outputExpression,
+                Options = boundOptions.ToImmutableArray(),
+                Outcome = outcome,
+                Index = switchStatement.Index,
+            };
+        }
+        else
+        {
+            boundStatement = switchStatement with
+            {
+                OutputExpression = outputExpression,
+                Options = boundOptions.ToImmutableArray(),
+            };
+        }
 
         return (table, boundStatement);
     }

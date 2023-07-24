@@ -65,9 +65,13 @@ public sealed class Emitter
             }
                       
             private int state = {{flowGraph.StartVertex}};
-
-            public bool FinishedStory { get; private set; } = false;
             """);
+
+        GenerateOutcomeFields(writer);
+
+        writer.WriteLine();
+
+        writer.WriteLine("public bool FinishedStory { get; private set; } = false;");
 
         writer.WriteLine();
 
@@ -93,7 +97,7 @@ public sealed class Emitter
                     return false;
                 }
 
-                state = GetNextState(0);
+                StateTransition(0);
                 Output = GetOutput();
                 Options = GetOptions();
             
@@ -112,7 +116,7 @@ public sealed class Emitter
                     return false;
                 }
 
-                state = GetNextState(option);
+                StateTransition(option);
                 Output = GetOutput();
                 Options = GetOptions();
 
@@ -126,7 +130,7 @@ public sealed class Emitter
 
             """);
 
-        GenerateGetNextStateMethod(writer);
+        GenerateStateTransitionMethod(writer);
 
         writer.WriteLine();
 
@@ -146,58 +150,158 @@ public sealed class Emitter
         return ((StringWriter)writer.InnerWriter).ToString();
     }
 
-    private void GenerateGetNextStateMethod(IndentedTextWriter writer)
+    private void GenerateOutcomeFields(IndentedTextWriter writer)
+    {
+        foreach (SyntaxNode node in boundStory.FlattenHierarchie())
+        {
+            if (node is BoundNamedSwitchStatementNode { Outcome: OutcomeSymbol outcome })
+            {
+                writer.WriteLine($"private int {GetOutcomeFieldName(outcome)};");
+            }
+        }
+    }
+
+    private void GenerateStateTransitionMethod(IndentedTextWriter writer)
     {
         writer.WriteManyLines(
             """
-            private int GetNextState(int option)
+            private void StateTransition(int option)
             {
-                switch (state, option)
+                while (true)
                 {
+                    switch (state, option)
+                    {
             """);
 
-        writer.Indent += 2;
+        writer.Indent += 3;
 
         foreach ((int index, ImmutableList<int> edges) in flowGraph.OutgoingEdges)
         {
-            if (edges.Count == 1)
+            switch (flowGraph.Vertices[index].AssociatedStatement)
             {
-                writer.WriteLine($"case ({index}, _):");
+                case OutputStatementNode:
+                    {
+                        Debug.Assert(flowGraph.OutgoingEdges[index].Count == 1);
 
-                writer.Indent++;
-                writer.WriteLine($"return {edges[0]};");
-                writer.Indent--;
-            }
-            else if (flowGraph.Vertices[index].AssociatedStatement is SwitchStatementNode switchStatement)
-            {
-                Debug.Assert(switchStatement.Options.Length == edges.Count);
+                        writer.WriteLine($"case ({index}, _):");
 
-                for (int i = 0; i < switchStatement.Options.Length; i++)
-                {
-                    // we know that for each option its index equals that of the associated next vertex
-                    // we also know that the order that the options appear in the switch statement node is exactly how each one will be indexed
-                    // plus we know that the outgoing edges are in exactly the right order
+                        writer.Indent++;
+                        writer.WriteLine($"state = {edges[0]};");
 
-                    // here we assert that the index of the vertex equals the index of the first statement of the option
-                    // however we ignore the case where the option's body is empty - there it would be impossible to get the next statement
-                    Debug.Assert(switchStatement.Options[i].Body.Statements.Length == 0 || switchStatement.Options[i].Body.Statements[0].Index == edges[i]);
+                        if (edges[0] == FlowGraph.EmptyVertex || flowGraph.Vertices[edges[0]].IsVisible)
+                        {
+                            writer.WriteLine("return;");
+                        }
+                        else
+                        {
+                            writer.WriteLine("continue;");
+                        }
 
-                    writer.WriteLine($"case ({index}, {i}):");
+                        writer.Indent--;
+                    }
+                    break;
+                case SwitchStatementNode switchStatement:
+                    {
+                        Debug.Assert(switchStatement.Options.Length == edges.Count);
 
-                    writer.Indent++;
-                    writer.WriteLine($"return {edges[i]};");
-                    writer.Indent--;
-                }
+                        for (int i = 0; i < switchStatement.Options.Length; i++)
+                        {
+                            // we know that for each option its index equals that of the associated next vertex
+                            // we also know that the order that the options appear in the switch statement node is exactly how each one will be indexed
+                            // plus we know that the outgoing edges are in exactly the right order
+
+                            // here we assert that the index of the vertex equals the index of the first statement of the option
+                            // however we ignore the case where the option's body is empty - there it would be impossible to get the next statement
+                            Debug.Assert(switchStatement.Options[i].Body.Statements.Length == 0 || switchStatement.Options[i].Body.Statements[0].Index == edges[i]);
+
+                            writer.WriteLine($"case ({index}, {i}):");
+
+                            writer.Indent++;
+                            writer.WriteLine($"state = {edges[i]};");
+
+                            if (switchStatement is BoundNamedSwitchStatementNode { Outcome: OutcomeSymbol outcome })
+                            {
+                                writer.WriteLine($"{GetOutcomeFieldName(outcome)} = {outcome.OptionNames.IndexOf(switchStatement.Options[i].Name!)};");
+                            }
+
+                            if (edges[i] == FlowGraph.EmptyVertex || flowGraph.Vertices[edges[i]].IsVisible)
+                            {
+                                writer.WriteLine("return;");
+                            }
+                            else
+                            {
+                                writer.WriteLine("continue;");
+                            }
+
+                            writer.Indent--;
+                        }
+                    }
+                    break;
+                case BoundBranchOnStatementNode branchOnStatement:
+                    {
+                        writer.WriteLine($"case ({index}, _):");
+
+                        writer.Indent++;
+                        writer.WriteLine($"switch ({GetOutcomeFieldName(branchOnStatement.Outcome)})");
+                        writer.WriteLine('{');
+                        writer.Indent++;
+
+                        for (int i = 0; i < branchOnStatement.Options.Length; i++)
+                        {
+                            BranchOnOptionNode option = branchOnStatement.Options[i];
+
+                            if (option is NamedBranchOnOptionNode { OptionName: string optionName })
+                            {
+                                writer.WriteLine($"case {branchOnStatement.Outcome.OptionNames.IndexOf(optionName)}:");
+                                writer.Indent++;
+                                writer.WriteLine($"state = {edges[i]};");
+
+                                if (edges[i] == FlowGraph.EmptyVertex || flowGraph.Vertices[edges[i]].IsVisible)
+                                {
+                                    writer.WriteLine("return;");
+                                }
+                                else
+                                {
+                                    writer.WriteLine("continue;");
+                                }
+
+                                writer.Indent--;
+                            }
+                            else
+                            {
+                                writer.WriteLine("default:");
+                                writer.Indent++;
+                                writer.WriteLine($"state = {flowGraph.OutgoingEdges[branchOnStatement.Index][i]};");
+
+                                if (edges[i] == FlowGraph.EmptyVertex || flowGraph.Vertices[edges[i]].IsVisible)
+                                {
+                                    writer.WriteLine("return;");
+                                }
+                                else
+                                {
+                                    writer.WriteLine("continue;");
+                                }
+                            }
+                        }
+
+                        writer.Indent--;
+                        writer.WriteLine('}');
+                        writer.WriteLine();
+                        writer.WriteLine("throw new System.InvalidOperationException(\"Invalid outcome\");");
+                        writer.Indent--;
+                    }
+                    break;
             }
         }
 
-        writer.Indent -= 2;
+        writer.Indent -= 3;
 
         writer.WriteManyLines(
             """
-                }
+                    }
 
-                throw new System.InvalidOperationException("Invalid state");
+                    throw new System.InvalidOperationException("Invalid state");
+                }
             }
             """);
 
@@ -418,13 +522,15 @@ public sealed class Emitter
                 writer.Write("int");
                 return;
             case BuiltinTypeSymbol { Type: BuiltinType.String }:
-                writer.Write("string");
+                writer.Write("string?");
                 return;
             default:
                 writer.Write("@" + type.Name);
                 return;
         }
     }
+
+    private static string GetOutcomeFieldName(OutcomeSymbol outcome) => outcome.Index >= 0 ? $"outcome{outcome.Index}" : $"outcome_{-outcome.Index}";
 }
 
 #if EXAMPLE_STORY
@@ -464,7 +570,7 @@ public sealed class Story
             return false;
         }
 
-        state = GetNextState(0);
+        state = StateTransition(0);
 
         return true;
     }
@@ -476,12 +582,12 @@ public sealed class Story
             return false;
         }
 
-        state = GetNextState(option);
+        state = StateTransition(option);
 
         return true;
     }
 
-    private int GetNextState(int option)
+    private int StateTransition(int option)
     {
         while (true)
         {

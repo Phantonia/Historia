@@ -146,4 +146,57 @@ public sealed class FlowAnalyzerTests
         Assert.AreEqual(1, flowGraph.OutgoingEdges[output10Vertex].Count);
         Assert.AreEqual(FlowGraph.EmptyVertex, flowGraph.OutgoingEdges[output10Vertex][0]);
     }
+
+    [TestMethod]
+    public void TestBranchOnFlow()
+    {
+        string code =
+            """
+            scene main
+            {
+                switch MySwitch (0)
+                {
+                    option A (3) { output (3); }
+                    option B (4) { output (4); }
+                    option C (5) { output (5); }
+                }
+
+                output (0);
+
+                branchon MySwitch
+                {
+                    option A { output (9); }
+                    option B { output (16); }
+                    option C { output (25); }
+                }
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        Binder binder = new(parser.Parse());
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        FlowAnalyzer flowAnalyzer = new(binder.Bind().BoundStory!);
+
+        FlowGraph graph = flowAnalyzer.GenerateMainFlowGraph();
+
+        int output0Index = code.IndexOf("output (0)");
+
+        Assert.IsTrue(graph.OutgoingEdges.ContainsKey(output0Index));
+        Assert.AreEqual(1, graph.OutgoingEdges[output0Index].Count);
+
+        int branchOnIndex = code.IndexOf("branchon");
+
+        Assert.AreEqual(branchOnIndex, graph.OutgoingEdges[output0Index][0]);
+
+        Assert.IsTrue(graph.OutgoingEdges.ContainsKey(branchOnIndex));
+        Assert.AreEqual(3, graph.OutgoingEdges[branchOnIndex].Count);
+
+        Assert.AreEqual(code.IndexOf("output (9)"), graph.OutgoingEdges[branchOnIndex][0]);
+        Assert.AreEqual(code.IndexOf("output (16)"), graph.OutgoingEdges[branchOnIndex][1]);
+        Assert.AreEqual(code.IndexOf("output (25)"), graph.OutgoingEdges[branchOnIndex][2]);
+    }
 }
