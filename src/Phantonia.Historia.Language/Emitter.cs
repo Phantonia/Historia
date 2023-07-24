@@ -285,7 +285,7 @@ public sealed class Emitter
                 writer.Indent++;
                 writer.Write("return System.Collections.Immutable.ImmutableArray.ToImmutableArray(new[] { ");
 
-                foreach (OptionNode option in switchStatement.Options)
+                foreach (SwitchOptionNode option in switchStatement.Options)
                 {
                     GenerateExpression(writer, option.Expression);
                     writer.Write(", ");

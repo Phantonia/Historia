@@ -180,6 +180,15 @@ public static class Errors
         };
     }
 
+    public static Error BranchOnOnlyOneOtherLast(int index)
+    {
+        return new Error
+        {
+            ErrorMessage = "A branchon statement may only have a single other clause and it has to be after every named option",
+            Index = index,
+        };
+    }
+
     public static string GenerateFullMessage(string text, Error error)
     {
         (string wholeLine, int column) = FindLine(text, error.Index);

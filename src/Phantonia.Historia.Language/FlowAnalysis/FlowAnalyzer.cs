@@ -67,7 +67,7 @@ public sealed class FlowAnalyzer
     {
         FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = switchStatement.Index, AssociatedStatement = switchStatement });
 
-        foreach (OptionNode option in switchStatement.Options)
+        foreach (SwitchOptionNode option in switchStatement.Options)
         {
             FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body);
 

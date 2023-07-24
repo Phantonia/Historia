@@ -168,6 +168,8 @@ public sealed class Lexer
             "output" => TokenKind.OutputKeyword,
             "switch" => TokenKind.SwitchKeyword,
             "option" => TokenKind.OptionKeyword,
+            "branchon" => TokenKind.BranchOnKeyword,
+            "other" => TokenKind.OtherKeyword,
             _ => TokenKind.Identifier,
         };
 

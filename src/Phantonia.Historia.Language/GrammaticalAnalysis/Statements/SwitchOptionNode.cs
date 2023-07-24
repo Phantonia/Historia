@@ -3,9 +3,9 @@ using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 
 namespace Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 
-public sealed record OptionNode : SyntaxNode
+public sealed record SwitchOptionNode : SyntaxNode
 {
-    public OptionNode() { }
+    public SwitchOptionNode() { }
 
     public string? Name { get; init; }
 

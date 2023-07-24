@@ -346,7 +346,7 @@ public sealed partial class Binder
             {
                 HashSet<string> optionNames = new();
 
-                foreach (OptionNode option in switchStatement.Options)
+                foreach (SwitchOptionNode option in switchStatement.Options)
                 {
                     if (!optionNames.Add(option.Name!))
                     {
@@ -372,7 +372,7 @@ public sealed partial class Binder
             }
         }
 
-        List<OptionNode> boundOptions = switchStatement.Options.ToList();
+        List<SwitchOptionNode> boundOptions = switchStatement.Options.ToList();
 
         for (int i = 0; i < boundOptions.Count; i++)
         {

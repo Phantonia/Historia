@@ -11,5 +11,5 @@ public sealed record SwitchStatementNode : StatementNode, IOutputStatementNode
 
     public required ExpressionNode OutputExpression { get; init; }
 
-    public required ImmutableArray<OptionNode> Options { get; init; }
+    public required ImmutableArray<SwitchOptionNode> Options { get; init; }
 }
