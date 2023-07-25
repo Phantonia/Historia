@@ -57,17 +57,47 @@ public sealed class FlowAnalyzer
     {
         return statement switch
         {
-            OutputStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = statement.Index, AssociatedStatement = statement }),
+            OutputStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex
+            {
+                Index = statement.Index,
+                AssociatedStatement = statement,
+                IsVisible = true,
+            }),
             SwitchStatementNode switchStatement => GenerateSwitchFlowGraph(switchStatement),
+            BranchOnStatementNode branchOnStatement => GenerateBranchOnFlowGraph(branchOnStatement),
             _ => throw new NotImplementedException($"Unknown statement type {statement.GetType().FullName}"),
         };
     }
 
     private FlowGraph GenerateSwitchFlowGraph(SwitchStatementNode switchStatement)
     {
-        FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = switchStatement.Index, AssociatedStatement = switchStatement });
+        FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex
+        {
+            Index = switchStatement.Index,
+            AssociatedStatement = switchStatement,
+            IsVisible = true,
+        });
 
-        foreach (OptionNode option in switchStatement.Options)
+        foreach (SwitchOptionNode option in switchStatement.Options)
+        {
+            FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body);
+
+            flowGraph = flowGraph.AppendToVertex(flowGraph.StartVertex, nestedFlowGraph);
+        }
+
+        return flowGraph;
+    }
+
+    private FlowGraph GenerateBranchOnFlowGraph(BranchOnStatementNode branchOnStatement)
+    {
+        FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex
+        {
+            Index = branchOnStatement.Index,
+            AssociatedStatement = branchOnStatement,
+            IsVisible = false,
+        });
+
+        foreach (BranchOnOptionNode option in branchOnStatement.Options)
         {
             FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body);
 

@@ -161,7 +161,7 @@ public sealed class ParserTests
                                 },
                                 Options:
                                     [
-                                        OptionNode
+                                        SwitchOptionNode
                                     {
                                         Expression: IntegerLiteralExpressionNode
                                         {
@@ -181,7 +181,7 @@ public sealed class ParserTests
                                                 ]
                                         }
                                     },
-                                        OptionNode
+                                        SwitchOptionNode
                                     {
                                         Expression: IntegerLiteralExpressionNode
                                         {
@@ -534,5 +534,91 @@ public sealed class ParserTests
         _ = parser.Parse();
 
         Assert.IsTrue(errors.Count > 0);
+    }
+
+    [TestMethod]
+    public void TestBranchOnStatement()
+    {
+        string code =
+            """
+            scene main
+            {
+                branchon MyOutcome
+                {
+                    option A
+                    {
+                        output 2;
+                    }
+
+                    option B
+                    {
+                        output 3;
+                    }
+
+                    other
+                    {
+                        output 4;
+                    }
+                }
+            }
+            """;
+
+        Parser parser = new(new Lexer(code).Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = parser.Parse();
+
+        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[0];
+
+        BranchOnStatementNode? branchOnStatement = mainScene.Body.Statements[0] as BranchOnStatementNode;
+        Assert.IsNotNull(branchOnStatement);
+
+        Assert.AreEqual("MyOutcome", branchOnStatement.OutcomeName);
+        Assert.AreEqual(3, branchOnStatement.Options.Length);
+
+        Assert.IsTrue(branchOnStatement.Options[0] is NamedBranchOnOptionNode { OptionName: "A" });
+        Assert.IsTrue(branchOnStatement.Options[1] is NamedBranchOnOptionNode { OptionName: "B" });
+        Assert.IsTrue(branchOnStatement.Options[2] is OtherBranchOnOptionNode { Body.Statements.Length: 1 });
+    }
+
+    [TestMethod]
+    public void TestWrongOtherInBranchon()
+    {
+        string code =
+            """
+            scene main
+            {
+                branchon MyOutcome
+                {
+                    option A
+                    {
+                        output 2;
+                    }
+
+                    option B
+                    {
+                        output 3;
+                    }
+
+                    other
+                    {
+                        output 4;
+                    }
+
+                    option C { }
+                }
+            }
+            """;
+        
+        Parser parser = new(new Lexer(code).Lex());
+
+        List<Error> errors = new();
+        parser.ErrorFound += errors.Add;
+
+        _ = parser.Parse();
+
+        Error expectedError = Errors.BranchOnOnlyOneOtherLast(code.IndexOf("option C"));
+
+        Assert.IsTrue(errors.Contains(expectedError));
     }
 }

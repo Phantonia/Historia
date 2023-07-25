@@ -310,6 +310,8 @@ public sealed partial class Binder
                 }
             case SwitchStatementNode switchStatement:
                 return BindSwitchStatement(switchStatement, settings, table);
+            case BranchOnStatementNode branchOnStatement:
+                return BindBranchOnStatement(branchOnStatement, settings, table);
             default:
                 Debug.Assert(false);
                 return default;
@@ -318,21 +320,6 @@ public sealed partial class Binder
 
     private (SymbolTable, StatementNode) BindSwitchStatement(SwitchStatementNode switchStatement, Settings settings, SymbolTable table)
     {
-        if (switchStatement.Name is not null)
-        {
-            if (switchStatement.Options.Any(o => o.Name is null))
-            {
-                ErrorFound?.Invoke(Errors.InconsistentNamedSwitch(switchStatement.Index));
-            }
-        }
-        else
-        {
-            if (switchStatement.Options.Any(o => o.Name is not null))
-            {
-                ErrorFound?.Invoke(Errors.InconsistentUnnamedSwitch(switchStatement.Index));
-            }
-        }
-
         (table, ExpressionNode outputExpression) = BindAndTypeExpression(switchStatement.OutputExpression, table);
 
         {
@@ -347,7 +334,47 @@ public sealed partial class Binder
             }
         }
 
-        List<OptionNode> boundOptions = switchStatement.Options.ToList();
+        if (switchStatement.Name is not null)
+        {
+            if (switchStatement.Options.Any(o => o.Name is null))
+            {
+                ErrorFound?.Invoke(Errors.InconsistentNamedSwitch(switchStatement.Index));
+            }
+            else if (table.IsDeclared(switchStatement.Name))
+            {
+                ErrorFound?.Invoke(Errors.DuplicatedSymbolName(switchStatement.Name, switchStatement.Index));
+            }
+            else
+            {
+                HashSet<string> optionNames = new();
+
+                foreach (SwitchOptionNode option in switchStatement.Options)
+                {
+                    if (!optionNames.Add(option.Name!))
+                    {
+                        ErrorFound?.Invoke(Errors.DuplicatedOptionInNamedSwitch(option.Name!, option.Index));
+                    }
+                }
+
+                OutcomeSymbol symbol = new()
+                {
+                    Name = switchStatement.Name,
+                    OptionNames = optionNames.ToImmutableArray(),
+                    Index = switchStatement.Index,
+                };
+
+                table = table.Declare(symbol);
+            }
+        }
+        else
+        {
+            if (switchStatement.Options.Any(o => o.Name is not null))
+            {
+                ErrorFound?.Invoke(Errors.InconsistentUnnamedSwitch(switchStatement.Index));
+            }
+        }
+
+        List<SwitchOptionNode> boundOptions = switchStatement.Options.ToList();
 
         for (int i = 0; i < boundOptions.Count; i++)
         {
@@ -372,10 +399,102 @@ public sealed partial class Binder
             };
         }
 
-        SwitchStatementNode boundStatement = switchStatement with
+        SwitchStatementNode boundStatement;
+
+        if (switchStatement.Name is not null && table.IsDeclared(switchStatement.Name) && table[switchStatement.Name] is OutcomeSymbol)
         {
-            OutputExpression = outputExpression,
+            OutcomeSymbol outcome = (OutcomeSymbol)table[switchStatement.Name];
+
+            boundStatement = new BoundNamedSwitchStatementNode
+            {
+                Name = switchStatement.Name,
+                OutputExpression = outputExpression,
+                Options = boundOptions.ToImmutableArray(),
+                Outcome = outcome,
+                Index = switchStatement.Index,
+            };
+        }
+        else
+        {
+            boundStatement = switchStatement with
+            {
+                OutputExpression = outputExpression,
+                Options = boundOptions.ToImmutableArray(),
+            };
+        }
+
+        return (table, boundStatement);
+    }
+
+    private (SymbolTable, StatementNode) BindBranchOnStatement(BranchOnStatementNode branchOnStatement, Settings settings, SymbolTable table)
+    {
+        if (!table.IsDeclared(branchOnStatement.OutcomeName))
+        {
+            ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(branchOnStatement.OutcomeName, branchOnStatement.Index));
+            return (table, branchOnStatement);
+        }
+
+        if (table[branchOnStatement.OutcomeName] is not OutcomeSymbol outcomeSymbol)
+        {
+            ErrorFound?.Invoke(Errors.SymbolIsNotOutcome(branchOnStatement.OutcomeName, branchOnStatement.Index));
+            return (table, branchOnStatement);
+        }
+
+        HashSet<string> uniqueOptionNames = new();
+        List<BranchOnOptionNode> boundOptions = new();
+
+        bool errorWithOptions = false;
+
+        foreach (BranchOnOptionNode option in branchOnStatement.Options)
+        {
+            bool error = false;
+
+            if (option is NamedBranchOnOptionNode { OptionName: string optionName })
+            {
+                if (!outcomeSymbol.OptionNames.Contains(optionName))
+                {
+                    ErrorFound?.Invoke(Errors.OptionDoesNotExistInOutcome(outcomeSymbol.Name, optionName, option.Index));
+                    error = true;
+                    errorWithOptions = true;
+                }
+                else if (!uniqueOptionNames.Add(optionName))
+                {
+                    ErrorFound?.Invoke(Errors.BranchOnDuplicateOption(outcomeSymbol.Name, optionName, option.Index));
+                    error = true;
+                    errorWithOptions = true;
+                }
+            }
+
+            (table, StatementBodyNode boundBody) = BindStatementBody(option.Body, settings, table);
+
+            if (!error)
+            {
+                boundOptions.Add(option with { Body = boundBody });
+            }
+        }
+
+        if (!errorWithOptions)
+        {
+            if (branchOnStatement.Options.Length == 0 || (branchOnStatement.Options.Length < outcomeSymbol.OptionNames.Length && branchOnStatement.Options[^1] is not OtherBranchOnOptionNode))
+            {
+                IEnumerable<string> missingOptionNames = outcomeSymbol.OptionNames.Except(branchOnStatement.Options.OfType<NamedBranchOnOptionNode>().Select(o => o.OptionName));
+                ErrorFound?.Invoke(Errors.BranchOnIsNotExhaustive(outcomeSymbol.Name, missingOptionNames, branchOnStatement.Index));
+            }
+            else if (branchOnStatement.Options.Length == uniqueOptionNames.Count + 1 && branchOnStatement.Options.Length == outcomeSymbol.OptionNames.Length + 1)
+            {
+                // this should only be able to happen if we cover every option and also have an other branch
+                Debug.Assert(branchOnStatement.Options[^1] is OtherBranchOnOptionNode);
+
+                ErrorFound?.Invoke(Errors.BranchOnIsExhaustiveAndHasOtherBranch(outcomeSymbol.Name, branchOnStatement.Index));
+            }
+        }
+
+        BoundBranchOnStatementNode boundStatement = new()
+        {
+            Outcome = outcomeSymbol,
+            OutcomeName = outcomeSymbol.Name,
             Options = boundOptions.ToImmutableArray(),
+            Index = branchOnStatement.Index,
         };
 
         return (table, boundStatement);

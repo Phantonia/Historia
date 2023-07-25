@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Phantonia.Historia.Language;
 using System;
+using System.Diagnostics;
 
 namespace Phantonia.Historia.Tests.Compiler;
 

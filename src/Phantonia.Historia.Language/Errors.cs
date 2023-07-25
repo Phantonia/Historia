@@ -126,6 +126,58 @@ public static class Errors
         };
     }
 
+    public static Error SymbolIsNotOutcome(string symbolName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Symbol named '{symbolName}' is not an outcome or a named switch",
+            Index = index
+        };
+    }
+
+    public static Error OptionDoesNotExistInOutcome(string outcomeName, string optionName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"The outcome or named switch '{outcomeName}' does not have an option named '{optionName}'",
+            Index = index,
+        };
+    }
+
+    public static Error BranchOnDuplicateOption(string outcomeName, string optionName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"The branchon statement for outcome or named switch '{outcomeName}' " +
+                           $"has more than one branch for the option named '{optionName}'",
+            Index = index,
+        };
+    }
+
+    public static Error BranchOnIsNotExhaustive(string outcomeName, IEnumerable<string> missingOptionNames, int index)
+    {
+        missingOptionNames = missingOptionNames.Select(n => $"'{n}'");
+
+        return new Error
+        {
+            ErrorMessage = $"The branchon statement does not cover all options of the outcome or named switch '{outcomeName}' " +
+                           $"(it is missing the options {string.Join(", ", missingOptionNames)}). " +
+                           $"Add an empty other branch if this is intentional, else this is probably an error",
+            Index = index,
+        };
+    }
+
+    public static Error BranchOnIsExhaustiveAndHasOtherBranch(string outcomeName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"The branchon statement covers every option of the outcome or named switch '{outcomeName}' " +
+                           $"but still has an other branch. This branch will never run. You can safely remove it or comment it out " +
+                           $"as you will get an error in case the outcome gets more options in the future anyway",
+            Index = index,
+        };
+    }
+
     public static Error NoMainScene()
     {
         return new Error
@@ -167,6 +219,24 @@ public static class Errors
         return new Error
         {
             ErrorMessage = "No option of an unnamed switch may be named",
+            Index = index,
+        };
+    }
+
+    public static Error DuplicatedOptionInNamedSwitch(string optionName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Option name '{optionName}' appears more than once",
+            Index = index,
+        };
+    }
+
+    public static Error BranchOnOnlyOneOtherLast(int index)
+    {
+        return new Error
+        {
+            ErrorMessage = "A branchon statement may only have a single other clause and it has to be after every named option",
             Index = index,
         };
     }

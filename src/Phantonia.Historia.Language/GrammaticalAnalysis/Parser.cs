@@ -39,6 +39,7 @@ public sealed class Parser
         return new StoryNode
         {
             TopLevelNodes = symbolBuilder.ToImmutable(),
+            Index = 0,
         };
     }
 
@@ -256,6 +257,8 @@ public sealed class Parser
                 return ParseOutputStatement(ref index);
             case { Kind: TokenKind.SwitchKeyword }:
                 return ParseSwitchStatement(ref index);
+            case { Kind: TokenKind.BranchOnKeyword }:
+                return ParseBranchOnStatement(ref index);
             case { Kind: TokenKind.EndOfFile }:
                 ErrorFound?.Invoke(Errors.UnexpectedEndOfFile(tokens[index]));
                 return null;
@@ -319,7 +322,7 @@ public sealed class Parser
 
         _ = Expect(TokenKind.OpenBrace, ref index);
 
-        ImmutableArray<OptionNode>? optionNodes = ParseOptions(ref index);
+        ImmutableArray<SwitchOptionNode>? optionNodes = ParseSwitchOptions(ref index);
         if (optionNodes is null)
         {
             return null;
@@ -331,14 +334,14 @@ public sealed class Parser
         {
             Name = name,
             OutputExpression = expression,
-            Options = (ImmutableArray<OptionNode>)optionNodes,
+            Options = (ImmutableArray<SwitchOptionNode>)optionNodes,
             Index = nodeIndex,
         };
     }
 
-    private ImmutableArray<OptionNode>? ParseOptions(ref int index)
+    private ImmutableArray<SwitchOptionNode>? ParseSwitchOptions(ref int index)
     {
-        ImmutableArray<OptionNode>.Builder optionBuilder = ImmutableArray.CreateBuilder<OptionNode>();
+        ImmutableArray<SwitchOptionNode>.Builder optionBuilder = ImmutableArray.CreateBuilder<SwitchOptionNode>();
 
         while (tokens[index] is { Kind: TokenKind.OptionKeyword })
         {
@@ -372,7 +375,7 @@ public sealed class Parser
                 return null;
             }
 
-            OptionNode optionNode = new()
+            SwitchOptionNode optionNode = new()
             {
                 Name = name,
                 Expression = expression,
@@ -385,6 +388,93 @@ public sealed class Parser
 
         return optionBuilder.ToImmutable();
     }
+
+    private BranchOnStatementNode? ParseBranchOnStatement(ref int index)
+    {
+        Debug.Assert(tokens[index].Kind == TokenKind.BranchOnKeyword);
+
+        int nodeIndex = tokens[index].Index;
+        index++;
+
+        Token outcomeIdentifier = Expect(TokenKind.Identifier, ref index);
+
+        _ = Expect(TokenKind.OpenBrace, ref index);
+
+        ImmutableArray<BranchOnOptionNode>? options = ParseBranchOnOptions(ref index);
+        if (options is null)
+        {
+            return null;
+        }
+
+        _ = Expect(TokenKind.ClosedBrace, ref index);
+
+        return new BranchOnStatementNode
+        {
+            OutcomeName = outcomeIdentifier.Text,
+            Options = (ImmutableArray<BranchOnOptionNode>)options,
+            Index = nodeIndex,
+        };
+    }
+
+    private ImmutableArray<BranchOnOptionNode>? ParseBranchOnOptions(ref int index)
+    {
+        ImmutableArray<BranchOnOptionNode>.Builder optionBuilder = ImmutableArray.CreateBuilder<BranchOnOptionNode>();
+
+        while (tokens[index] is { Kind: TokenKind.OptionKeyword })
+        {
+            int nodeIndex = tokens[index].Index;
+
+            index++;
+
+            string name = Expect(TokenKind.Identifier, ref index).Text;
+
+            StatementBodyNode? body = ParseStatementBody(ref index);
+
+            if (body is null)
+            {
+                return null;
+            }
+
+            BranchOnOptionNode optionNode = new NamedBranchOnOptionNode()
+            {
+                OptionName = name,
+                Body = body,
+                Index = nodeIndex,
+            };
+
+            optionBuilder.Add(optionNode);
+        }
+
+        if (tokens[index] is { Kind: TokenKind.OtherKeyword })
+        {
+            int nodeIndex = tokens[index].Index;
+
+            index++;
+
+            StatementBodyNode? body = ParseStatementBody(ref index);
+
+            if (body is null)
+            {
+                return null;
+            }
+
+            BranchOnOptionNode optionNode = new OtherBranchOnOptionNode()
+            {
+                Body = body,
+                Index = nodeIndex,
+            };
+
+            optionBuilder.Add(optionNode);
+        }
+
+        if (tokens[index] is { Kind: TokenKind.OptionKeyword or TokenKind.OtherKeyword })
+        {
+            ErrorFound?.Invoke(Errors.BranchOnOnlyOneOtherLast(tokens[index].Index));
+        }
+
+        return optionBuilder.ToImmutable();
+    }
+
 
     private ExpressionNode? ParseExpression(ref int index)
     {
