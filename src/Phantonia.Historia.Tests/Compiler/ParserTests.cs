@@ -404,14 +404,14 @@ public sealed class ParserTests
                         {
                             OutputExpression: StringLiteralExpressionNode
                             {
-                                StringLiteral: "\"String\"",
+                                StringLiteral: "String",
                             }
                         },
                         OutputStatementNode
                         {
                             OutputExpression: StringLiteralExpressionNode
                             {
-                                StringLiteral: "'Another String'",
+                                StringLiteral: "Another String",
                             }
                         }
                     ]

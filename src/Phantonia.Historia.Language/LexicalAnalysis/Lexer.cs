@@ -159,10 +159,12 @@ public sealed class Lexer
             index++;
         }
 
+        string realString = StringParser.Parse(historiaText.AsSpan()[(startIndex + delimiterCount)..(index - delimiterCount)]);
+
         return new Token
         {
             Kind = delimiterCountdown == 0 ? TokenKind.StringLiteral : TokenKind.BrokenStringLiteral,
-            Text = historiaText[startIndex..index],
+            Text = delimiterCountdown == 0 ? realString : historiaText[startIndex..index],
             Index = startIndex,
         };
     }

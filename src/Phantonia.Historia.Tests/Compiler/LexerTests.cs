@@ -138,7 +138,7 @@ public sealed class LexerTests
         ImmutableArray<Token> tokens = lexer.Lex();
 
         Assert.AreEqual(10, tokens.Length);
-        string[] literals = code.Split(' ');
+        string[] literals = new[] { "a", "b", "cde", "fghijk", "lmn", "opq", "rst", "uvw", "xyz" };
 
         for (int i = 0; i < 9; i++)
         {
@@ -185,10 +185,10 @@ public sealed class LexerTests
         Assert.AreEqual(3, tokens.Length);
 
         Assert.AreEqual(TokenKind.StringLiteral, tokens[0].Kind);
-        Assert.AreEqual("\"\"That is \"nonsense\" tbh\"\"", tokens[0].Text);
+        Assert.AreEqual("That is \"nonsense\" tbh", tokens[0].Text);
 
         Assert.AreEqual(TokenKind.StringLiteral, tokens[1].Kind);
-        Assert.AreEqual("''Hey, I'm cool''", tokens[1].Text);
+        Assert.AreEqual("Hey, I'm cool", tokens[1].Text);
     }
 
     [TestMethod]
@@ -220,4 +220,5 @@ public sealed class LexerTests
 
         Assert.IsTrue(tokens.Select(t => t.Kind).SequenceEqual(expectedKinds));
     }
+   
 }

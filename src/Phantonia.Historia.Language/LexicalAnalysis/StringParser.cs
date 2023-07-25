@@ -4,7 +4,7 @@ namespace Phantonia.Historia.Language.LexicalAnalysis;
 
 public static class StringParser
 {
-    public static string Parse(string stringLiteralWithoutQuotes)
+    public static string Parse(ReadOnlySpan<char> stringLiteralWithoutQuotes)
     {
         Span<char> newString = stackalloc char[stringLiteralWithoutQuotes.Length];
         int newStringIndex = 0;
