@@ -190,4 +190,34 @@ public sealed class LexerTests
         Assert.AreEqual(TokenKind.StringLiteral, tokens[1].Kind);
         Assert.AreEqual("''Hey, I'm cool''", tokens[1].Text);
     }
+
+    [TestMethod]
+    public void TestComments()
+    {
+        string code =
+            """
+            // a very cool story
+            scene main // this code will run when the story starts
+            {
+                output 2; // output the value 2
+            } // end of story
+            """;
+
+        Lexer lexer = new(code);
+        ImmutableArray<Token> tokens = lexer.Lex();
+
+        TokenKind[] expectedKinds = new[]
+        {
+            TokenKind.SceneKeyword,
+            TokenKind.Identifier,
+            TokenKind.OpenBrace,
+            TokenKind.OutputKeyword,
+            TokenKind.IntegerLiteral,
+            TokenKind.Semicolon,
+            TokenKind.ClosedBrace,
+            TokenKind.EndOfFile,
+        };
+
+        Assert.IsTrue(tokens.Select(t => t.Kind).SequenceEqual(expectedKinds));
+    }
 }

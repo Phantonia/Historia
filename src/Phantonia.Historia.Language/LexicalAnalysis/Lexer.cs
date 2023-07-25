@@ -1,4 +1,5 @@
-﻿using System.Collections.Immutable;
+﻿using System;
+using System.Collections.Immutable;
 using System.Diagnostics;
 
 namespace Phantonia.Historia.Language.LexicalAnalysis;
@@ -34,36 +35,58 @@ public sealed class Lexer
 
     private Token LexSingleToken(ref int index)
     {
-        if (index >= historiaText.Length)
+        while (true)
         {
-            return new Token { Kind = TokenKind.EndOfFile, Index = historiaText.Length, Text = "" };
-        }
-
-        while (char.IsWhiteSpace(historiaText[index]))
-        {
-            index++;
-
             if (index >= historiaText.Length)
             {
                 return new Token { Kind = TokenKind.EndOfFile, Index = historiaText.Length, Text = "" };
             }
-        }
 
-        return historiaText[index] switch
-        {
-            '{' => new Token { Kind = TokenKind.OpenBrace, Text = "{", Index = index++ },
-            '}' => new Token { Kind = TokenKind.ClosedBrace, Text = "}", Index = index++ },
-            '(' => new Token { Kind = TokenKind.OpenParenthesis, Text = "(", Index = index++ },
-            ')' => new Token { Kind = TokenKind.ClosedParenthesis, Text = ")", Index = index++ },
-            ';' => new Token { Kind = TokenKind.Semicolon, Text = ";", Index = index++ },
-            ':' => new Token { Kind = TokenKind.Colon, Text = ":", Index = index++ },
-            ',' => new Token { Kind = TokenKind.Comma, Text = ",", Index = index++ },
-            '=' => new Token { Kind = TokenKind.Equals, Text = "=", Index = index++ },
-            '"' or '\'' => LexStringLiteral(ref index),
-            >= '0' and <= '9' => LexIntegerLiteral(ref index),
-            >= 'a' and <= 'z' or >= 'A' and <= 'Z' or '_' => LexIdentifierOrKeyword(ref index),
-            _ => new Token { Kind = TokenKind.Unknown, Text = historiaText[index].ToString(), Index = index++ },
-        };
+            if (char.IsWhiteSpace(historiaText[index]))
+            {
+                for (; index < historiaText.Length; index++)
+                {
+                    if (!char.IsWhiteSpace(historiaText[index]))
+                    {
+                        break;
+                    }
+                }
+
+                continue; // start again from the beginning
+            }
+
+            if (historiaText[index] == '/' && index < historiaText.Length - 1 && historiaText[index + 1] == '/')
+            {
+                index += 2;
+
+                for (; index < historiaText.Length; index++)
+                {
+                    if (historiaText[index] == '\r' || historiaText[index] == '\n')
+                    {
+                        index++;
+                        break; ;
+                    }
+                }
+
+                continue; // start again from the beginning
+            }
+
+            return historiaText[index] switch
+            {
+                '{' => new Token { Kind = TokenKind.OpenBrace, Text = "{", Index = index++ },
+                '}' => new Token { Kind = TokenKind.ClosedBrace, Text = "}", Index = index++ },
+                '(' => new Token { Kind = TokenKind.OpenParenthesis, Text = "(", Index = index++ },
+                ')' => new Token { Kind = TokenKind.ClosedParenthesis, Text = ")", Index = index++ },
+                ';' => new Token { Kind = TokenKind.Semicolon, Text = ";", Index = index++ },
+                ':' => new Token { Kind = TokenKind.Colon, Text = ":", Index = index++ },
+                ',' => new Token { Kind = TokenKind.Comma, Text = ",", Index = index++ },
+                '=' => new Token { Kind = TokenKind.Equals, Text = "=", Index = index++ },
+                '"' or '\'' => LexStringLiteral(ref index),
+                >= '0' and <= '9' => LexIntegerLiteral(ref index),
+                >= 'a' and <= 'z' or >= 'A' and <= 'Z' or '_' => LexIdentifierOrKeyword(ref index),
+                _ => new Token { Kind = TokenKind.Unknown, Text = historiaText[index].ToString(), Index = index++ },
+            };
+        }
     }
 
     private Token LexIntegerLiteral(ref int index)
