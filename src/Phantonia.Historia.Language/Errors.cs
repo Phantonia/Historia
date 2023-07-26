@@ -250,11 +250,38 @@ public static class Errors
         };
     }
 
+    public static Error OutcomeAssignedNonIdentifier(string outcomeName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"'{outcomeName}' is an outcome, but it isn't assigned one of it's options",
+            Index = index,
+        };
+    }
+
     public static Error BranchOnOnlyOneOtherLast(int index)
     {
         return new Error
         {
             ErrorMessage = "A branchon statement may only have a single other clause and it has to be after every named option",
+            Index = index,
+        };
+    }
+
+    public static Error SymbolHasNoValue(string name, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"The symbol '{name}' cannot be used as an expression",
+            Index = index,
+        };
+    }
+
+    public static Error SymbolCannotBeAssignedTo(string name, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"The symbol '{name}' cannot be assigned to",
             Index = index,
         };
     }

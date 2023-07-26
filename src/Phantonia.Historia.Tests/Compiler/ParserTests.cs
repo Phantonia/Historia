@@ -664,4 +664,40 @@ public sealed class ParserTests
         AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[2], "Y", Array.Empty<string>(), null);
         AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[3], "Z", new[] { "A", "B", "C", "D", "E", "F" }, "A");
     }
+
+    [TestMethod]
+    public void TestAssignment()
+    {
+        string code =
+            """
+            scene main
+            {
+                // this will not pass the binder at all but we don't care
+                x = 4;
+                y = "abc";
+                z = A;
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = parser.Parse();
+
+        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[0];
+
+        void AssertIsCorrectAssignment<ExpressionType>(StatementNode statement)
+            where ExpressionType : ExpressionNode
+        {
+            AssignmentStatementNode? assignment = statement as AssignmentStatementNode;
+            Assert.IsNotNull(assignment);
+
+            Assert.IsInstanceOfType(assignment.AssignedExpression, typeof(ExpressionType));
+        }
+
+        AssertIsCorrectAssignment<IntegerLiteralExpressionNode>(mainScene.Body.Statements[0]);
+        AssertIsCorrectAssignment<StringLiteralExpressionNode>(mainScene.Body.Statements[1]);
+        AssertIsCorrectAssignment<IdentifierExpressionNode>(mainScene.Body.Statements[2]);
+    }
 }

@@ -788,13 +788,13 @@ public sealed class BinderTests
     [TestMethod]
     public void TestOutcomeDeclarationStatements()
     {
-        // once assigning outcomes is implemented we should add that here
-
         string code =
             """
             scene main
             {
                 outcome WorldEnding (Yes, No);
+
+                WorldEnding = Yes; // is that even a question?
 
                 branchon WorldEnding
                 {
@@ -818,10 +818,73 @@ public sealed class BinderTests
         Assert.IsTrue(new[] { "Yes", "No" }.SequenceEqual(boundOutcomeDeclaration.Outcome.OptionNames));
         Assert.IsNull(boundOutcomeDeclaration.Outcome.DefaultOption);
 
-        BoundBranchOnStatementNode? boundBranchOn = mainScene.Body.Statements[1] as BoundBranchOnStatementNode;
+        BoundOutcomeAssignmentStatementNode? boundAssignment = mainScene.Body.Statements[1] as BoundOutcomeAssignmentStatementNode;
+        Assert.IsNotNull(boundAssignment);
 
+        BoundBranchOnStatementNode? boundBranchOn = mainScene.Body.Statements[2] as BoundBranchOnStatementNode;
         Assert.IsNotNull(boundBranchOn);
 
+        Assert.AreEqual(boundOutcomeDeclaration.Outcome, boundAssignment.Outcome);
         Assert.AreEqual(boundBranchOn.Outcome, boundOutcomeDeclaration.Outcome);
+    }
+
+    [TestMethod]
+    public void TestWrongOutcomes()
+    {
+        void TestForError(string code, Error expectedError)
+        {
+            Binder binder = PrepareBinder(code);
+
+            List<Error> errors = new();
+            binder.ErrorFound += errors.Add;
+
+            _ = binder.Bind();
+
+            Assert.AreEqual(1, errors.Count);
+            Assert.AreEqual(expectedError, errors[0]);
+
+            Debug.WriteLine(Errors.GenerateFullMessage(code, errors[0]));
+        }
+
+        string code0 =
+            """
+            scene main
+            {
+                outcome X();
+            }
+            """;
+
+        TestForError(code0, Errors.OutcomeWithZeroOptions("X", code0.IndexOf("outcome X")));
+
+        string code1 =
+            """
+            scene main
+            {
+                outcome X(A, A);
+            }
+            """;
+
+        TestForError(code1, Errors.DuplicatedOptionInOutcomeDeclaration("A", code1.IndexOf("outcome X")));
+
+        string code2 =
+            """
+            scene main
+            {
+                outcome X(A, B) default C;
+            }
+            """;
+
+        TestForError(code2, Errors.OutcomeDefaultOptionNotAnOption("X", code2.IndexOf("outcome X")));
+
+        string code3 =
+            """
+            scene main
+            {
+                outcome X(A, B);
+                X = C;
+            }
+            """;
+
+        TestForError(code3, Errors.OptionDoesNotExistInOutcome("X", "C", code3.IndexOf("C;")));
     }
 }

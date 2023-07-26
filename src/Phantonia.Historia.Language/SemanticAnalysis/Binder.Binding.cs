@@ -314,6 +314,8 @@ public sealed partial class Binder
                 return BindOutcomeDeclarationStatement(outcomeDeclaration, table);
             case BranchOnStatementNode branchOnStatement:
                 return BindBranchOnStatement(branchOnStatement, settings, table);
+            case AssignmentStatementNode assignmentStatement:
+                return BindAssignmentStatement(assignmentStatement, table);
             default:
                 Debug.Assert(false);
                 return default;
@@ -499,6 +501,48 @@ public sealed partial class Binder
         return (table, boundStatement);
     }
 
+    private (SymbolTable, StatementNode) BindAssignmentStatement(AssignmentStatementNode assignmentStatement, SymbolTable table)
+    {
+        if (!table.IsDeclared(assignmentStatement.VariableName))
+        {
+            ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(assignmentStatement.VariableName, assignmentStatement.Index));
+            return (table, assignmentStatement);
+        }
+
+        Symbol symbol = table[assignmentStatement.VariableName];
+
+        switch (symbol)
+        {
+            case OutcomeSymbol outcomeSymbol:
+                {
+                    if (assignmentStatement.AssignedExpression is not IdentifierExpressionNode { Identifier: string option })
+                    {
+                        ErrorFound?.Invoke(Errors.OutcomeAssignedNonIdentifier(assignmentStatement.VariableName, assignmentStatement.AssignedExpression.Index));
+                        return (table, assignmentStatement);
+                    }
+
+                    if (!outcomeSymbol.OptionNames.Contains(option))
+                    {
+                        ErrorFound?.Invoke(Errors.OptionDoesNotExistInOutcome(assignmentStatement.VariableName, option, assignmentStatement.AssignedExpression.Index));
+                        return (table, assignmentStatement);
+                    }
+
+                    BoundOutcomeAssignmentStatementNode boundAssignment = new()
+                    {
+                        VariableName = assignmentStatement.VariableName,
+                        AssignedExpression = assignmentStatement.AssignedExpression,
+                        Index = assignmentStatement.Index,
+                        Outcome = outcomeSymbol,
+                    };
+
+                    return (table, boundAssignment);
+                }
+            default:
+                ErrorFound?.Invoke(Errors.SymbolCannotBeAssignedTo(symbol.Name, assignmentStatement.Index));
+                return (table, assignmentStatement);
+        }
+    }
+
     private (SymbolTable, StatementNode) BindBranchOnStatement(BranchOnStatementNode branchOnStatement, Settings settings, SymbolTable table)
     {
         if (!table.IsDeclared(branchOnStatement.OutcomeName))
@@ -609,6 +653,17 @@ public sealed partial class Binder
                 }
             case RecordCreationExpressionNode recordCreationExpression:
                 return BindAndTypeRecordCreationExpression(recordCreationExpression, table);
+            case IdentifierExpressionNode { Identifier: string identifier, Index: int index }:
+                if (!table.IsDeclared(identifier))
+                {
+                    ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(identifier, index));
+                    return (table, expression);
+                }
+                else // once we get variables or constants, there might actually be symbols to bind to here
+                {
+                    ErrorFound?.Invoke(Errors.SymbolHasNoValue(identifier, index));
+                    return (table, expression);
+                }
             default:
                 Debug.Assert(false);
                 return default;

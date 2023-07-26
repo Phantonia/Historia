@@ -316,6 +316,8 @@ public sealed class Parser
                         Index = nodeIndex,
                     };
                 }
+            case { Kind: TokenKind.Identifier }:
+                return ParseIdentifierLeadStatement(ref index);
             case { Kind: TokenKind.EndOfFile }:
                 ErrorFound?.Invoke(Errors.UnexpectedEndOfFile(tokens[index]));
                 return null;
@@ -532,6 +534,34 @@ public sealed class Parser
         return optionBuilder.ToImmutable();
     }
 
+    private StatementNode? ParseIdentifierLeadStatement(ref int index)
+    {
+        Debug.Assert(tokens[index] is { Kind: TokenKind.Identifier });
+        Token identifier = tokens[index];
+
+        int nodeIndex = tokens[index].Index;
+        index++;
+
+        // we might have more statements that begin with an identifier later
+        // rewrite this method then
+        _ = Expect(TokenKind.Equals, ref index);
+
+        ExpressionNode? assignedExpression = ParseExpression(ref index);
+        if (assignedExpression is null)
+        {
+            return null;
+        }
+
+        _ = Expect(TokenKind.Semicolon, ref index);
+
+        return new AssignmentStatementNode
+        {
+            VariableName = identifier.Text,
+            AssignedExpression = assignedExpression,
+            Index = nodeIndex,
+        };
+    }
+
     private ExpressionNode? ParseExpression(ref int index)
     {
         switch (tokens[index])
@@ -580,14 +610,20 @@ public sealed class Parser
     {
         Debug.Assert(tokens[index] is { Kind: TokenKind.Identifier });
 
-        string recordName = tokens[index].Text;
+        string name = tokens[index].Text;
         int nodeIndex = tokens[index].Index;
         index++;
 
-        // once we add variables, there will be simple identifier expressions
-        // right now, we only have record creation expressions
+        if (tokens[index] is not { Kind: TokenKind.OpenParenthesis })
+        {
+            return new IdentifierExpressionNode
+            {
+                Identifier = name,
+                Index = nodeIndex,
+            };
+        }
 
-        _ = Expect(TokenKind.OpenParenthesis, ref index);
+        index++;
 
         ImmutableArray<ArgumentNode>.Builder arguments = ImmutableArray.CreateBuilder<ArgumentNode>();
 
@@ -598,7 +634,7 @@ public sealed class Parser
             if (index < tokens.Length - 1 && tokens[index].Kind == TokenKind.Identifier && tokens[index + 1].Kind == TokenKind.Equals)
             {
                 // named argument
-                string name = tokens[index].Text;
+                string argumentName = tokens[index].Text;
                 index += 2;
 
                 ExpressionNode? expression = ParseExpression(ref index);
@@ -610,7 +646,7 @@ public sealed class Parser
                 arguments.Add(new ArgumentNode
                 {
                     Expression = expression,
-                    PropertyName = name,
+                    PropertyName = argumentName,
                     Index = argumentIndex,
                 });
             }
@@ -641,7 +677,7 @@ public sealed class Parser
         return new RecordCreationExpressionNode
         {
             Arguments = arguments.ToImmutable(),
-            RecordName = recordName,
+            RecordName = name,
             Index = nodeIndex,
         };
     }
