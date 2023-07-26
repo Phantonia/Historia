@@ -1,4 +1,5 @@
-﻿using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
+﻿using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
+using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 
@@ -7,4 +8,6 @@ public sealed record BoundOutcomeAssignmentStatementNode : AssignmentStatementNo
     public BoundOutcomeAssignmentStatementNode() { }
 
     public required OutcomeSymbol Outcome { get; init; }
+
+    public string AssignedOption => ((IdentifierExpressionNode)AssignedExpression).Identifier;
 }

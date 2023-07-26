@@ -154,7 +154,7 @@ public sealed class Emitter
     {
         foreach (SyntaxNode node in boundStory.FlattenHierarchie())
         {
-            if (node is BoundNamedSwitchStatementNode { Outcome: OutcomeSymbol outcome })
+            if (node is IBoundOutcomeDeclarationNode { Outcome: OutcomeSymbol outcome })
             {
                 writer.WriteLine($"private int {GetOutcomeFieldName(outcome)};");
             }
@@ -290,6 +290,17 @@ public sealed class Emitter
                         writer.WriteLine("throw new System.InvalidOperationException(\"Invalid outcome\");");
                         writer.Indent--;
                     }
+                    break;
+                case BoundOutcomeAssignmentStatementNode outcomeAssignment:
+                    writer.WriteLine($"case ({outcomeAssignment.Index}, _):");
+                    writer.Indent++;
+                    writer.Write(GetOutcomeFieldName(outcomeAssignment.Outcome));
+                    writer.Write(" = ");
+                    writer.Write(outcomeAssignment.Outcome.OptionNames.IndexOf(outcomeAssignment.AssignedOption));
+                    writer.WriteLine(";");
+                    writer.WriteLine($"state = {flowGraph.OutgoingEdges[outcomeAssignment.Index][0]};");
+                    writer.WriteLine("continue;");
+                    writer.Indent--;
                     break;
             }
         }

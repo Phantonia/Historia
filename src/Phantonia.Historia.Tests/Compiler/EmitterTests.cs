@@ -266,4 +266,84 @@ public sealed class EmitterTests
         Assert.IsFalse(story.TryContinue());
         Assert.IsFalse(story.TryContinueWithOption(0));
     }
+
+    [TestMethod]
+    public void TestComplicatedStory()
+    {
+        string code =
+            """
+            setting OutputType: String;
+            setting OptionType: String;
+
+            scene main
+            {
+                outcome WorldEnding (Yes, No);
+
+                output "Jonathan: Come on, Alice. Press the button. It's finally time to end this fucking world.";
+
+                switch ("What do you do?")
+                {
+                    option ("Do it")
+                    {
+                        output "Alice: You are right, Jonathan. Let's do this!";
+                        WorldEnding = Yes;
+                    }
+
+                    option ("Should I really?")
+                    {
+                        output "Alice: I'm really not sure this is the right thing to do. What about all the people?";
+                        output "Jonathan: Don't pretend you care about all of them!";
+                        output "Alice: Hmm...";
+                        output "Jonathan: Press it now!";
+
+                        switch ("What do you do now?")
+                        {
+                            option ("Press the button")
+                            {
+                                output "Alice: Okay, here goes nothing.";
+                                WorldEnding = Yes;
+                            }
+            
+                            option ("Destroy the button without pressing it")
+                            {
+                                output "Alice: No, I won't. No one will ever press this button.";
+                                output "Jonathan: How dare you!";
+                                WorldEnding = No;
+                            }
+                        }
+                    }
+
+                    option ("Destroy the button without pressing it")
+                    {
+                        output "Alice: I can't. And actually, I'll make it so no one will ever press it.";
+                        output "Jonathan: How dare you!";
+                        WorldEnding = No;
+                    }
+                }
+                    
+                output "Time stands still for a second...";
+
+                branchon WorldEnding
+                {
+                    option Yes
+                    {
+                        output "And then the explosion wipes out all life on earth.";
+                    }
+
+                    option No
+                    {
+                        output "And then nothing happens.";
+                    }
+                }
+            }
+            """;
+
+        Language.Compiler compiler = new(code);
+
+        var result = compiler.CompileToCSharpText();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+        Assert.IsNotNull(result.CSharpText);
+    }
 }

@@ -388,7 +388,7 @@ public sealed partial class Binder
             {
                 if (!TypesAreCompatible(sourceType, settings.OptionType))
                 {
-                    ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, settings.OutputType, "option", optionExpression.Index));
+                    ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, settings.OptionType, "option", optionExpression.Index));
 
                     return (table, switchStatement);
                 }
