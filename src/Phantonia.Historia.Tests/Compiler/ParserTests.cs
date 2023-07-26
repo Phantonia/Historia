@@ -6,8 +6,10 @@ using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Types;
 using Phantonia.Historia.Language.LexicalAnalysis;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 
 namespace Phantonia.Historia.Tests.Compiler;
 
@@ -620,5 +622,46 @@ public sealed class ParserTests
         Error expectedError = Errors.BranchOnOnlyOneOtherLast(code.IndexOf("option C"));
 
         Assert.IsTrue(errors.Contains(expectedError));
+    }
+
+    [TestMethod]
+    public void TestOutcomeDeclaration()
+    {
+        string code =
+            """
+            scene main
+            {
+                outcome W (A);
+                outcome X (A, B,);
+                outcome Y (); // grammatically correct - semantically incorrect
+                outcome Z (A, B, C, D, E, F) default A;
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = parser.Parse();
+
+        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[0];
+
+        static void AssertIsCorrectOutcomeDeclaration(StatementNode statement, string name, string[] options, string? defaultOption)
+        {
+            OutcomeDeclarationStatementNode? declaration = statement as OutcomeDeclarationStatementNode;
+
+            Assert.IsNotNull(declaration);
+
+            Assert.AreEqual(name, declaration.Name);
+            Assert.IsTrue(options.SequenceEqual(declaration.Options));
+            Assert.AreEqual(defaultOption, declaration.DefaultOption);
+        }
+
+        Assert.AreEqual(4, mainScene.Body.Statements.Length);
+
+        AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[0], "W", new[] { "A" }, null);
+        AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[1], "X", new[] { "A", "B" }, null);
+        AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[2], "Y", Array.Empty<string>(), null);
+        AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[3], "Z", new[] { "A", "B", "C", "D", "E", "F" }, "A");
     }
 }

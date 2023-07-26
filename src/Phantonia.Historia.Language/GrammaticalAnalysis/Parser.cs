@@ -220,6 +220,52 @@ public sealed class Parser
         return null;
     }
 
+    // can be reused for top level declarations
+    private (string name, ImmutableArray<string> options, string? defaultOption, int nodeIndex) ParseOutcomeDeclaration(ref int index)
+    {
+        Debug.Assert(tokens[index] is { Kind: TokenKind.OutcomeKeyword });
+
+        int nodeIndex = tokens[index].Index;
+        index++;
+
+        string name = Expect(TokenKind.Identifier, ref index).Text;
+
+        _ = Expect(TokenKind.OpenParenthesis, ref index);
+
+        ImmutableArray<string>.Builder optionsBuilder = ImmutableArray.CreateBuilder<string>();
+
+        while (tokens[index] is { Kind: TokenKind.Identifier, Text: string option })
+        {
+            optionsBuilder.Add(option);
+
+            index++;
+
+            if (tokens[index] is not { Kind: TokenKind.Comma })
+            {
+                break;
+            }
+            else
+            {
+                index++;
+            }
+        }
+
+        _ = Expect(TokenKind.ClosedParenthesis, ref index);
+
+        string? defaultOption = null;
+
+        if (tokens[index] is { Kind: TokenKind.DefaultKeyword })
+        {
+            index++;
+
+            defaultOption = Expect(TokenKind.Identifier, ref index).Text;
+        }
+
+        _ = Expect(TokenKind.Semicolon, ref index);
+
+        return (name, optionsBuilder.ToImmutable(), defaultOption, nodeIndex);
+    }
+
     private StatementBodyNode? ParseStatementBody(ref int index)
     {
         ImmutableArray<StatementNode>.Builder statementBuilder = ImmutableArray.CreateBuilder<StatementNode>();
@@ -259,6 +305,17 @@ public sealed class Parser
                 return ParseSwitchStatement(ref index);
             case { Kind: TokenKind.BranchOnKeyword }:
                 return ParseBranchOnStatement(ref index);
+            case { Kind: TokenKind.OutcomeKeyword }:
+                {
+                    (string name, ImmutableArray<string> options, string? defaultOption, int nodeIndex) = ParseOutcomeDeclaration(ref index);
+                    return new OutcomeDeclarationStatementNode
+                    {
+                        Name = name,
+                        Options = options,
+                        DefaultOption = defaultOption,
+                        Index = nodeIndex,
+                    };
+                }
             case { Kind: TokenKind.EndOfFile }:
                 ErrorFound?.Invoke(Errors.UnexpectedEndOfFile(tokens[index]));
                 return null;
@@ -474,7 +531,6 @@ public sealed class Parser
 
         return optionBuilder.ToImmutable();
     }
-
 
     private ExpressionNode? ParseExpression(ref int index)
     {

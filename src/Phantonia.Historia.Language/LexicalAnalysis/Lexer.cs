@@ -195,6 +195,8 @@ public sealed class Lexer
             "option" => TokenKind.OptionKeyword,
             "branchon" => TokenKind.BranchOnKeyword,
             "other" => TokenKind.OtherKeyword,
+            "outcome" => TokenKind.OutcomeKeyword,
+            "default" => TokenKind.DefaultKeyword,
             _ => TokenKind.Identifier,
         };
 

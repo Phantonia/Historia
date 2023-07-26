@@ -26,6 +26,8 @@ public enum TokenKind
     OptionKeyword,
     BranchOnKeyword,
     OtherKeyword,
+    OutcomeKeyword,
+    DefaultKeyword,
 
     // literals
     Identifier,
