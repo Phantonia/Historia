@@ -100,9 +100,9 @@ public sealed class DependencyGraph
 
             foreach (int adjacentVertex in Dependencies[vertex])
             {
-                if (!marked[vertex])
+                if (!marked[adjacentVertex])
                 {
-                    DepthFirstSearch(vertex);
+                    DepthFirstSearch(adjacentVertex);
                 }
             }
 

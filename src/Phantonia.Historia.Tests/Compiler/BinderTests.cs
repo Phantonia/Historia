@@ -388,6 +388,42 @@ public sealed class BinderTests
     }
 
     [TestMethod]
+    public void TestRecordsInWeirdOrder()
+    {
+        string code =
+            """
+            record F { V: D; W: E; }
+            record A { V: Int; }
+            record C { V: A; }
+            record B { V: Int; }
+            record D { V: C; }
+            record E { V: B; }
+
+            scene main { }
+            """;
+
+        Binder binder = PrepareBinder(code);
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        BindingResult result = binder.Bind();
+
+        SymbolTable table = result.SymbolTable!;
+
+        RecordTypeSymbol a = (RecordTypeSymbol)table["A"];
+        RecordTypeSymbol b = (RecordTypeSymbol)table["B"];
+        RecordTypeSymbol c = (RecordTypeSymbol)table["C"];
+        RecordTypeSymbol d = (RecordTypeSymbol)table["D"];
+        RecordTypeSymbol e = (RecordTypeSymbol)table["E"];
+        RecordTypeSymbol f = (RecordTypeSymbol)table["F"];
+
+        Assert.AreEqual(a, c.Properties[0].Type);
+        Assert.AreEqual(c, d.Properties[0].Type);
+        Assert.AreEqual(b, e.Properties[0].Type);
+        Assert.AreEqual(d, f.Properties[0].Type);
+        Assert.AreEqual(e, f.Properties[1].Type);
+    }
+
+    [TestMethod]
     public void TestBindingAndTypeChecking()
     {
         string code =
