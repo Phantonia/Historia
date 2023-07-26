@@ -472,6 +472,7 @@ public sealed partial class Binder
         {
             Name = outcomeDeclaration.Name,
             OptionNames = optionNames.ToImmutableArray(),
+            DefaultOption = outcomeDeclaration.DefaultOption,
             Index = outcomeDeclaration.Index,
         };
 

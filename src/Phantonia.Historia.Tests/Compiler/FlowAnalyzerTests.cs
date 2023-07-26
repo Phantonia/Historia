@@ -6,6 +6,7 @@ using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 using Phantonia.Historia.Language.LexicalAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 
@@ -14,6 +15,20 @@ namespace Phantonia.Historia.Tests.Compiler;
 [TestClass]
 public sealed class FlowAnalyzerTests
 {
+    private FlowAnalyzer PrepareFlowAnalyzer(string code)
+    {
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        Binder binder = new(parser.Parse());
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        BindingResult result = binder.Bind();
+        FlowAnalyzer flowAnalyzer = new(result.BoundStory!, result.SymbolTable!);
+        return flowAnalyzer;
+    }
+
     [TestMethod]
     public void TestLinearFlow()
     {
@@ -27,14 +42,7 @@ public sealed class FlowAnalyzerTests
                       }
                       """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
-        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
-
-        Binder binder = new(parser.Parse());
-        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
-
-        FlowAnalyzer flowAnalyzer = new(binder.Bind().BoundStory!);
+        FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
 
         FlowGraph graph = flowAnalyzer.GenerateMainFlowGraph();
 
@@ -79,14 +87,7 @@ public sealed class FlowAnalyzerTests
                       }
                       """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
-        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
-
-        Binder binder = new(parser.Parse());
-        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
-
-        FlowAnalyzer flowAnalyzer = new(binder.Bind().BoundStory!);
+        FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
 
         FlowGraph flowGraph = flowAnalyzer.GenerateMainFlowGraph();
 
@@ -172,14 +173,7 @@ public sealed class FlowAnalyzerTests
             }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
-        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
-
-        Binder binder = new(parser.Parse());
-        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
-
-        FlowAnalyzer flowAnalyzer = new(binder.Bind().BoundStory!);
+        FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
 
         FlowGraph graph = flowAnalyzer.GenerateMainFlowGraph();
 
@@ -198,5 +192,209 @@ public sealed class FlowAnalyzerTests
         Assert.AreEqual(code.IndexOf("output (9)"), graph.OutgoingEdges[branchOnIndex][0]);
         Assert.AreEqual(code.IndexOf("output (16)"), graph.OutgoingEdges[branchOnIndex][1]);
         Assert.AreEqual(code.IndexOf("output (25)"), graph.OutgoingEdges[branchOnIndex][2]);
+    }
+
+    [TestMethod]
+    public void TestOutcomeNotDefinitelyAssigned()
+    {
+        string code =
+           """
+            scene main
+            {
+                outcome X (A, B);
+
+                switch (0)
+                {
+                    option (0)
+                    {
+                        X = A;
+                    }
+
+                    option (1)
+                    {
+                        
+                    }
+                }
+
+                branchon X // error: outcome X not definitely assigned
+                {
+                    option A { }
+                    option B { }
+                }
+            }
+            """;
+
+        FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
+
+        List<Error> errors = new();
+        flowAnalyzer.ErrorFound += errors.Add;
+
+        _ = flowAnalyzer.GenerateMainFlowGraph();
+
+        Assert.AreEqual(1, errors.Count);
+
+        Error expectedError = Errors.OutcomeNotDefinitelyAssigned("X", code.IndexOf("branchon"));
+
+        Assert.IsTrue(expectedError == errors[0] || expectedError == errors[1]);
+    }
+
+    [TestMethod]
+    public void TestOutcomeDefinitelyAssigned()
+    {
+        string code =
+            """
+            scene main
+            {
+                outcome X (A, B);
+            
+                switch (0)
+                {
+                    option (0)
+                    {
+                        X = A;
+                    }
+            
+                    option (1)
+                    {
+                        X = B;
+                    }
+                }
+            
+                branchon X // all good
+                {
+                    option A { }
+                    option B { }
+                }
+            }
+            """;
+
+        FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
+        flowAnalyzer.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        _ = flowAnalyzer.GenerateMainFlowGraph();
+    }
+
+    [TestMethod]
+    public void TestOutcomeAssignedMoreThanOnce()
+    {
+        string code =
+            """
+            scene main
+            {
+                outcome X (A, B);
+
+                // this is blatant
+                X = A;
+                X = B;
+            }
+            """;
+
+        FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
+
+        List<Error> errors = new();
+        flowAnalyzer.ErrorFound += errors.Add;
+
+        _ = flowAnalyzer.GenerateMainFlowGraph();
+
+        Assert.AreEqual(1, errors.Count);
+
+        Error expectedError = Errors.OutcomeMayBeAssignedMoreThanOnce("X", code.IndexOf("X = B"));
+
+        Assert.IsTrue(expectedError == errors[0] || expectedError == errors[1]);
+    }
+
+    [TestMethod]
+    public void TestOutcomeMightBeAssignedMoreThanOnce()
+    {
+        string code =
+            """
+            scene main
+            {
+                outcome X (A, B, C);
+
+                switch (0)
+                {
+                    option (0) { X = A; }
+                    option (1) { }
+                }
+
+                switch (1)
+                {
+                    option (0) { X = B; }
+                    option (1) { X = C; }
+                }
+            }
+            """;
+
+        FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
+
+        List<Error> errors = new();
+        flowAnalyzer.ErrorFound += errors.Add;
+
+        _ = flowAnalyzer.GenerateMainFlowGraph();
+
+        Assert.AreEqual(2, errors.Count);
+
+        Error expectedError0 = Errors.OutcomeMayBeAssignedMoreThanOnce("X", code.IndexOf("X = B"));
+        Assert.IsTrue(expectedError0 == errors[0] || expectedError0 == errors[1]);
+
+        Error expectedError1 = Errors.OutcomeMayBeAssignedMoreThanOnce("X", code.IndexOf("X = C"));
+        Assert.IsTrue(expectedError1 == errors[0] || expectedError1 == errors[1]);
+    }
+
+    [TestMethod]
+    public void TestMultipleOutcomes()
+    {
+        string code =
+            """
+            scene main
+            {
+                outcome X (A, B);
+                outcome Y (A, B);
+                outcome Z (A, B) default A;
+
+                switch (0)
+                {
+                    option (1)
+                    {
+                        X = A;
+                    }
+
+                    option (2)
+                    {
+                        Y = A;
+                    }
+                }
+
+                X = B; // error: X might already be assigned
+
+                branchon Y // error: Y might not be assigned
+                {
+                    option A { }
+                    option B { }
+                }
+
+                branchon Z // okay: Z is not assigned but has a default value
+                {
+                    option A { }
+                    option B { }
+                }
+            }
+            """;
+
+        FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
+
+        List<Error> errors = new();
+        flowAnalyzer.ErrorFound += errors.Add;
+
+        _ = flowAnalyzer.GenerateMainFlowGraph();
+
+        Assert.AreEqual(2, errors.Count);
+
+        Error expectedFirstError = Errors.OutcomeMayBeAssignedMoreThanOnce("X", code.IndexOf("X = B"));
+        Error expectedSecondError = Errors.OutcomeNotDefinitelyAssigned("Y", code.IndexOf("branchon Y"));
+
+        Assert.IsTrue(expectedFirstError == errors[0] || expectedFirstError == errors[1]);
+        Assert.IsTrue(expectedSecondError == errors[0] || expectedSecondError == errors[1]);
     }
 }

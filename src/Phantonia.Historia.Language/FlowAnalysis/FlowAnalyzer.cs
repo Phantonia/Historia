@@ -1,26 +1,32 @@
-﻿using Phantonia.Historia.Language.FlowAnalysis;
-using Phantonia.Historia.Language.GrammaticalAnalysis;
+﻿using Phantonia.Historia.Language.GrammaticalAnalysis;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
 using Phantonia.Historia.Language.SemanticAnalysis;
 using System;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Phantonia.Historia.Language.FlowAnalysis;
 
 // there is no abbreviation for this thing
 // always use its full name, im serious
-public sealed class FlowAnalyzer
+public sealed partial class FlowAnalyzer
 {
-    public FlowAnalyzer(StoryNode story)
+    public FlowAnalyzer(StoryNode story, SymbolTable symbolTable)
     {
         this.story = story;
+        this.symbolTable = symbolTable;
     }
 
     private readonly StoryNode story;
+    private readonly SymbolTable symbolTable;
+
+    public event Action<Error>? ErrorFound;
 
     public FlowGraph GenerateMainFlowGraph()
     {
+        FlowGraph? mainFlowGraph = null;
+
         foreach (TopLevelNode symbolDeclaration in story.TopLevelNodes)
         {
             if (symbolDeclaration is BoundSymbolDeclarationNode
@@ -32,12 +38,16 @@ public sealed class FlowAnalyzer
                     }
                 } mainScene)
             {
-                return GenerateBodyFlowGraph(body);
+                mainFlowGraph = GenerateBodyFlowGraph(body);
+                break;
             }
         }
 
-        Debug.Assert(false); // we don't have a main scene - should have been caught by the binder already
-        return null;
+        Debug.Assert(mainFlowGraph is not null); // we don't have a main scene - should have been caught by the binder already
+
+        PerformReachabilityAnalysis(mainFlowGraph);
+
+        return mainFlowGraph;
     }
 
     private FlowGraph GenerateBodyFlowGraph(StatementBodyNode body)

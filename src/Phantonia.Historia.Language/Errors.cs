@@ -286,6 +286,24 @@ public static class Errors
         };
     }
 
+    public static Error OutcomeMayBeAssignedMoreThanOnce(string outcomeName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"The outcome '{outcomeName}' may already be assigned once this assignment executes. Keep in mind that outcomes may only be assigned once",
+            Index = index,
+        };
+    }
+
+    public static Error OutcomeNotDefinitelyAssigned(string outcomeName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"The outcome '{outcomeName}' may not be assigned once this statement executes",
+            Index = index,
+        };
+    }
+
     public static string GenerateFullMessage(string text, Error error)
     {
         (string wholeLine, int column) = FindLine(text, error.Index);

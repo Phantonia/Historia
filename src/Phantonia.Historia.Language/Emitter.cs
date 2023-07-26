@@ -156,7 +156,14 @@ public sealed class Emitter
         {
             if (node is IBoundOutcomeDeclarationNode { Outcome: OutcomeSymbol outcome })
             {
-                writer.WriteLine($"private int {GetOutcomeFieldName(outcome)};");
+                writer.Write($"private int {GetOutcomeFieldName(outcome)}");
+
+                if (outcome.DefaultOption is not null)
+                {
+                    writer.Write($" = {outcome.OptionNames.IndexOf(outcome.DefaultOption)}");
+                }
+
+                writer.WriteLine(";");
             }
         }
     }

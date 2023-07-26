@@ -6,6 +6,7 @@ using Edges = System.Collections.Immutable.ImmutableDictionary<
     int, System.Collections.Immutable.ImmutableList<int>>;
 using MutEdges = System.Collections.Generic.Dictionary<
     int, System.Collections.Generic.List<int>>;
+using System.Diagnostics;
 
 namespace Phantonia.Historia.Language.FlowAnalysis;
 
@@ -179,5 +180,67 @@ public sealed record FlowGraph
             Vertices = tempVertices.ToImmutableDictionary(),
             StartVertex = StartVertex == replacedVertex ? graph.StartVertex : StartVertex,
         };
+    }
+
+    public FlowGraph Reverse()
+    {
+        MutEdges edges = new();
+
+        foreach ((int vertex, ImmutableList<int> pointedVertices) in OutgoingEdges)
+        {
+            foreach (int pointedVertex in pointedVertices)
+            {
+                if (!edges.ContainsKey(pointedVertex))
+                {
+                    edges[pointedVertex] = new List<int>();
+                }
+
+                edges[pointedVertex].Add(vertex);
+            }
+        }
+
+        return new FlowGraph
+        {
+            Vertices = Vertices,
+            OutgoingEdges = edges.ToImmutableDictionary(p => p.Key, p => p.Value.ToImmutableList()),
+            StartVertex = StartVertex,
+        };
+    }
+
+    public IEnumerable<int> TopologicalSort()
+    {
+        Dictionary<int, bool> marked = new();
+
+        foreach (int vertex in Vertices.Keys)
+        {
+            marked[vertex] = false;
+        }
+
+        Stack<int> postOrder = new();
+
+        foreach (int vertex in Vertices.Keys)
+        {
+            if (!marked[vertex])
+            {
+                DepthFirstSearch(vertex);
+            }
+        }
+
+        return postOrder;
+
+        void DepthFirstSearch(int vertex)
+        {
+            marked[vertex] = true;
+
+            foreach (int adjacentVertex in OutgoingEdges[vertex])
+            {
+                if (adjacentVertex != EmptyVertex && !marked[adjacentVertex])
+                {
+                    DepthFirstSearch(adjacentVertex);
+                }
+            }
+
+            postOrder.Push(vertex);
+        }
     }
 }

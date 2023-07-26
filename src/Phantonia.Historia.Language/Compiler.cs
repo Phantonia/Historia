@@ -58,7 +58,17 @@ public sealed class Compiler
         Debug.Assert(settings is not null);
         Debug.Assert(symbolTable is not null);
 
-        FlowAnalyzer flowAnalyzer = new(boundStory);
+        FlowAnalyzer flowAnalyzer = new(boundStory, symbolTable);
+        flowAnalyzer.ErrorFound += errors.Add;
+
+        if (errors.Count > 0)
+        {
+            return new CompilationResult
+            {
+                Errors = errors.ToImmutableArray(),
+            };
+        }
+
         FlowGraph mainGraph = flowAnalyzer.GenerateMainFlowGraph();
 
         Emitter emitter = new(boundStory, settings, mainGraph);

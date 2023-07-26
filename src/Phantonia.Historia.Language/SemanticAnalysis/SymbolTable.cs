@@ -12,6 +12,8 @@ public sealed record SymbolTable
 
     private ImmutableStack<Scope> Table { get; init; } = ImmutableStack<Scope>.Empty;
 
+    public ImmutableList<Symbol> AllSymbols { get; init; } = ImmutableList<Symbol>.Empty;
+
     public Symbol this[string name]
     {
         get
@@ -44,6 +46,7 @@ public sealed record SymbolTable
 
         return this with
         {
+            AllSymbols = AllSymbols.Add(symbol),
             Table = Table.Pop().Push(currentScope.Add(symbol.Name, symbol)),
         };
     }
