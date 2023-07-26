@@ -2,7 +2,7 @@
 
 namespace Phantonia.Historia.Language.GrammaticalAnalysis;
 
-public abstract record SyntaxNode
+public abstract record SyntaxNode : ISyntaxNode
 {
     protected SyntaxNode() { }
 

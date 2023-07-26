@@ -784,4 +784,44 @@ public sealed class BinderTests
 
         TestForError(code5, Errors.BranchOnIsExhaustiveAndHasOtherBranch("Outcome", code5.IndexOf("branchon")));
     }
+
+    [TestMethod]
+    public void TestOutcomeDeclarationStatements()
+    {
+        // once assigning outcomes is implemented we should add that here
+
+        string code =
+            """
+            scene main
+            {
+                outcome WorldEnding (Yes, No);
+
+                branchon WorldEnding
+                {
+                    option Yes { }
+                    option No { }
+                }
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode boundStory = binder.Bind().BoundStory!;
+
+        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)((BoundSymbolDeclarationNode)boundStory.TopLevelNodes[0]).Declaration;
+
+        BoundOutcomeDeclarationStatementNode? boundOutcomeDeclaration = mainScene.Body.Statements[0] as BoundOutcomeDeclarationStatementNode;
+        Assert.IsNotNull(boundOutcomeDeclaration);
+
+        Assert.AreEqual("WorldEnding", boundOutcomeDeclaration.Outcome.Name);
+        Assert.IsTrue(new[] { "Yes", "No" }.SequenceEqual(boundOutcomeDeclaration.Outcome.OptionNames));
+        Assert.IsNull(boundOutcomeDeclaration.Outcome.DefaultOption);
+
+        BoundBranchOnStatementNode? boundBranchOn = mainScene.Body.Statements[1] as BoundBranchOnStatementNode;
+
+        Assert.IsNotNull(boundBranchOn);
+
+        Assert.AreEqual(boundBranchOn.Outcome, boundOutcomeDeclaration.Outcome);
+    }
 }

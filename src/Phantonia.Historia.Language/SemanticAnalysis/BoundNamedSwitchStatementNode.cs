@@ -3,9 +3,9 @@ using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 
-public sealed record BoundOutcomeDeclarationStatementNode : OutcomeDeclarationStatementNode, IBoundOutcomeDeclarationNode
+public sealed record BoundNamedSwitchStatementNode : SwitchStatementNode, IBoundOutcomeDeclarationNode
 {
-    public BoundOutcomeDeclarationStatementNode() { }
+    public BoundNamedSwitchStatementNode() { }
 
     public required OutcomeSymbol Outcome { get; init; }
 

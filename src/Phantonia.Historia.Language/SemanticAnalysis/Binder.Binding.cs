@@ -310,6 +310,8 @@ public sealed partial class Binder
                 }
             case SwitchStatementNode switchStatement:
                 return BindSwitchStatement(switchStatement, settings, table);
+            case OutcomeDeclarationStatementNode outcomeDeclaration:
+                return BindOutcomeDeclarationStatement(outcomeDeclaration, table);
             case BranchOnStatementNode branchOnStatement:
                 return BindBranchOnStatement(branchOnStatement, settings, table);
             default:
@@ -352,7 +354,7 @@ public sealed partial class Binder
                 {
                     if (!optionNames.Add(option.Name!))
                     {
-                        ErrorFound?.Invoke(Errors.DuplicatedOptionInNamedSwitch(option.Name!, option.Index));
+                        ErrorFound?.Invoke(Errors.DuplicatedOptionInOutcomeDeclaration(option.Name!, option.Index));
                     }
                 }
 
@@ -422,6 +424,77 @@ public sealed partial class Binder
                 Options = boundOptions.ToImmutableArray(),
             };
         }
+
+        return (table, boundStatement);
+    }
+
+    private (SymbolTable, OutcomeSymbol?) BindOutcomeDeclaration(IOutcomeDeclarationNode outcomeDeclaration, SymbolTable table)
+    {
+        bool error = false;
+
+        if (table.IsDeclared(outcomeDeclaration.Name))
+        {
+            ErrorFound?.Invoke(Errors.DuplicatedSymbolName(outcomeDeclaration.Name, outcomeDeclaration.Index));
+            error = true;
+        }
+
+        if (outcomeDeclaration.Options.Length == 0)
+        {
+            ErrorFound?.Invoke(Errors.OutcomeWithZeroOptions(outcomeDeclaration.Name, outcomeDeclaration.Index));
+            error = true;
+        }
+
+        HashSet<string> optionNames = new();
+
+        foreach (string option in outcomeDeclaration.Options)
+        {
+            if (!optionNames.Add(option))
+            {
+                ErrorFound?.Invoke(Errors.DuplicatedOptionInOutcomeDeclaration(option, outcomeDeclaration.Index));
+                error = true;
+            }
+        }
+
+        if (outcomeDeclaration.DefaultOption is not null && !optionNames.Contains(outcomeDeclaration.DefaultOption))
+        {
+            ErrorFound?.Invoke(Errors.OutcomeDefaultOptionNotAnOption(outcomeDeclaration.Name, outcomeDeclaration.Index));
+            error = true;
+        }
+
+        if (error)
+        {
+            return (table, null);
+        }
+
+        OutcomeSymbol symbol = new()
+        {
+            Name = outcomeDeclaration.Name,
+            OptionNames = optionNames.ToImmutableArray(),
+            Index = outcomeDeclaration.Index,
+        };
+
+        table = table.Declare(symbol);
+
+        return (table, symbol);
+    }
+
+    private (SymbolTable, StatementNode) BindOutcomeDeclarationStatement(OutcomeDeclarationStatementNode outcomeDeclaration, SymbolTable table)
+    {
+        (table, OutcomeSymbol? symbol) = BindOutcomeDeclaration(outcomeDeclaration, table);
+
+        if (symbol is null)
+        {
+            return (table, outcomeDeclaration);
+        }
+
+        BoundOutcomeDeclarationStatementNode boundStatement = new()
+        {
+            Name = outcomeDeclaration.Name,
+            Options = outcomeDeclaration.Options,
+            DefaultOption = outcomeDeclaration.DefaultOption,
+            Index = outcomeDeclaration.Index,
+            Outcome = symbol,
+        };
 
         return (table, boundStatement);
     }

@@ -223,11 +223,29 @@ public static class Errors
         };
     }
 
-    public static Error DuplicatedOptionInNamedSwitch(string optionName, int index)
+    public static Error DuplicatedOptionInOutcomeDeclaration(string optionName, int index)
     {
         return new Error
         {
-            ErrorMessage = $"Option name '{optionName}' appears more than once",
+            ErrorMessage = $"Option name '{optionName}' appears more than once in outcome declaration or named switch",
+            Index = index,
+        };
+    }
+
+    public static Error OutcomeWithZeroOptions(string outcomeName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"An outcome or named switch needs at least one option, outcome '{outcomeName}' has none",
+            Index = index,
+        };
+    }
+
+    public static Error OutcomeDefaultOptionNotAnOption(string outcomeName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"The default option of outcome '{outcomeName}' is not one of its options. Add it to the list",
             Index = index,
         };
     }

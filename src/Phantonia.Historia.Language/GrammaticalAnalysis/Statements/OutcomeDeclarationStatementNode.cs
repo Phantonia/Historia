@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 
-public sealed record OutcomeDeclarationStatementNode : StatementNode
+public record OutcomeDeclarationStatementNode : StatementNode, IOutcomeDeclarationNode
 {
     public OutcomeDeclarationStatementNode() { }
 
