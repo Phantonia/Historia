@@ -35,9 +35,16 @@ public sealed class Emitter
 
         IndentedTextWriter writer = new(new StringWriter());
 
+        writer.Write("public sealed class ");
+        writer.Write(className);
+        writer.Write(" : Phantonia.Historia.IStory<");
+        GenerateType(writer, settings.OutputType);
+        writer.Write(", ");
+        GenerateType(writer, settings.OptionType);
+        writer.WriteLine('>');
+
         writer.WriteManyLines(
           $$"""
-            public sealed class {{className}}
             {
                 public {{className}}()
                 {

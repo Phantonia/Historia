@@ -57,169 +57,51 @@ public sealed class EmitterTests
         string csharpText = result.CSharpText;
     }
 
-    // this is copy pasted
-    // in the long run why might want to test with dynamically compiled classes
-    public sealed class HistoriaStory
-    {
-        public HistoriaStory()
-        {
-            Output = 16;
-        }
-
-        private int state = 19;
-
-        public bool FinishedStory { get; private set; } = false;
-
-        public System.Collections.Immutable.ImmutableArray<int> Options { get; private set; } = System.Collections.Immutable.ImmutableArray<int>.Empty;
-
-        public int Output { get; private set; }
-
-        public bool TryContinue()
-        {
-            if (FinishedStory || Options.Length != 0)
-            {
-                return false;
-            }
-
-            state = GetNextState(0);
-            Output = GetOutput();
-            Options = GetOptions();
-
-            if (state == -1)
-            {
-                FinishedStory = true;
-            }
-
-            return true;
-        }
-
-        public bool TryContinueWithOption(int option)
-        {
-            if (FinishedStory || option < 0 || option >= Options.Length)
-            {
-                return false;
-            }
-
-            state = GetNextState(option);
-            Output = GetOutput();
-            Options = GetOptions();
-
-            if (state == -1)
-            {
-                FinishedStory = true;
-            }
-
-            return true;
-        }
-
-        private int GetNextState(int option)
-        {
-            switch (state, option)
-            {
-                case (19, _):
-                    return 43;
-                case (43, 0):
-                    return 107;
-                case (43, 1):
-                    return 204;
-                case (107, _):
-                    return 133;
-                case (133, _):
-                    return 452;
-                case (204, _):
-                    return 232;
-                case (232, 0):
-                    return 328;
-                case (232, 1):
-                    return 452;
-                case (328, _):
-                    return 452;
-                case (452, _):
-                    return -1;
-            }
-
-            throw new System.InvalidOperationException("Invalid state");
-        }
-
-        private int GetOutput()
-        {
-            switch (state)
-            {
-                case 19:
-                    return 16;
-                case 43:
-                    return 17;
-                case 107:
-                    return 19;
-                case 133:
-                    return 20;
-                case 204:
-                    return 22;
-                case 232:
-                    return 23;
-                case 328:
-                    return 25;
-                case 452:
-                    return 27;
-                case -1:
-                    return default;
-            }
-
-            throw new System.InvalidOperationException("Invalid state");
-        }
-
-        private System.Collections.Immutable.ImmutableArray<int> GetOptions()
-        {
-            switch (state)
-            {
-                case 43:
-                    return System.Collections.Immutable.ImmutableArray.ToImmutableArray(new[] { 18, 21, });
-                case 232:
-                    return System.Collections.Immutable.ImmutableArray.ToImmutableArray(new[] { 24, 26, });
-            }
-
-            return System.Collections.Immutable.ImmutableArray<int>.Empty;
-        }
-    }
-
     [TestMethod]
     public void TestEmittedCode()
     {
-        /*
-        scene main
-        {
-            output (16);
-                
-            switch (17)
+        string code =
+            """
+            scene main
             {
-                option (18)
+                output (16);
+                
+                switch (17)
                 {
-                    output (19);
-                    output (20);
-                }
-
-                option (21)
-                {
-                    output (22);
-
-                    switch (23)
+                    option (18)
                     {
-                        option (24)
-                        {
-                            output (25);
-                        }
+                        output (19);
+                        output (20);
+                    }
 
-                        option (26)
-                        { }
+                    option (21)
+                    {
+                        output (22);
+
+                        switch (23)
+                        {
+                            option (24)
+                            {
+                                output (25);
+                            }
+
+                            option (26)
+                            { }
+                        }
                     }
                 }
+
+                output(27);
             }
+            """;
 
-            output(27);
-        }
-        */
+        CompilationResult result = new Language.Compiler(code).CompileToCSharpText();
 
-        HistoriaStory story = new();
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+        Assert.IsNotNull(result.CSharpText);
+
+        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(result.CSharpText);
 
         // output (16);
         Assert.AreEqual(16, story.Output);
@@ -265,6 +147,105 @@ public sealed class EmitterTests
 
         Assert.IsFalse(story.TryContinue());
         Assert.IsFalse(story.TryContinueWithOption(0));
+    }
+
+    [TestMethod]
+    public void TestOutcomeStory()
+    {
+        string code =
+            """
+            scene main
+            {
+                output 0;
+
+                outcome X (A, B);
+
+                switch (1)
+                {
+                    option (2)
+                    {
+                        output 3;
+                        X = A;
+                    }
+
+                    option (4)
+                    {
+                        output 5;
+                        X = B;
+                    }
+
+                    option (6)
+                    {
+                        switch (7)
+                        {
+                            option (8)
+                            {
+                                output 9;
+                                X = A;
+                            }
+
+                            option (10)
+                            {
+                                output 11;
+                                X = B;
+                            }
+                        }
+                    }
+                }
+
+                branchon X
+                {
+                    option A
+                    {
+                        output 12;
+                    }
+
+                    option B
+                    {
+                        output 13;
+                    }
+                }
+
+                output 14;
+            }
+            """;
+
+        Language.Compiler compiler = new(code);
+        CompilationResult result = compiler.CompileToCSharpText();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+        Assert.IsNotNull(result.CSharpText);
+
+        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(result.CSharpText);
+
+        Assert.AreEqual(0, story.Output);
+        Assert.IsTrue(story.TryContinue());
+
+        Assert.AreEqual(1, story.Output);
+        Assert.AreEqual(3, story.Options.Length);
+        Assert.AreEqual(2, story.Options[0]);
+        Assert.AreEqual(4, story.Options[1]);
+        Assert.AreEqual(6, story.Options[2]);
+        Assert.IsTrue(story.TryContinueWithOption(2));
+
+        Assert.AreEqual(7, story.Output);
+        Assert.AreEqual(2, story.Options.Length);
+        Assert.AreEqual(8, story.Options[0]);
+        Assert.AreEqual(10, story.Options[1]);
+        Assert.IsTrue(story.TryContinueWithOption(1));
+
+        Assert.AreEqual(11, story.Output);
+        Assert.IsTrue(story.TryContinue());
+
+        Assert.AreEqual(13, story.Output);
+        Assert.IsTrue(story.TryContinue());
+
+        Assert.AreEqual(14, story.Output);
+        Assert.IsTrue(story.TryContinue());
+
+        Assert.IsTrue(story.FinishedStory);
+        Assert.IsFalse(story.TryContinue());
     }
 
     [TestMethod]
@@ -340,10 +321,12 @@ public sealed class EmitterTests
 
         Language.Compiler compiler = new(code);
 
-        var result = compiler.CompileToCSharpText();
+        CompilationResult result = compiler.CompileToCSharpText();
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
         Assert.IsNotNull(result.CSharpText);
+
+        _ = DynamicCompiler.CompileToStory<string, string>(result.CSharpText);
     }
 }

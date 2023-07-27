@@ -67,7 +67,7 @@ public sealed partial class FlowAnalyzer
     {
         return statement switch
         {
-            OutputStatementNode or AssignmentStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex
+            OutputStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex
             {
                 Index = statement.Index,
                 AssociatedStatement = statement,
@@ -76,6 +76,12 @@ public sealed partial class FlowAnalyzer
             SwitchStatementNode switchStatement => GenerateSwitchFlowGraph(switchStatement),
             BranchOnStatementNode branchOnStatement => GenerateBranchOnFlowGraph(branchOnStatement),
             OutcomeDeclarationStatementNode => FlowGraph.Empty,
+            AssignmentStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex
+            {
+                Index = statement.Index,
+                AssociatedStatement = statement,
+                IsVisible = false,
+            }),
             _ => throw new NotImplementedException($"Unknown statement type {statement.GetType().FullName}"),
         };
     }
