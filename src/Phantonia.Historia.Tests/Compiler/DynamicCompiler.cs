@@ -19,13 +19,15 @@ internal static class DynamicCompiler
         // define source code, then parse it (to the type used for compilation)
         SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(csharpCode);
 
+        string runtimePath = Path.Combine(Path.GetDirectoryName(typeof(object).Assembly.Location)!, "System.Runtime.dll");
+
         // define other necessary objects for compilation
         string assemblyName = Path.GetRandomFileName();
         MetadataReference[] references = new[]
         {
             MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
             MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location),
-            MetadataReference.CreateFromFile(@"C:\Program Files\dotnet\shared\Microsoft.NETCore.App\7.0.7\System.Runtime.dll"),
+            MetadataReference.CreateFromFile(runtimePath),
             MetadataReference.CreateFromFile(typeof(ImmutableArray).Assembly.Location),
             MetadataReference.CreateFromFile(typeof(IStory).Assembly.Location),
         };
