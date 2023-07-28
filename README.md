@@ -16,6 +16,7 @@ Historia is a special kind of language to express branching stories for games in
 - [ ] Splitting Historia code across multiple files
 
 ### Framework features
+- [ ] Visual Studio language extension
 - [ ] Immutable story classes
 - [ ] Generating flow graphs
 - [ ] Dynamic compilation
