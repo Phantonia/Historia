@@ -113,9 +113,9 @@ public sealed partial class FlowAnalyzer
                 }
             }
 
-            thisVertexData = defaultVertexData with
+            thisVertexData = thisVertexData with
             {
-                Outcomes = defaultVertexData.Outcomes.SetItem(outcome, new OutcomeData
+                Outcomes = thisVertexData.Outcomes.SetItem(outcome, new OutcomeData
                 {
                     DefinitelyAssigned = definitelyAssigned,
                     MightBeAssigned = mightBeAssigned
