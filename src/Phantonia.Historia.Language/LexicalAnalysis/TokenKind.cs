@@ -21,6 +21,7 @@ public enum TokenKind
     SceneKeyword,
     SettingKeyword,
     RecordKeyword,
+    UnionKeyword,
     OutputKeyword,
     SwitchKeyword,
     OptionKeyword,

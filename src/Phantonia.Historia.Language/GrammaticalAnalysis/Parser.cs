@@ -27,13 +27,13 @@ public sealed class Parser
         int index = 0;
         ImmutableArray<TopLevelNode>.Builder symbolBuilder = ImmutableArray.CreateBuilder<TopLevelNode>();
 
-        TopLevelNode? nextSymbol = ParseSymbolDeclaration(ref index);
+        TopLevelNode? nextSymbol = ParseTopLevelNode(ref index);
 
         while (nextSymbol is not null)
         {
             symbolBuilder.Add(nextSymbol);
 
-            nextSymbol = ParseSymbolDeclaration(ref index);
+            nextSymbol = ParseTopLevelNode(ref index);
         }
 
         return new StoryNode
@@ -75,7 +75,7 @@ public sealed class Parser
         }
     }
 
-    private TopLevelNode? ParseSymbolDeclaration(ref int index)
+    private TopLevelNode? ParseTopLevelNode(ref int index)
     {
         switch (tokens[index])
         {
@@ -87,15 +87,17 @@ public sealed class Parser
                 return ParseSceneSymbolDeclaration(ref index);
             case { Kind: TokenKind.RecordKeyword }:
                 return ParseRecordSymbolDeclaration(ref index);
+            case { Kind: TokenKind.UnionKeyword }:
+                return ParseUnionSymbolDeclaration(ref index);
             case { Kind: TokenKind.SettingKeyword }:
-                return ParseSettingSymbolDeclaration(ref index);
+                return ParseSettingDirective(ref index);
             case { Kind: TokenKind.EndOfFile }:
                 return null;
             default:
                 {
                     ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index]));
                     index++;
-                    return ParseSymbolDeclaration(ref index);
+                    return ParseTopLevelNode(ref index);
                 }
         }
     }
@@ -119,6 +121,53 @@ public sealed class Parser
         {
             Body = body,
             Name = nameToken.Text,
+            Index = nodeIndex,
+        };
+    }
+
+    private UnionTypeSymbolDeclarationNode? ParseUnionSymbolDeclaration(ref int index)
+    {
+        Debug.Assert(tokens[index] is { Kind: TokenKind.UnionKeyword });
+
+        int nodeIndex = tokens[index].Index;
+        index++;
+
+        string name = Expect(TokenKind.Identifier, ref index).Text;
+
+        _ = Expect(TokenKind.Colon, ref index);
+
+        ImmutableArray<TypeNode>.Builder subtypeBuilder = ImmutableArray.CreateBuilder<TypeNode>();
+
+        while (true)
+        {
+            TypeNode? subtype = ParseType(ref index);
+
+            if (subtype is null)
+            {
+                return null;
+            }
+
+            subtypeBuilder.Add(subtype);
+
+            if (tokens[index] is { Kind: TokenKind.Comma })
+            {
+                index++;
+            }
+            else if (tokens[index] is { Kind: TokenKind.Semicolon })
+            {
+                index++;
+                break;
+            }
+            else
+            {
+                ErrorFound?.Invoke(Errors.ExpectedToken(tokens[index], TokenKind.Semicolon));
+            }
+        }
+
+        return new UnionTypeSymbolDeclarationNode
+        {
+            Name = name,
+            Subtypes = subtypeBuilder.ToImmutable(),
             Index = nodeIndex,
         };
     }
@@ -164,7 +213,7 @@ public sealed class Parser
         };
     }
 
-    private SettingDirectiveNode? ParseSettingSymbolDeclaration(ref int index)
+    private SettingDirectiveNode? ParseSettingDirective(ref int index)
     {
         Debug.Assert(tokens[index].Kind == TokenKind.SettingKeyword);
 

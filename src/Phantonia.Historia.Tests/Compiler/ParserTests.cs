@@ -700,4 +700,28 @@ public sealed class ParserTests
         AssertIsCorrectAssignment<StringLiteralExpressionNode>(mainScene.Body.Statements[1]);
         AssertIsCorrectAssignment<IdentifierExpressionNode>(mainScene.Body.Statements[2]);
     }
+
+    [TestMethod]
+    public void TestUnionDeclaration()
+    {
+        string code =
+            """
+            union X: Int, String, Y;
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = parser.Parse();
+
+        Assert.AreEqual(1, story.TopLevelNodes.Length);
+
+        UnionTypeSymbolDeclarationNode? unionDeclaration = story.TopLevelNodes[0] as UnionTypeSymbolDeclarationNode;
+
+        Assert.IsNotNull(unionDeclaration);
+
+        Assert.AreEqual("X", unionDeclaration.Name);
+        Assert.IsTrue(unionDeclaration.Subtypes.Select(s => (s as IdentifierTypeNode)?.Identifier).SequenceEqual(new[] { "Int", "String", "Y" }));
+    }
 }
