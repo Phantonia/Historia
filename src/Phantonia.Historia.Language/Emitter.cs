@@ -470,7 +470,7 @@ public sealed class Emitter
     {
         writer.WriteManyLines(
                         $$"""
-                        public readonly struct @{{record.Name}}
+                        public readonly struct @{{record.Name}} : System.IEquatable<@{{record.Name}}>
                         {
                         """);
         writer.Indent++;
