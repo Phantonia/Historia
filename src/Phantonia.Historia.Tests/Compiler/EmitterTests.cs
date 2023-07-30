@@ -329,4 +329,31 @@ public sealed class EmitterTests
 
         _ = DynamicCompiler.CompileToStory<string, string>(result.CSharpText);
     }
+
+    [TestMethod]
+    public void TestUnion()
+    {
+        string code =
+            """
+            record Line
+            {
+                Text: String;
+                Character: Int;
+            }
+
+            union X: String, Int, Line;
+
+            scene main { output 2; }
+            """;
+
+        Language.Compiler compiler = new(code);
+
+        CompilationResult result = compiler.CompileToCSharpText();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+        Assert.IsNotNull(result.CSharpText);
+
+        _ = DynamicCompiler.CompileToStory(result.CSharpText);
+    }
 }

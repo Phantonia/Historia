@@ -8,8 +8,10 @@ using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
 using Phantonia.Historia.Language.SemanticAnalysis;
+using System;
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
+using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -456,6 +458,9 @@ public sealed class Emitter
                 case RecordTypeSymbol recordSymbol:
                     GenerateRecordDeclaration(writer, recordSymbol);
                     continue;
+                case UnionTypeSymbol unionSymbol:
+                    GenerateUnionDeclaration(writer, unionSymbol);
+                    continue;
                 default:
                     Debug.Assert(false);
                     return;
@@ -504,6 +509,358 @@ public sealed class Emitter
 
         GenerateType(writer, record.Properties[^1].Type);
         writer.WriteLine($" @{record.Properties[^1].Name} {{ get; }}");
+        writer.WriteLine();
+
+        // union Equals()
+        writer.Write("public bool Equals(@");
+        writer.Write(record.Name);
+        writer.WriteLine(" other)");
+        writer.WriteLine('{');
+        writer.Indent++;
+        writer.Write("return ");
+
+        foreach (PropertySymbol property in record.Properties.Take(record.Properties.Length - 1))
+        {
+            writer.Write('@');
+            writer.Write(property.Name);
+            writer.Write(" == other.@");
+            writer.Write(property.Name);
+            writer.Write(" && ");
+        }
+
+        writer.Write('@');
+        writer.Write(record.Properties[^1].Name);
+        writer.Write(" == other.@");
+        writer.Write(record.Properties[^1].Name);
+        writer.WriteLine(';');
+        writer.Indent--;
+        writer.WriteLine('}');
+        writer.WriteLine();
+
+        // object Equals()
+        writer.WriteLine("public override bool Equals(object? other)");
+        writer.WriteLine('{');
+        writer.Indent++;
+        writer.Write("return other is @");
+        writer.Write(record.Name);
+        writer.WriteLine(" record && Equals(record);");
+        writer.Indent--;
+        writer.WriteLine('}');
+        writer.WriteLine();
+
+        // GetHashCode()
+        writer.WriteLine("public override int GetHashCode()");
+        writer.WriteLine('{');
+        writer.Indent++;
+        writer.WriteLine("System.HashCode hashcode = default;");
+
+        foreach (PropertySymbol property in record.Properties)
+        {
+            writer.Write("hashcode.Add(@");
+            writer.Write(property.Name);
+            writer.WriteLine(");");
+        }
+
+        writer.WriteLine("return hashcode.ToHashCode();");
+        writer.Indent--;
+        writer.WriteLine('}');
+        writer.WriteLine();
+
+        // == operator
+        writer.Write("public static bool operator ==(@");
+        writer.Write(record.Name);
+        writer.Write(" x, @");
+        writer.Write(record.Name);
+        writer.WriteLine(" y)");
+        writer.WriteLine('{');
+        writer.Indent++;
+        writer.WriteLine("return x.Equals(y);");
+        writer.Indent--;
+        writer.WriteLine('}');
+
+        // != operator
+        writer.Write("public static bool operator !=(@");
+        writer.Write(record.Name);
+        writer.Write(" x, @");
+        writer.Write(record.Name);
+        writer.WriteLine(" y)");
+        writer.WriteLine('{');
+        writer.Indent++;
+        writer.WriteLine("return !x.Equals(y);");
+        writer.Indent--;
+        writer.WriteLine('}');
+
+        writer.Indent--;
+        writer.WriteLine('}');
+    }
+
+    private void GenerateUnionDeclaration(IndentedTextWriter writer, UnionTypeSymbol union)
+    {
+        writer.WriteManyLines(
+            $$"""
+            public readonly struct @{{union.Name}} : System.IEquatable<@{{union.Name}}>
+            {
+            """);
+
+        writer.Indent++;
+
+        void GenerateSubtypeName(TypeSymbol subtype, bool includeAt = true)
+        {
+            if (includeAt)
+            {
+                writer.Write('@');
+            }
+
+            writer.Write(subtype.Name);
+        }
+
+        // constructors
+        foreach (TypeSymbol subtype in union.Subtypes)
+        {
+            writer.Write($"internal @{union.Name}(");
+            GenerateType(writer, subtype);
+            writer.WriteLine(" value)");
+            writer.WriteLine('{');
+            writer.Indent++;
+            GenerateSubtypeName(subtype);
+            writer.WriteLine(" = value;");
+            writer.Indent--;
+            writer.WriteLine('}');
+            writer.WriteLine();
+        }
+
+        // properties
+        foreach (TypeSymbol subtype in union.Subtypes)
+        {
+            writer.Write("public ");
+            GenerateType(writer, subtype);
+            writer.Write(' ');
+            GenerateSubtypeName(subtype); // the property gets the same name as the type
+            writer.WriteLine(" { get; }");
+            writer.WriteLine();
+        }
+
+        writer.Write("public ");
+        writer.Write(union.Name);
+        writer.WriteLine("Discriminator Discriminator { get; }");
+        writer.WriteLine();
+
+        // AsObject()
+        writer.WriteLine("public object AsObject()");
+        writer.WriteLine('{');
+        writer.Indent++;
+        writer.WriteLine("switch (Discriminator)");
+        writer.WriteLine('{');
+        writer.Indent++;
+
+        foreach (TypeSymbol subtype in union.Subtypes)
+        {
+            writer.Write("case ");
+            writer.Write(union.Name);
+            writer.Write("Discriminator.");
+            GenerateSubtypeName(subtype);
+            writer.WriteLine(':');
+            writer.Indent++;
+            writer.Write("return ");
+            GenerateSubtypeName(subtype);
+            writer.WriteLine(';');
+            writer.Indent--;
+        }
+
+        writer.Indent--;
+        writer.WriteLine('}');
+        writer.WriteLine("throw new System.InvalidOperationException(\"Invalid discriminator\");");
+        writer.Indent--;
+        writer.WriteLine('}');
+        writer.WriteLine();
+
+        // Run()
+        writer.Write("public void Run(");
+        
+        foreach (TypeSymbol subtype in union.Subtypes.Take(union.Subtypes.Length - 1))
+        {
+            writer.Write("System.Action<");
+            GenerateType(writer, subtype);
+            writer.Write("> action");
+            GenerateSubtypeName(subtype, includeAt: false);
+            writer.Write(", ");
+        }
+
+        writer.Write("System.Action<");
+        GenerateType(writer, union.Subtypes[^1]);
+        writer.Write("> action");
+        GenerateSubtypeName(union.Subtypes[^1], includeAt: false);
+        writer.WriteLine(')');
+
+        writer.WriteLine('{');
+        writer.Indent++;
+        writer.WriteLine("switch (Discriminator)");
+        writer.WriteLine('{');
+        writer.Indent++;
+
+        foreach (TypeSymbol subtype in union.Subtypes)
+        {
+            writer.Write("case ");
+            writer.Write(union.Name);
+            writer.Write("Discriminator.");
+            GenerateSubtypeName(subtype);
+            writer.WriteLine(':');
+            writer.Indent++;
+            writer.Write("action");
+            GenerateSubtypeName(subtype, includeAt: false);
+            writer.Write('(');
+            GenerateSubtypeName(subtype);
+            writer.WriteLine(");");
+            writer.WriteLine("return;");
+            writer.Indent--;
+        }
+
+        writer.Indent--;
+        writer.WriteLine('}');
+        writer.WriteLine();
+        writer.WriteLine("throw new System.InvalidOperationException(\"Invalid discriminator\");");
+        writer.Indent--;
+        writer.WriteLine('}');
+        writer.WriteLine();
+
+        // Evaluate()
+        writer.Write("public T Evaluate<T>(");
+
+        foreach (TypeSymbol subtype in union.Subtypes.Take(union.Subtypes.Length - 1))
+        {
+            writer.Write("System.Func<");
+            GenerateType(writer, subtype);
+            writer.Write(", T> function");
+            GenerateSubtypeName(subtype, includeAt: false);
+            writer.Write(", ");
+        }
+
+        writer.Write("System.Func<");
+        GenerateType(writer, union.Subtypes[^1]);
+        writer.Write(", T> function");
+        GenerateSubtypeName(union.Subtypes[^1], includeAt: false);
+        writer.WriteLine(')');
+        writer.WriteLine('{');
+        writer.Indent++;
+        writer.WriteLine("switch (Discriminator)");
+        writer.WriteLine('{');
+        writer.Indent++;
+
+        foreach (TypeSymbol subtype in union.Subtypes)
+        {
+            writer.Write("case ");
+            writer.Write(union.Name);
+            writer.Write("Discriminator.");
+            GenerateSubtypeName(subtype);
+            writer.WriteLine(':');
+            writer.Indent++;
+            writer.Write("return function");
+            GenerateSubtypeName(subtype, includeAt: false);
+            writer.Write('(');
+            GenerateSubtypeName(subtype);
+            writer.WriteLine(");");
+            writer.Indent--;
+        }
+
+        writer.Indent--;
+        writer.WriteLine('}');
+        writer.WriteLine();
+        writer.WriteLine("throw new System.InvalidOperationException(\"Invalid discriminator\");");
+        writer.Indent--;
+        writer.WriteLine('}');
+        writer.WriteLine();
+
+        // union Equals()
+        writer.Write("public bool Equals(@");
+        writer.Write(union.Name);
+        writer.WriteLine(" other)");
+        writer.WriteLine('{');
+        writer.Indent++;
+        writer.Write("return Discriminator == other.Discriminator");
+
+        foreach (TypeSymbol subtype in union.Subtypes)
+        {
+            writer.Write(" && ");
+            GenerateSubtypeName(subtype);
+            writer.Write(" == other.");
+            GenerateSubtypeName(subtype);
+        }
+
+        writer.WriteLine(';');
+        writer.Indent--;
+        writer.WriteLine('}');
+        writer.WriteLine();
+
+        // object Equals()
+        writer.WriteLine("public override bool Equals(object? other)");
+        writer.WriteLine('{');
+        writer.Indent++;
+        writer.Write("return other is @");
+        writer.Write(union.Name);
+        writer.WriteLine(" union && Equals(union);");
+        writer.Indent--;
+        writer.WriteLine('}');
+        writer.WriteLine();
+
+        // GetHashCode()
+        writer.WriteLine("public override int GetHashCode()");
+        writer.WriteLine('{');
+        writer.Indent++;
+        writer.WriteLine("System.HashCode hashcode = default;");
+
+        foreach (TypeSymbol subtype in union.Subtypes)
+        {
+            writer.Write("hashcode.Add(");
+            GenerateSubtypeName(subtype);
+            writer.WriteLine(");");
+        }
+
+        writer.WriteLine("return hashcode.ToHashCode();");
+        writer.Indent--;
+        writer.WriteLine('}');
+        writer.WriteLine();
+
+        // == operator
+        writer.Write("public static bool operator ==(@");
+        writer.Write(union.Name);
+        writer.Write(" x, @");
+        writer.Write(union.Name);
+        writer.WriteLine(" y)");
+        writer.WriteLine('{');
+        writer.Indent++;
+        writer.WriteLine("return x.Equals(y);");
+        writer.Indent--;
+        writer.WriteLine('}');
+        writer.WriteLine();
+
+        // != operator
+        writer.Write("public static bool operator !=(@");
+        writer.Write(union.Name);
+        writer.Write(" x, @");
+        writer.Write(union.Name);
+        writer.WriteLine(" y)");
+        writer.WriteLine('{');
+        writer.Indent++;
+        writer.WriteLine("return !x.Equals(y);");
+        writer.Indent--;
+        writer.WriteLine('}');
+        writer.WriteLine();
+
+        // discriminator enum
+        writer.Write("public enum ");
+        writer.Write(union.Name);
+        writer.WriteLine("Discriminator");
+        writer.WriteLine('{');
+        writer.Indent++;
+
+        foreach (TypeSymbol subtype in union.Subtypes)
+        {
+            GenerateSubtypeName(subtype);
+            writer.WriteLine(',');
+        }
+
+        writer.Indent--;
+        writer.WriteLine('}');
 
         writer.Indent--;
         writer.WriteLine('}');
@@ -513,6 +870,21 @@ public sealed class Emitter
     {
         TypedExpressionNode? typedExpression = expression as TypedExpressionNode;
         Debug.Assert(typedExpression is not null);
+
+        // deal with this more later
+        // problem: recursive unions
+        //if (typedExpression.SourceType != typedExpression.TargetType)
+        //{
+        //    Debug.Assert(typedExpression.TargetType is UnionTypeSymbol);
+
+        //    writer.Write("new @");
+        //    writer.Write(typedExpression.TargetType.Name);
+        //    writer.Write('(');
+        //    GenerateExpression(writer, typedExpression with
+        //    {
+        //        TargetType = 
+        //    })
+        //}
 
         switch (typedExpression.Expression)
         {
