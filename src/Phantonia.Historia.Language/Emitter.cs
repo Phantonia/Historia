@@ -33,12 +33,10 @@ public sealed class Emitter
 
     public string GenerateCSharpText()
     {
-        const string className = "HistoriaStory";
-
         IndentedTextWriter writer = new(new StringWriter());
 
-        writer.Write("public sealed class ");
-        writer.Write(className);
+        writer.Write("public sealed class @");
+        writer.Write(settings.ClassName);
         writer.Write(" : Phantonia.Historia.IStory<");
         GenerateType(writer, settings.OutputType);
         writer.Write(", ");
@@ -48,7 +46,7 @@ public sealed class Emitter
         writer.WriteManyLines(
           $$"""
             {
-                public {{className}}()
+                public @{{settings.ClassName}}()
                 {
             """);
 
@@ -468,7 +466,7 @@ public sealed class Emitter
         }
     }
 
-    private static void GenerateRecordDeclaration(IndentedTextWriter writer, RecordTypeSymbol record)
+    private void GenerateRecordDeclaration(IndentedTextWriter writer, RecordTypeSymbol record)
     {
         writer.WriteManyLines(
                         $$"""
@@ -873,18 +871,20 @@ public sealed class Emitter
 
         // deal with this more later
         // problem: recursive unions
-        //if (typedExpression.SourceType != typedExpression.TargetType)
-        //{
-        //    Debug.Assert(typedExpression.TargetType is UnionTypeSymbol);
+        if (typedExpression.SourceType != typedExpression.TargetType)
+        {
+            Debug.Assert(typedExpression.TargetType is UnionTypeSymbol);
 
-        //    writer.Write("new @");
-        //    writer.Write(typedExpression.TargetType.Name);
-        //    writer.Write('(');
-        //    GenerateExpression(writer, typedExpression with
-        //    {
-        //        TargetType = 
-        //    })
-        //}
+            writer.Write("new @");
+            writer.Write(typedExpression.TargetType.Name);
+            writer.Write('(');
+            GenerateExpression(writer, typedExpression with
+            {
+                TargetType = typedExpression.SourceType,
+            });
+            writer.Write(')');
+            return;
+        }
 
         switch (typedExpression.Expression)
         {
@@ -911,7 +911,7 @@ public sealed class Emitter
         Debug.Assert(false);
     }
 
-    private static void GenerateType(IndentedTextWriter writer, TypeSymbol type)
+    private void GenerateType(IndentedTextWriter writer, TypeSymbol type)
     {
         switch (type)
         {
@@ -922,7 +922,10 @@ public sealed class Emitter
                 writer.Write("string?");
                 return;
             default:
-                writer.Write("@" + type.Name);
+                writer.Write('@');
+                writer.Write(settings.ClassName);
+                writer.Write(".@");
+                writer.Write(type.Name);
                 return;
         }
     }

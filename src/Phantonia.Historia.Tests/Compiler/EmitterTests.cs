@@ -343,7 +343,14 @@ public sealed class EmitterTests
 
             union X: String, Int, Line;
 
-            scene main { output 2; }
+            setting OutputType: X;
+
+            scene main
+            {
+                output 2;
+                output "String";
+                output Line("Hey", 1);
+            }
             """;
 
         Language.Compiler compiler = new(code);

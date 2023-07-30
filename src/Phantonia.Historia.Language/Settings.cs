@@ -29,6 +29,8 @@ public sealed record Settings
 
     public Settings() { }
 
+    public string ClassName { get; init; } = "HistoriaStory";
+
     public TypeSymbol OutputType { get; init; } = IntType;
 
     public TypeSymbol OptionType { get; init; } = IntType;

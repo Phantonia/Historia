@@ -156,17 +156,29 @@ public sealed partial class Binder
 
     private static UnionTypeSymbol TurnIntoTrueUnionSymbol(PseudoUnionTypeSymbol pseudoUnion, SymbolTable table)
     {
-        ImmutableArray<TypeSymbol>.Builder trueSubtypes = ImmutableArray.CreateBuilder<TypeSymbol>(initialCapacity: pseudoUnion.Subtypes.Length);
+        HashSet<TypeSymbol> trueSubtypes = new();
 
         foreach (TypeNode subtype in pseudoUnion.Subtypes)
         {
-            trueSubtypes.Add(GetTypeSymbol(subtype, table));
+            TypeSymbol subtypeSymbol = GetTypeSymbol(subtype, table);
+
+            if (subtypeSymbol is UnionTypeSymbol subtypeUnion)
+            {
+                foreach (TypeSymbol subsubtypes in subtypeUnion.Subtypes)
+                {
+                    trueSubtypes.Add(subsubtypes);
+                }
+            }
+            else
+            {
+                trueSubtypes.Add(GetTypeSymbol(subtype, table));
+            }
         }
 
         return new UnionTypeSymbol
         {
             Name = pseudoUnion.Name,
-            Subtypes = trueSubtypes.MoveToImmutable(),
+            Subtypes = trueSubtypes.ToImmutableArray(),
             Index = pseudoUnion.Index,
         };
     }
