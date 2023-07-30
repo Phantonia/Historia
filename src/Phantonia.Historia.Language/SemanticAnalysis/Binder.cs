@@ -108,6 +108,8 @@ public sealed partial class Binder
                 return new SceneSymbol { Name = name, Index = index };
             case RecordSymbolDeclarationNode recordDeclaration:
                 return CreateRecordSymbolFromDeclaration(recordDeclaration);
+            case UnionTypeSymbolDeclarationNode unionDeclaration:
+                return CreateUnionSymbolFromDeclaration(unionDeclaration);
             case SettingDirectiveNode:
                 return null;
             default:
@@ -138,6 +140,16 @@ public sealed partial class Binder
         };
     }
 
+    private static PseudoUnionTypeSymbol CreateUnionSymbolFromDeclaration(UnionTypeSymbolDeclarationNode unionDeclaration)
+    {
+        return new PseudoUnionTypeSymbol
+        {
+            Name = unionDeclaration.Name,
+            Subtypes = unionDeclaration.Subtypes,
+            Index = unionDeclaration.Index,
+        };
+    }
+
     private static TypeSymbol GetTypeSymbol(TypeNode typeNode, SymbolTable table)
     {
         switch (typeNode)
@@ -151,15 +163,21 @@ public sealed partial class Binder
         }
     }
 
-
-
     private static bool TypesAreCompatible(TypeSymbol sourceType, TypeSymbol targetType)
     {
-        // we will get more complicated cases soon
-        // - anonymous types like arrays
-        // - subtype relationships
-        // for now we can just check for equality
-        // and two symbols are equals iff their indices are equal
+        if (targetType is UnionTypeSymbol union)
+        {
+            foreach (TypeSymbol subtype in union.Subtypes)
+            {
+                if (TypesAreCompatible(sourceType, subtype))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         return sourceType.Index == targetType.Index;
     }
 }

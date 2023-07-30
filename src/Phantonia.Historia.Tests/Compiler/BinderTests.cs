@@ -257,7 +257,7 @@ public sealed class BinderTests
         BindingResult result = binder.Bind();
         Assert.IsFalse(result.IsValid);
 
-        Error expectedError = Errors.CyclicRecordDeclaration(new[] { "C", "A", "B", "C" }, code.IndexOf("record C"));
+        Error expectedError = Errors.CyclicTypeDefinition(new[] { "C", "A", "B", "C" }, code.IndexOf("record C"));
 
         Assert.AreEqual(1, errors.Count);
         Assert.AreEqual(expectedError, errors[0]);
@@ -285,7 +285,7 @@ public sealed class BinderTests
         BindingResult result = binder.Bind();
         Assert.IsFalse(result.IsValid);
 
-        Error expectedError = Errors.CyclicRecordDeclaration(new[] { "A", "A" }, index: code.IndexOf("record A"));
+        Error expectedError = Errors.CyclicTypeDefinition(new[] { "A", "A" }, index: code.IndexOf("record A"));
 
         Assert.AreEqual(1, errors.Count);
         Assert.AreEqual(expectedError, errors[0]);
@@ -507,7 +507,7 @@ public sealed class BinderTests
             TypedExpressionNode? typedExpression = outputStatement.OutputExpression as TypedExpressionNode;
             Assert.IsNotNull(typedExpression);
 
-            Assert.IsTrue(typedExpression.Type is RecordTypeSymbol
+            Assert.IsTrue(typedExpression.SourceType is RecordTypeSymbol
             {
                 Name: "Line",
                 Properties.Length: 2,
@@ -525,7 +525,7 @@ public sealed class BinderTests
                         Expression: TypedExpressionNode
                         {
                             Expression: StringLiteralExpressionNode,
-                            Type: BuiltinTypeSymbol
+                            SourceType: BuiltinTypeSymbol
                             {
                                 Type: BuiltinType.String,
                             }
@@ -922,5 +922,170 @@ public sealed class BinderTests
             """;
 
         TestForError(code3, Errors.OptionDoesNotExistInOutcome("X", "C", code3.IndexOf("C;")));
+    }
+
+    [TestMethod]
+    public void TestUnionTypes()
+    {
+        string code =
+            """
+            union Stuff: Int, String;
+            setting OutputType: Stuff;
+
+            scene main
+            {
+                output "String";
+                output 2;
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        BindingResult result = binder.Bind();
+
+        Assert.IsTrue(result.IsValid);
+
+        StoryNode? boundStory = result.BoundStory;
+        Assert.IsNotNull(boundStory);
+
+        Assert.AreEqual(3, boundStory.TopLevelNodes.Length);
+
+        BoundSymbolDeclarationNode? boundUnionDeclaration = boundStory.TopLevelNodes[0] as BoundSymbolDeclarationNode;
+        Assert.IsNotNull(boundUnionDeclaration);
+        Assert.IsTrue(boundUnionDeclaration is
+        {
+            Declaration: UnionTypeSymbolDeclarationNode { Name: "Stuff", Subtypes.Length: 2 },
+            Symbol: UnionTypeSymbol { Name: "Stuff", Subtypes: [BuiltinTypeSymbol { Type: BuiltinType.Int }, BuiltinTypeSymbol { Type: BuiltinType.String }] },
+        });
+
+        BoundSymbolDeclarationNode? mainScene = boundStory.TopLevelNodes[2] as BoundSymbolDeclarationNode;
+        SceneSymbolDeclarationNode? scene = mainScene?.Declaration as SceneSymbolDeclarationNode;
+        Assert.IsNotNull(scene);
+
+        Assert.AreEqual(2, scene.Body.Statements.Length);
+
+        OutputStatementNode? outputStringStatement = scene.Body.Statements[0] as OutputStatementNode;
+        Assert.IsNotNull(outputStringStatement);
+
+        Assert.IsTrue(outputStringStatement is
+        {
+            OutputExpression: TypedExpressionNode
+            {
+                SourceType: BuiltinTypeSymbol { Type: BuiltinType.String },
+                TargetType: UnionTypeSymbol { Name: "Stuff" },
+            }
+        });
+
+        OutputStatementNode? outputIntStatement = scene.Body.Statements[0] as OutputStatementNode;
+        Assert.IsNotNull(outputIntStatement);
+
+        Assert.IsTrue(outputIntStatement is
+        {
+            OutputExpression: TypedExpressionNode
+            {
+                SourceType: BuiltinTypeSymbol { Type: BuiltinType.String },
+                TargetType: UnionTypeSymbol { Name: "Stuff" },
+            }
+        });
+    }
+
+    [TestMethod]
+    public void TestRecursiveUnion()
+    {
+        string code =
+            """
+            record X
+            {
+                A: Int;
+                B: String;
+            }
+
+            union Y: X, Int;
+            union Z: Y, String;
+
+            setting OutputType: Z;
+
+            scene main
+            {
+                output X(4, "abc");
+                output 4;
+                output "xyz";
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        _ = binder.Bind();
+    }
+
+    [TestMethod]
+    public void TestUnionTypeError()
+    {
+        string code =
+            """
+            record X
+            {
+                A: Int;
+                B: String;
+            }
+
+            union Y: X, Int;
+
+            setting OutputType: Y;
+
+            scene main
+            {
+                output "String";
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+
+        List<Error> errors = new();
+        binder.ErrorFound += errors.Add;
+
+        BindingResult result = binder.Bind();
+
+        Assert.AreEqual(1, errors.Count);
+
+        Error expectedError = Errors.IncompatibleType((TypeSymbol)result.SymbolTable!["String"], (TypeSymbol)result.SymbolTable!["Y"], "output", code.IndexOf("\"String\""));
+
+        Assert.AreEqual(expectedError, errors[0]);
+    }
+
+    [TestMethod]
+    public void TestCyclicUnionsAndRecords()
+    {
+        string code =
+            """
+            union A: B, C;
+
+            record B
+            {
+                C: C;
+            }
+
+            record C
+            {
+                A: A;
+            }
+
+            scene main { }
+            """;
+
+        Binder binder = PrepareBinder(code);
+
+        List<Error> errors = new();
+        binder.ErrorFound += errors.Add;
+
+        _ = binder.Bind();
+
+        Assert.AreEqual(1, errors.Count);
+
+        Error expectedError = Errors.CyclicTypeDefinition(new[] { "C", "A", "B", "C" }, code.IndexOf("record C"));
+
+        Assert.AreEqual(expectedError, errors[0]);
     }
 }

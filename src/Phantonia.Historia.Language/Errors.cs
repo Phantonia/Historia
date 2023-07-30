@@ -196,11 +196,11 @@ public static class Errors
         };
     }
 
-    public static Error CyclicRecordDeclaration(IEnumerable<string> cycle, int index)
+    public static Error CyclicTypeDefinition(IEnumerable<string> cycle, int index)
     {
         return new Error
         {
-            ErrorMessage = $"Cyclic record definition: {string.Join(", ", cycle.Select(s => s))}",
+            ErrorMessage = $"Cyclic type definition: {string.Join(", ", cycle.Select(s => s))}",
             Index = index,
         };
     }

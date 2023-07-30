@@ -3,6 +3,7 @@ using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Types;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -39,6 +40,8 @@ public sealed partial class Binder
         {
             case RecordSymbolDeclarationNode recordDeclaration:
                 return BindPseudoRecordDeclaration(recordDeclaration, table);
+            case UnionTypeSymbolDeclarationNode unionDeclaration:
+                return BindPseudoUnionDeclaration(unionDeclaration, table);
             default:
                 Debug.Assert(false);
                 return default;
@@ -67,6 +70,30 @@ public sealed partial class Binder
             },
             Symbol = table[recordDeclaration.Name],
             Index = recordDeclaration.Index,
+        };
+
+        return (table, boundDeclaration);
+    }
+
+    private (SymbolTable, TopLevelNode) BindPseudoUnionDeclaration(UnionTypeSymbolDeclarationNode unionDeclaration, SymbolTable table)
+    {
+        List<TypeNode> subtypes = unionDeclaration.Subtypes.ToList();
+
+        for (int i = 0; i < subtypes.Count; i++)
+        {
+            (table, TypeNode boundType) = BindType(subtypes[i], table);
+            subtypes[i] = boundType;
+        }
+
+        BoundSymbolDeclarationNode boundDeclaration = new()
+        {
+            Name = unionDeclaration.Name,
+            Declaration = unionDeclaration with
+            {
+                Subtypes = subtypes.ToImmutableArray(),
+            },
+            Symbol = table[unionDeclaration.Name],
+            Index = unionDeclaration.Index,
         };
 
         return (table, boundDeclaration);
@@ -153,6 +180,8 @@ public sealed partial class Binder
                 return BindSceneDeclaration(sceneDeclaration, settings, table);
             case RecordSymbolDeclarationNode recordDeclaration:
                 return BindRecordDeclaration(recordDeclaration, table);
+            case UnionTypeSymbolDeclarationNode unionDeclaration:
+                return BindUnionDeclaration(unionDeclaration, table);
             default:
                 Debug.Assert(false);
                 return default;
@@ -193,6 +222,23 @@ public sealed partial class Binder
         };
 
         return (table, boundRecordDeclaration);
+    }
+
+    private (SymbolTable, TopLevelNode) BindUnionDeclaration(UnionTypeSymbolDeclarationNode unionDeclaration, SymbolTable table)
+    {
+        Debug.Assert(table.IsDeclared(unionDeclaration.Name) && table[unionDeclaration.Name] is UnionTypeSymbol);
+
+        UnionTypeSymbol unionSymbol = (UnionTypeSymbol)table[unionDeclaration.Name];
+
+        BoundSymbolDeclarationNode boundUnionDeclaration = new()
+        {
+            Name = unionDeclaration.Name,
+            Declaration = unionDeclaration,
+            Symbol = unionSymbol,
+            Index = unionDeclaration.Index,
+        };
+
+        return (table, boundUnionDeclaration);
     }
 
     private (SymbolTable, SettingDirectiveNode) BindSingleSettingDirective(SettingDirectiveNode directive, SymbolTable table)
@@ -291,7 +337,7 @@ public sealed partial class Binder
                 {
                     (table, ExpressionNode boundExpression) = BindAndTypeExpression(outputStatement.OutputExpression, table);
 
-                    if (boundExpression is TypedExpressionNode { Type: TypeSymbol sourceType })
+                    if (boundExpression is TypedExpressionNode { SourceType: TypeSymbol sourceType } typedExpression)
                     {
                         if (!TypesAreCompatible(sourceType, settings.OutputType))
                         {
@@ -299,6 +345,11 @@ public sealed partial class Binder
 
                             return (table, statement);
                         }
+
+                        boundExpression = typedExpression with
+                        {
+                            TargetType = settings.OutputType,
+                        };
                     }
 
                     OutputStatementNode boundStatement = outputStatement with
@@ -327,7 +378,7 @@ public sealed partial class Binder
         (table, ExpressionNode outputExpression) = BindAndTypeExpression(switchStatement.OutputExpression, table);
 
         {
-            if (outputExpression is TypedExpressionNode { Type: TypeSymbol sourceType })
+            if (outputExpression is TypedExpressionNode { SourceType: TypeSymbol sourceType } typedExpression)
             {
                 if (!TypesAreCompatible(sourceType, settings.OutputType))
                 {
@@ -335,6 +386,11 @@ public sealed partial class Binder
 
                     return (table, switchStatement);
                 }
+
+                outputExpression = typedExpression with
+                {
+                    TargetType = settings.OutputType,
+                };
             }
         }
 
@@ -384,7 +440,7 @@ public sealed partial class Binder
         {
             (table, ExpressionNode optionExpression) = BindAndTypeExpression(boundOptions[i].Expression, table);
 
-            if (optionExpression is TypedExpressionNode { Type: TypeSymbol sourceType })
+            if (optionExpression is TypedExpressionNode { SourceType: TypeSymbol sourceType } typedExpression)
             {
                 if (!TypesAreCompatible(sourceType, settings.OptionType))
                 {
@@ -392,6 +448,11 @@ public sealed partial class Binder
 
                     return (table, switchStatement);
                 }
+
+                optionExpression = typedExpression with
+                {
+                    TargetType = settings.OptionType,
+                };
             }
 
             (table, StatementBodyNode optionBody) = BindStatementBody(boundOptions[i].Body, settings, table);
@@ -631,7 +692,7 @@ public sealed partial class Binder
                     TypedExpressionNode typedExpression = new()
                     {
                         Expression = expression,
-                        Type = intType,
+                        SourceType = intType,
                         Index = expression.Index,
                     };
 
@@ -646,7 +707,7 @@ public sealed partial class Binder
                     TypedExpressionNode typedExpression = new()
                     {
                         Expression = expression,
-                        Type = stringType,
+                        SourceType = stringType,
                         Index = expression.Index,
                     };
 
@@ -692,7 +753,7 @@ public sealed partial class Binder
             TypedExpressionNode incompleteTypedExpression = new()
             {
                 Expression = recordCreation,
-                Type = recordSymbol,
+                SourceType = recordSymbol,
                 Index = recordCreation.Index,
             };
 
@@ -719,11 +780,16 @@ public sealed partial class Binder
                 continue;
             }
 
-            if (!TypesAreCompatible(typedExpression.Type, propertyType))
+            if (!TypesAreCompatible(typedExpression.SourceType, propertyType))
             {
-                ErrorFound?.Invoke(Errors.IncompatibleType(typedExpression.Type, propertyType, "property", recordCreation.Arguments[i].Index));
+                ErrorFound?.Invoke(Errors.IncompatibleType(typedExpression.SourceType, propertyType, "property", recordCreation.Arguments[i].Index));
                 continue;
             }
+
+            typedExpression = typedExpression with
+            {
+                TargetType = recordSymbol.Properties[i].Type,
+            };
 
             BoundArgumentNode boundArgument = new()
             {
@@ -749,7 +815,7 @@ public sealed partial class Binder
             TypedExpressionNode typedRecordCreation = new()
             {
                 Expression = boundRecordCreation,
-                Type = recordSymbol,
+                SourceType = recordSymbol,
                 Index = boundRecordCreation.Index,
             };
 
@@ -760,7 +826,7 @@ public sealed partial class Binder
             TypedExpressionNode typedRecordCreation = new()
             {
                 Expression = recordCreation,
-                Type = recordSymbol,
+                SourceType = recordSymbol,
                 Index = recordCreation.Index,
             };
 

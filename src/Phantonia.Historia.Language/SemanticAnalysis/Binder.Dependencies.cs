@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Collections.Immutable;
+using System;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 
@@ -29,7 +30,7 @@ public sealed partial class Binder
 
     private DependencyGraph? BuildTypeDependencyGraph(StoryNode story, SymbolTable table)
     {
-        Dictionary<int, Symbol> symbols = new(); ;
+        Dictionary<int, Symbol> symbols = new();
         Dictionary<int, IReadOnlyList<int>> dependencies = new();
 
         foreach (TopLevelNode declaration in story.TopLevelNodes)
@@ -53,7 +54,7 @@ public sealed partial class Binder
 
         if (dependencyGraph.IsCyclic(out IEnumerable<int>? cycle))
         {
-            ErrorFound?.Invoke(Errors.CyclicRecordDeclaration(cycle.Select(i => dependencyGraph.Symbols[i].Name), dependencyGraph.Symbols[cycle.First()].Index));
+            ErrorFound?.Invoke(Errors.CyclicTypeDefinition(cycle.Select(i => dependencyGraph.Symbols[i].Name), dependencyGraph.Symbols[cycle.First()].Index));
 
             return null;
         }
@@ -88,6 +89,22 @@ public sealed partial class Binder
                     }
                 }
                 break;
+            case UnionTypeSymbolDeclarationNode unionDeclaration:
+                foreach (TypeNode subtype in unionDeclaration.Subtypes)
+                {
+                    if (((BoundTypeNode)subtype).Node is IdentifierTypeNode { Identifier: string identifier })
+                    {
+                        if (table[identifier] is not BuiltinTypeSymbol)
+                        {
+                            dependencies.Add(table[identifier].Index);
+                        }
+                    }
+                    else
+                    {
+                        Debug.Assert(false);
+                    }
+                }
+                break;
             default:
                 Debug.Assert(false);
                 break;
@@ -102,6 +119,8 @@ public sealed partial class Binder
         {
             case PseudoRecordTypeSymbol recordSymbol:
                 return TurnIntoTrueRecordSymbol(recordSymbol, table);
+            case PseudoUnionTypeSymbol unionSymbol:
+                return TurnIntoTrueUnionSymbol(unionSymbol, table);
             default:
                 Debug.Assert(false);
                 return null;
@@ -132,6 +151,23 @@ public sealed partial class Binder
             Name = pseudoProperty.Name,
             Type = GetTypeSymbol(pseudoProperty.Type, table),
             Index = pseudoProperty.Index,
+        };
+    }
+
+    private static UnionTypeSymbol TurnIntoTrueUnionSymbol(PseudoUnionTypeSymbol pseudoUnion, SymbolTable table)
+    {
+        ImmutableArray<TypeSymbol>.Builder trueSubtypes = ImmutableArray.CreateBuilder<TypeSymbol>(initialCapacity: pseudoUnion.Subtypes.Length);
+
+        foreach (TypeNode subtype in pseudoUnion.Subtypes)
+        {
+            trueSubtypes.Add(GetTypeSymbol(subtype, table));
+        }
+
+        return new UnionTypeSymbol
+        {
+            Name = pseudoUnion.Name,
+            Subtypes = trueSubtypes.MoveToImmutable(),
+            Index = pseudoUnion.Index,
         };
     }
 }

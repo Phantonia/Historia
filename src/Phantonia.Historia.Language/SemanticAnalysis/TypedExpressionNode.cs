@@ -10,7 +10,9 @@ public sealed record TypedExpressionNode : ExpressionNode
 
     public required ExpressionNode Expression { get; init; }
 
-    public required TypeSymbol Type { get; init; }
+    public required TypeSymbol SourceType { get; init; }
+
+    public TypeSymbol? TargetType { get; init; }
 
     public override IEnumerable<SyntaxNode> Children => new[] { Expression };
 }
