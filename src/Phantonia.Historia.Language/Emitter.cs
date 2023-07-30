@@ -8,10 +8,8 @@ using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
 using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
 using Phantonia.Historia.Language.SemanticAnalysis;
-using System;
 using System.CodeDom.Compiler;
 using System.Collections.Immutable;
-using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -35,35 +33,44 @@ public sealed class Emitter
     {
         IndentedTextWriter writer = new(new StringWriter());
 
+        writer.WriteLine("#nullable enable");
         writer.Write("public sealed class @");
         writer.Write(settings.ClassName);
-        writer.Write(" : Phantonia.Historia.IStory<");
+        writer.Write(" : global::Phantonia.Historia.IStory<");
         GenerateType(writer, settings.OutputType);
         writer.Write(", ");
         GenerateType(writer, settings.OptionType);
         writer.WriteLine('>');
+        writer.WriteLine('{');
 
-        writer.WriteManyLines(
-          $$"""
-            {
-                public @{{settings.ClassName}}()
-                {
-            """);
+        writer.Indent++;
 
-        writer.Indent += 2;
+        writer.Write("public @");
+        writer.Write(settings.ClassName);
+        writer.WriteLine("()");
+        writer.WriteLine('{');
 
-        writer.Write("Output = ");
+        writer.Indent++;
 
-        if (flowGraph.Vertices[flowGraph.StartVertex].AssociatedStatement is IOutputStatementNode outputStatement)
+        if (flowGraph.StartVertex == FlowGraph.EmptyVertex)
         {
-            GenerateExpression(writer, outputStatement.OutputExpression);
+            writer.Write("FinishedStory = true;");
         }
         else
         {
-            writer.Write("default");
-        }
+            writer.Write("Output = ");
 
-        writer.WriteLine(";");
+            if (flowGraph.Vertices[flowGraph.StartVertex].AssociatedStatement is IOutputStatementNode outputStatement)
+            {
+                GenerateExpression(writer, outputStatement.OutputExpression);
+            }
+            else
+            {
+                writer.Write("default");
+            }
+
+            writer.WriteLine(";");
+        }
 
         writer.Indent--;
 
@@ -82,9 +89,9 @@ public sealed class Emitter
 
         writer.WriteLine();
 
-        writer.Write("public System.Collections.Immutable.ImmutableArray<");
+        writer.Write("public global::System.Collections.Immutable.ImmutableArray<");
         GenerateType(writer, settings.OptionType);
-        writer.Write("> Options { get; private set; } = System.Collections.Immutable.ImmutableArray<");
+        writer.Write("> Options { get; private set; } = global::System.Collections.Immutable.ImmutableArray<");
         GenerateType(writer, settings.OptionType);
         writer.WriteLine(">.Empty;");
 
@@ -150,9 +157,30 @@ public sealed class Emitter
         writer.WriteLine();
 
         GenerateTypes(writer);
+
+        writer.WriteLine();
+        writer.Write("global::System.Collections.Generic.IReadOnlyList<");
+        GenerateType(writer, settings.OptionType);
+        writer.Write("> global::Phantonia.Historia.IStory<");
+        GenerateType(writer, settings.OutputType);
+        writer.Write(", ");
+        GenerateType(writer, settings.OptionType);
+        writer.WriteLine(">.Options");
+        writer.WriteManyLines(
+            """
+            {
+                get
+                {
+                    return Options;
+                }
+            }
+            """);
+
         writer.Indent--;
 
         writer.WriteLine("}");
+
+        Debug.Assert(writer.Indent == 0);
 
         return ((StringWriter)writer.InnerWriter).ToString();
     }
@@ -301,7 +329,7 @@ public sealed class Emitter
                         writer.Indent--;
                         writer.WriteLine('}');
                         writer.WriteLine();
-                        writer.WriteLine("throw new System.InvalidOperationException(\"Invalid outcome\");");
+                        writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid outcome\");");
                         writer.Indent--;
                     }
                     break;
@@ -325,7 +353,7 @@ public sealed class Emitter
             """
                     }
 
-                    throw new System.InvalidOperationException("Invalid state");
+                    throw new global::System.InvalidOperationException("Invalid state");
                 }
             }
             """);
@@ -385,14 +413,14 @@ public sealed class Emitter
                         return default;
                 }
 
-                throw new System.InvalidOperationException("Invalid state");
+                throw new global::System.InvalidOperationException("Invalid state");
             }
             """);
     }
 
     private void GenerateGetOptionsMethod(IndentedTextWriter writer)
     {
-        writer.Write("private System.Collections.Immutable.ImmutableArray<");
+        writer.Write("private global::System.Collections.Immutable.ImmutableArray<");
         GenerateType(writer, settings.OptionType);
         writer.WriteLine("> GetOptions()");
 
@@ -412,7 +440,7 @@ public sealed class Emitter
                 writer.WriteLine($"case {index}:");
 
                 writer.Indent++;
-                writer.Write("return System.Collections.Immutable.ImmutableArray.ToImmutableArray(new[] { ");
+                writer.Write("return global::System.Collections.Immutable.ImmutableArray.ToImmutableArray(new[] { ");
 
                 foreach (SwitchOptionNode option in switchStatement.Options)
                 {
@@ -430,7 +458,7 @@ public sealed class Emitter
         writer.WriteLine('}');
         writer.WriteLine();
 
-        writer.Write("return System.Collections.Immutable.ImmutableArray<");
+        writer.Write("return global::System.Collections.Immutable.ImmutableArray<");
         GenerateType(writer, settings.OptionType);
         writer.WriteLine(">.Empty;");
 
@@ -470,7 +498,7 @@ public sealed class Emitter
     {
         writer.WriteManyLines(
                         $$"""
-                        public readonly struct @{{record.Name}} : System.IEquatable<@{{record.Name}}>
+                        public readonly struct @{{record.Name}} : global::System.IEquatable<@{{record.Name}}>
                         {
                         """);
         writer.Indent++;
@@ -550,7 +578,7 @@ public sealed class Emitter
         writer.WriteLine("public override int GetHashCode()");
         writer.WriteLine('{');
         writer.Indent++;
-        writer.WriteLine("System.HashCode hashcode = default;");
+        writer.WriteLine("global::System.HashCode hashcode = default;");
 
         foreach (PropertySymbol property in record.Properties)
         {
@@ -575,6 +603,7 @@ public sealed class Emitter
         writer.WriteLine("return x.Equals(y);");
         writer.Indent--;
         writer.WriteLine('}');
+        writer.WriteLine();
 
         // != operator
         writer.Write("public static bool operator !=(@");
@@ -594,14 +623,6 @@ public sealed class Emitter
 
     private void GenerateUnionDeclaration(IndentedTextWriter writer, UnionTypeSymbol union)
     {
-        writer.WriteManyLines(
-            $$"""
-            public readonly struct @{{union.Name}} : System.IEquatable<@{{union.Name}}>
-            {
-            """);
-
-        writer.Indent++;
-
         void GenerateSubtypeName(TypeSymbol subtype, bool includeAt = true)
         {
             if (includeAt)
@@ -612,6 +633,38 @@ public sealed class Emitter
             writer.Write(subtype.Name);
         }
 
+        void GenerateUnionInterfaceName()
+        {
+            writer.Write("global::Phantonia.Historia.IUnion<");
+
+            foreach (TypeSymbol subtype in union.Subtypes.Take(union.Subtypes.Length - 1))
+            {
+                GenerateType(writer, subtype);
+                writer.Write(", ");
+            }
+
+            GenerateType(writer, union.Subtypes[^1]);
+            writer.Write('>');
+        }
+
+        writer.Write("public readonly struct @");
+        writer.Write(union.Name);
+        writer.Write(" : global::System.IEquatable<@");
+        writer.Write(union.Name);
+        writer.Write('>');
+
+        if (union.Subtypes.Length is >= 2 and <= 10)
+        {
+            // the IUnion interface only exists for those
+            writer.Write(", ");
+            GenerateUnionInterfaceName();
+        }
+
+        writer.WriteLine();
+        writer.WriteLine('{');
+
+        writer.Indent++;
+
         // constructors
         foreach (TypeSymbol subtype in union.Subtypes)
         {
@@ -620,6 +673,7 @@ public sealed class Emitter
             writer.WriteLine(" value)");
             writer.WriteLine('{');
             writer.Indent++;
+            writer.Write("this.");
             GenerateSubtypeName(subtype);
             writer.WriteLine(" = value;");
             writer.Indent--;
@@ -644,7 +698,7 @@ public sealed class Emitter
         writer.WriteLine();
 
         // AsObject()
-        writer.WriteLine("public object AsObject()");
+        writer.WriteLine("public object? AsObject()");
         writer.WriteLine('{');
         writer.Indent++;
         writer.WriteLine("switch (Discriminator)");
@@ -659,7 +713,7 @@ public sealed class Emitter
             GenerateSubtypeName(subtype);
             writer.WriteLine(':');
             writer.Indent++;
-            writer.Write("return ");
+            writer.Write("return this.");
             GenerateSubtypeName(subtype);
             writer.WriteLine(';');
             writer.Indent--;
@@ -667,24 +721,25 @@ public sealed class Emitter
 
         writer.Indent--;
         writer.WriteLine('}');
-        writer.WriteLine("throw new System.InvalidOperationException(\"Invalid discriminator\");");
+        writer.WriteLine();
+        writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid discriminator\");");
         writer.Indent--;
         writer.WriteLine('}');
         writer.WriteLine();
 
         // Run()
         writer.Write("public void Run(");
-        
+
         foreach (TypeSymbol subtype in union.Subtypes.Take(union.Subtypes.Length - 1))
         {
-            writer.Write("System.Action<");
+            writer.Write("global::System.Action<");
             GenerateType(writer, subtype);
             writer.Write("> action");
             GenerateSubtypeName(subtype, includeAt: false);
             writer.Write(", ");
         }
 
-        writer.Write("System.Action<");
+        writer.Write("global::System.Action<");
         GenerateType(writer, union.Subtypes[^1]);
         writer.Write("> action");
         GenerateSubtypeName(union.Subtypes[^1], includeAt: false);
@@ -706,7 +761,7 @@ public sealed class Emitter
             writer.Indent++;
             writer.Write("action");
             GenerateSubtypeName(subtype, includeAt: false);
-            writer.Write('(');
+            writer.Write("(this.");
             GenerateSubtypeName(subtype);
             writer.WriteLine(");");
             writer.WriteLine("return;");
@@ -716,7 +771,7 @@ public sealed class Emitter
         writer.Indent--;
         writer.WriteLine('}');
         writer.WriteLine();
-        writer.WriteLine("throw new System.InvalidOperationException(\"Invalid discriminator\");");
+        writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid discriminator\");");
         writer.Indent--;
         writer.WriteLine('}');
         writer.WriteLine();
@@ -726,14 +781,14 @@ public sealed class Emitter
 
         foreach (TypeSymbol subtype in union.Subtypes.Take(union.Subtypes.Length - 1))
         {
-            writer.Write("System.Func<");
+            writer.Write("global::System.Func<");
             GenerateType(writer, subtype);
             writer.Write(", T> function");
             GenerateSubtypeName(subtype, includeAt: false);
             writer.Write(", ");
         }
 
-        writer.Write("System.Func<");
+        writer.Write("global::System.Func<");
         GenerateType(writer, union.Subtypes[^1]);
         writer.Write(", T> function");
         GenerateSubtypeName(union.Subtypes[^1], includeAt: false);
@@ -754,7 +809,7 @@ public sealed class Emitter
             writer.Indent++;
             writer.Write("return function");
             GenerateSubtypeName(subtype, includeAt: false);
-            writer.Write('(');
+            writer.Write("(this.");
             GenerateSubtypeName(subtype);
             writer.WriteLine(");");
             writer.Indent--;
@@ -763,7 +818,7 @@ public sealed class Emitter
         writer.Indent--;
         writer.WriteLine('}');
         writer.WriteLine();
-        writer.WriteLine("throw new System.InvalidOperationException(\"Invalid discriminator\");");
+        writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid discriminator\");");
         writer.Indent--;
         writer.WriteLine('}');
         writer.WriteLine();
@@ -778,7 +833,7 @@ public sealed class Emitter
 
         foreach (TypeSymbol subtype in union.Subtypes)
         {
-            writer.Write(" && ");
+            writer.Write(" && this.");
             GenerateSubtypeName(subtype);
             writer.Write(" == other.");
             GenerateSubtypeName(subtype);
@@ -804,11 +859,11 @@ public sealed class Emitter
         writer.WriteLine("public override int GetHashCode()");
         writer.WriteLine('{');
         writer.Indent++;
-        writer.WriteLine("System.HashCode hashcode = default;");
+        writer.WriteLine("global::System.HashCode hashcode = default;");
 
         foreach (TypeSymbol subtype in union.Subtypes)
         {
-            writer.Write("hashcode.Add(");
+            writer.Write("hashcode.Add(this.");
             GenerateSubtypeName(subtype);
             writer.WriteLine(");");
         }
@@ -859,9 +914,51 @@ public sealed class Emitter
 
         writer.Indent--;
         writer.WriteLine('}');
+        writer.WriteLine();
 
-        writer.Indent--;
-        writer.WriteLine('}');
+        // explicit interface implementation
+        if (union.Subtypes.Length is >= 2 and <= 10)
+        {
+            for (int i = 0; i < union.Subtypes.Length; i++)
+            {
+                GenerateType(writer, union.Subtypes[i]);
+                writer.Write(' ');
+                GenerateUnionInterfaceName();
+                writer.Write(".Value");
+                writer.WriteLine(i);
+                writer.WriteLine('{');
+                writer.Indent++;
+                writer.WriteLine("get");
+                writer.WriteLine('{');
+                writer.Indent++;
+                writer.Write("return this.");
+                GenerateSubtypeName(union.Subtypes[i]);
+                writer.WriteLine(';');
+                writer.Indent--;
+                writer.WriteLine('}');
+                writer.Indent--;
+                writer.WriteLine('}');
+
+                writer.WriteLine();
+            }
+
+            writer.Write("int ");
+            GenerateUnionInterfaceName();
+            writer.WriteLine(".Discriminator");
+            writer.WriteLine('{');
+            writer.Indent++;
+            writer.WriteLine("get");
+            writer.WriteLine('{');
+            writer.Indent++;
+            writer.WriteLine("return (int)Discriminator;");
+            writer.Indent--;
+            writer.WriteLine('}');
+            writer.Indent--;
+            writer.WriteLine('}');
+
+            writer.Indent--;
+            writer.WriteLine('}');
+        }
     }
 
     private static void GenerateExpression(IndentedTextWriter writer, ExpressionNode expression)
@@ -869,8 +966,6 @@ public sealed class Emitter
         TypedExpressionNode? typedExpression = expression as TypedExpressionNode;
         Debug.Assert(typedExpression is not null);
 
-        // deal with this more later
-        // problem: recursive unions
         if (typedExpression.SourceType != typedExpression.TargetType)
         {
             Debug.Assert(typedExpression.TargetType is UnionTypeSymbol);

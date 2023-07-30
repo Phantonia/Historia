@@ -1,4 +1,5 @@
-﻿using System.Collections.Immutable;
+﻿using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 
 namespace Phantonia.Historia;
@@ -16,11 +17,11 @@ public interface IStory
     bool TryContinueWithOption(int option);
 }
 
-public interface IStory<TOutput, TOption> : IStory
+public interface IStory<out TOutput, out TOption> : IStory
 {
     new TOutput Output { get; }
 
-    new ImmutableArray<TOption> Options { get; }
+    new IReadOnlyList<TOption> Options { get; }
 
     object? IStory.Output => Output;
 

@@ -105,13 +105,13 @@ public sealed class EmitterTests
 
         // output (16);
         Assert.AreEqual(16, story.Output);
-        Assert.AreEqual(0, story.Options.Length);
+        Assert.AreEqual(0, story.Options.Count);
 
         // switch (17)
         Assert.IsFalse(story.TryContinueWithOption(0));
         Assert.IsTrue(story.TryContinue());
         Assert.AreEqual(17, story.Output);
-        Assert.AreEqual(2, story.Options.Length);
+        Assert.AreEqual(2, story.Options.Count);
         Assert.AreEqual(18, story.Options[0]);
         Assert.AreEqual(21, story.Options[1]);
 
@@ -122,7 +122,7 @@ public sealed class EmitterTests
         Assert.IsFalse(story.TryContinueWithOption(int.MaxValue));
         Assert.IsTrue(story.TryContinueWithOption(0));
         Assert.AreEqual(19, story.Output);
-        Assert.AreEqual(0, story.Options.Length);
+        Assert.AreEqual(0, story.Options.Count);
 
         // output (20);
         for (int i = 0; i < 10; i++)
@@ -132,18 +132,18 @@ public sealed class EmitterTests
         }
         Assert.IsTrue(story.TryContinue());
         Assert.AreEqual(20, story.Output);
-        Assert.AreEqual(0, story.Options.Length);
+        Assert.AreEqual(0, story.Options.Count);
 
         // output (27);
         Assert.IsTrue(story.TryContinue());
         Assert.AreEqual(27, story.Output);
-        Assert.AreEqual(0, story.Options.Length);
+        Assert.AreEqual(0, story.Options.Count);
 
         // done
         Assert.IsTrue(story.TryContinue());
         Assert.AreEqual(default, story.Output);
         Assert.IsTrue(story.FinishedStory);
-        Assert.AreEqual(0, story.Options.Length);
+        Assert.AreEqual(0, story.Options.Count);
 
         Assert.IsFalse(story.TryContinue());
         Assert.IsFalse(story.TryContinueWithOption(0));
@@ -223,14 +223,14 @@ public sealed class EmitterTests
         Assert.IsTrue(story.TryContinue());
 
         Assert.AreEqual(1, story.Output);
-        Assert.AreEqual(3, story.Options.Length);
+        Assert.AreEqual(3, story.Options.Count);
         Assert.AreEqual(2, story.Options[0]);
         Assert.AreEqual(4, story.Options[1]);
         Assert.AreEqual(6, story.Options[2]);
         Assert.IsTrue(story.TryContinueWithOption(2));
 
         Assert.AreEqual(7, story.Output);
-        Assert.AreEqual(2, story.Options.Length);
+        Assert.AreEqual(2, story.Options.Count);
         Assert.AreEqual(8, story.Options[0]);
         Assert.AreEqual(10, story.Options[1]);
         Assert.IsTrue(story.TryContinueWithOption(1));
@@ -362,5 +362,27 @@ public sealed class EmitterTests
         Assert.IsNotNull(result.CSharpText);
 
         _ = DynamicCompiler.CompileToStory(result.CSharpText);
+    }
+
+    [TestMethod]
+    public void TestEmptyStory()
+    {
+        string code =
+            """
+            scene main { }
+            """;
+
+        Language.Compiler compiler = new(code);
+
+        CompilationResult result = compiler.CompileToCSharpText();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+        Assert.IsNotNull(result.CSharpText);
+
+        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(result.CSharpText);
+
+        Assert.IsTrue(story.FinishedStory);
+        Assert.IsFalse(story.TryContinue());
     }
 }

@@ -47,9 +47,7 @@ internal static class DynamicCompiler
         if (!result.Success)
         {
             // handle exceptions
-            IEnumerable<Diagnostic> failures = result.Diagnostics.Where(diagnostic =>
-                diagnostic.IsWarningAsError ||
-                diagnostic.Severity == DiagnosticSeverity.Error);
+            IEnumerable<Diagnostic> failures = result.Diagnostics;
 
             foreach (Diagnostic diagnostic in failures)
             {
