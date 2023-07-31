@@ -724,4 +724,24 @@ public sealed class ParserTests
         Assert.AreEqual("X", unionDeclaration.Name);
         Assert.IsTrue(unionDeclaration.Subtypes.Select(s => (s as IdentifierTypeNode)?.Identifier).SequenceEqual(new[] { "Int", "String", "Y" }));
     }
+
+    [TestMethod]
+    public void TestEmptyUnion()
+    {
+        string code =
+            """
+            union X:;
+            scene main { }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+
+        List<Error> errors = new();
+        parser.ErrorFound += errors.Add;
+
+        _ = parser.Parse();
+
+        Assert.AreEqual(1, errors.Count);
+    }
 }

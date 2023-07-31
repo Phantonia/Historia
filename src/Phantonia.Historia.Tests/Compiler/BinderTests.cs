@@ -1088,4 +1088,57 @@ public sealed class BinderTests
 
         Assert.AreEqual(expectedError, errors[0]);
     }
+
+    [TestMethod]
+    public void TestUnionCollapsing()
+    {
+        string code =
+            """
+            union W: Int, String;
+            union X: Int, W;
+            record Y { A: Int; }
+            union Z: X, Y;
+            scene main { }
+            """;
+
+        Binder binder = PrepareBinder(code);
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        BindingResult result = binder.Bind();
+
+        SymbolTable table = result.SymbolTable!;
+
+        UnionTypeSymbol z = (UnionTypeSymbol)table["Z"];
+
+        Assert.AreEqual(3, z.Subtypes.Length);
+
+        IEnumerable<string> subtypeNames = z.Subtypes.Select(s => s.Name);
+
+        Assert.IsTrue(subtypeNames.Contains("Int"));
+        Assert.IsTrue(subtypeNames.Contains("String"));
+        Assert.IsTrue(subtypeNames.Contains("Y"));
+    }
+
+    [TestMethod]
+    public void TestUnionDuplicatedSubtype()
+    {
+        string code =
+            """
+            union X: Int, Int, String;
+            scene main { }
+            """;
+
+        Binder binder = PrepareBinder(code);
+
+        List<Error> errors = new();
+        binder.ErrorFound += errors.Add;
+
+        _ = binder.Bind();
+
+        Assert.AreEqual(1, errors.Count);
+
+        Error expectedError = Errors.UnionHasDuplicateSubtype("X", "Int", 0);
+
+        Assert.AreEqual(expectedError, errors[0]);
+    }
 }

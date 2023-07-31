@@ -304,6 +304,15 @@ public static class Errors
         };
     }
 
+    public static Error UnionHasDuplicateSubtype(string unionName, string typeName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"The union '{unionName}' has the subtype '{typeName}' more than once",
+            Index = index,
+        };
+    }
+
     public static string GenerateFullMessage(string text, Error error)
     {
         (string wholeLine, int column) = FindLine(text, error.Index);

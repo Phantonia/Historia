@@ -11,7 +11,7 @@ namespace Phantonia.Historia.Language.SemanticAnalysis;
 
 public sealed partial class Binder
 {
-    private static SymbolTable FixPseudoSymbols(DependencyGraph dependencyGraph, SymbolTable table)
+    private SymbolTable FixPseudoSymbols(DependencyGraph dependencyGraph, SymbolTable table)
     {
         IEnumerable<int>? topologicalOrdering = dependencyGraph.TopologicalSort();
 
@@ -113,7 +113,7 @@ public sealed partial class Binder
         return dependencies;
     }
 
-    private static TypeSymbol TurnIntoTrueTypeSymbol(TypeSymbol typeSymbol, SymbolTable table)
+    private TypeSymbol TurnIntoTrueTypeSymbol(TypeSymbol typeSymbol, SymbolTable table)
     {
         switch (typeSymbol)
         {
@@ -154,24 +154,35 @@ public sealed partial class Binder
         };
     }
 
-    private static UnionTypeSymbol TurnIntoTrueUnionSymbol(PseudoUnionTypeSymbol pseudoUnion, SymbolTable table)
+    private UnionTypeSymbol TurnIntoTrueUnionSymbol(PseudoUnionTypeSymbol pseudoUnion, SymbolTable table)
     {
-        HashSet<TypeSymbol> trueSubtypes = new();
+        HashSet<TypeSymbol> listedSubtypes = new();
 
         foreach (TypeNode subtype in pseudoUnion.Subtypes)
         {
             TypeSymbol subtypeSymbol = GetTypeSymbol(subtype, table);
 
-            if (subtypeSymbol is UnionTypeSymbol subtypeUnion)
+            if (!listedSubtypes.Add(subtypeSymbol))
             {
-                foreach (TypeSymbol subsubtypes in subtypeUnion.Subtypes)
+                ErrorFound?.Invoke(Errors.UnionHasDuplicateSubtype(pseudoUnion.Name, subtypeSymbol.Name, pseudoUnion.Index));
+            }
+        }
+
+        Queue<TypeSymbol> subtypeQueue = new(listedSubtypes);
+        HashSet<TypeSymbol> trueSubtypes = new();
+
+        while (subtypeQueue.TryDequeue(out TypeSymbol? subtype))
+        {
+            if (subtype is UnionTypeSymbol unionSubtype)
+            {
+                foreach (TypeSymbol subsubtype in unionSubtype.Subtypes)
                 {
-                    trueSubtypes.Add(subsubtypes);
+                    subtypeQueue.Enqueue(subsubtype);
                 }
             }
             else
             {
-                trueSubtypes.Add(GetTypeSymbol(subtype, table));
+                trueSubtypes.Add(subtype);
             }
         }
 
