@@ -2,7 +2,7 @@
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 
-public sealed record OutcomeSymbol : Symbol
+public record OutcomeSymbol : Symbol
 {
     public OutcomeSymbol() { }
 

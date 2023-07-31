@@ -259,6 +259,33 @@ public static class Errors
         };
     }
 
+    public static Error SpectrumNotIncreasing(string spectrumName, (int num, int denom) lastOkay, (int num, int denom) offending, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"The options in the spectrum '{spectrumName}' are not increasing: {lastOkay.num}/{lastOkay.denom} >= {offending.num}/{offending.denom}",
+            Index = index,
+        };
+    }
+
+    public static Error SpectrumBoundDivisionByZero(string spectrumName, string offendingOption, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"In the spectrum '{spectrumName}' the option '{offendingOption}' divides by zero",
+            Index = index,
+        };
+    }
+
+    public static Error SpectrumBoundNotInRange(string spectrumName, string offendingOption, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"The option '{offendingOption}' of the spectrum '{spectrumName}' has a bound greater than 1 or less than 0",
+            Index = index,
+        };
+    }
+
     public static Error BranchOnOnlyOneOtherLast(int index)
     {
         return new Error

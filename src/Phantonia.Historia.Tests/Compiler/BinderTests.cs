@@ -357,31 +357,31 @@ public sealed class BinderTests
                 Properties:
                 [
                     BoundPropertyDeclarationNode
+                {
+                    Name: "Line",
+                    Symbol: PropertySymbol
                     {
                         Name: "Line",
-                        Symbol: PropertySymbol
+                        Type: RecordTypeSymbol
                         {
                             Name: "Line",
-                            Type: RecordTypeSymbol
-                            {
-                                Name: "Line",
-                                Properties.Length: 2,
-                            }
-                        }
-                    },
-                    BoundPropertyDeclarationNode
-                    {
-                        Name: "StageDirection",
-                        Symbol: PropertySymbol
-                        {
-                            Name: "StageDirection",
-                            Type: RecordTypeSymbol
-                            {
-                                Name: "StageDirection",
-                                Properties.Length: 2,
-                            }
+                            Properties.Length: 2,
                         }
                     }
+                },
+                    BoundPropertyDeclarationNode
+                {
+                    Name: "StageDirection",
+                    Symbol: PropertySymbol
+                    {
+                        Name: "StageDirection",
+                        Type: RecordTypeSymbol
+                        {
+                            Name: "StageDirection",
+                            Properties.Length: 2,
+                        }
+                    }
+                }
                 ]
             }
         });
@@ -521,16 +521,16 @@ public sealed class BinderTests
                 },
                 BoundArguments:
                 [
+                {
+                    Expression: TypedExpressionNode
                     {
-                        Expression: TypedExpressionNode
+                        Expression: StringLiteralExpressionNode,
+                        SourceType: BuiltinTypeSymbol
                         {
-                            Expression: StringLiteralExpressionNode,
-                            SourceType: BuiltinTypeSymbol
-                            {
-                                Type: BuiltinType.String,
-                            }
+                            Type: BuiltinType.String,
                         }
-                    },
+                    }
+                },
                     BoundArgumentNode,
                 ]
             });
@@ -1140,5 +1140,76 @@ public sealed class BinderTests
         Error expectedError = Errors.UnionHasDuplicateSubtype("X", "Int", 0);
 
         Assert.AreEqual(expectedError, errors[0]);
+    }
+
+    [TestMethod]
+    public void TestSpectrumDeclarations()
+    {
+        string code =
+            """
+            scene main
+            {
+                spectrum Relationship (Apart < 6/14, Neutral <= 19/21, Close);
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        BindingResult result = binder.Bind();
+
+        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)((BoundSymbolDeclarationNode)result.BoundStory!.TopLevelNodes[0]).Declaration;
+
+        BoundSpectrumDeclarationStatementNode relationshipDeclaration = (BoundSpectrumDeclarationStatementNode)mainScene.Body.Statements[0];
+
+        Assert.AreEqual("Relationship", relationshipDeclaration.Spectrum.Name);
+        Assert.AreEqual(3, relationshipDeclaration.Spectrum.OptionNames.Length);
+        Assert.AreEqual(new SpectrumInterval { Inclusive = false, UpperNumerator = 18, UpperDenominator = 42 }, relationshipDeclaration.Spectrum.Intervals["Apart"]);
+        Assert.AreEqual(new SpectrumInterval { Inclusive = true, UpperNumerator = 38, UpperDenominator = 42 }, relationshipDeclaration.Spectrum.Intervals["Neutral"]);
+        Assert.AreEqual(new SpectrumInterval { Inclusive = true, UpperNumerator = 42, UpperDenominator = 42 }, relationshipDeclaration.Spectrum.Intervals["Close"]);
+    }
+
+    [TestMethod]
+    public void TestInvalidSpectrums()
+    {
+        string code =
+            """
+            scene main
+            {
+                spectrum O (A <= 1/2, B) default C; // error: default option is not an option
+                spectrum P (A <= 1/0, B); // error: divide by 0
+                spectrum Q (A < 2/3, B < 1/2, C); // error: decreasing
+                spectrum R (A <= 2/3, B <= 2/3, C); // error: not increasing
+                spectrum S (A <= 2/3, B < 2/3, C); // error: decreasing
+                spectrum T (A < 2/3, B <= 2/3, C); // okay
+                spectrum U (A < 3/2, B); // error: greater than 1
+                spectrum W (A <= 1/1, B); // error: not increasing
+                spectrum X (A < 1/1, B); // okay
+                spectrum Y (A <= 1/2, A); // error: duplicated option name
+                spectrum Z (); // error: no options
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+
+        List<Error> errors = new();
+        binder.ErrorFound += errors.Add;
+
+        _ = binder.Bind();
+
+        void AssertIsError(int index, Error error)
+        {
+            Assert.AreEqual(error, errors[index]);
+        }
+
+        AssertIsError(0, Errors.OutcomeDefaultOptionNotAnOption("O", code.IndexOf("spectrum O")));
+        AssertIsError(1, Errors.SpectrumBoundDivisionByZero("P", "A", code.IndexOf("A <= 1/0")));
+        AssertIsError(2, Errors.SpectrumNotIncreasing("Q", (2, 3), (1, 2), code.IndexOf("B < 1/2, C); // error: decreasing")));
+        AssertIsError(3, Errors.SpectrumNotIncreasing("R", (2, 3), (2, 3), code.IndexOf("B <= 2/3, C); // error: not increasing")));
+        AssertIsError(4, Errors.SpectrumNotIncreasing("S", (2, 3), (2, 3), code.IndexOf("B < 2/3, C); // error: decreasing")));
+        AssertIsError(5, Errors.SpectrumBoundNotInRange("U", "A", code.IndexOf("A < 3/2")));
+        AssertIsError(6, Errors.SpectrumNotIncreasing("W", (1, 1), (1, 1), code.IndexOf("B); // error: not increasing")));
+        AssertIsError(7, Errors.DuplicatedOptionInOutcomeDeclaration("A", code.IndexOf("spectrum Y")));
+        AssertIsError(8, Errors.OutcomeWithZeroOptions("Z", code.IndexOf("spectrum Z")));
     }
 }

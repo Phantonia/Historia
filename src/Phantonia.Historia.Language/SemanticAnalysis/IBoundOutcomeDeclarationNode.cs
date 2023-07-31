@@ -2,7 +2,7 @@
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 
-public interface IBoundOutcomeDeclarationNode
+public interface IBoundOutcomeDeclarationNode : ISyntaxNode
 {
     SyntaxNode DeclarationNode { get; }
 
