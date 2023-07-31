@@ -315,6 +315,78 @@ public sealed class Parser
         return (name, optionsBuilder.ToImmutable(), defaultOption, nodeIndex);
     }
 
+    private (string name, ImmutableArray<SpectrumOptionNode> options, string? defaultOption, int nodeIndex) ParseSpectrumDeclaration(ref int index)
+    {
+        Debug.Assert(tokens[index] is { Kind: TokenKind.SpectrumKeyword });
+
+        int nodeIndex = tokens[index].Index;
+        index++;
+
+        string name = Expect(TokenKind.Identifier, ref index).Text;
+
+        _ = Expect(TokenKind.OpenParenthesis, ref index);
+
+        ImmutableArray<SpectrumOptionNode>.Builder optionBuilder = ImmutableArray.CreateBuilder<SpectrumOptionNode>();
+
+        while (tokens[index] is { Kind: TokenKind.Identifier })
+        {
+            string optionName = tokens[index].Text;
+            int optionIndex = tokens[index].Index;
+            index++;
+
+            if (tokens[index] is not { Kind: TokenKind.LessThan or TokenKind.LessThanOrEquals })
+            {
+                optionBuilder.Add(new SpectrumOptionNode
+                {
+                    Name = optionName,
+                    Numerator = 1,
+                    Denominator = 1,
+                    Inclusive = true,
+                    Index = optionIndex,
+                });
+
+                break;
+            }
+
+            bool inclusive = tokens[index] is { Kind: TokenKind.LessThanOrEquals };
+            index++;
+
+            int? numerator = Expect(TokenKind.IntegerLiteral, ref index).IntegerValue;
+            _ = Expect(TokenKind.Slash, ref index);
+            int? denominator = Expect(TokenKind.IntegerLiteral, ref index).IntegerValue;
+
+            _ = Expect(TokenKind.Comma, ref index);
+
+            if (numerator is null || denominator is null)
+            {
+                continue;
+            }
+
+            optionBuilder.Add(new SpectrumOptionNode
+            {
+                Name = optionName,
+                Inclusive = inclusive,
+                Numerator = (int)numerator,
+                Denominator = (int)denominator,
+                Index = optionIndex,
+            });
+        }
+
+        _ = Expect(TokenKind.ClosedParenthesis, ref index);
+
+        string? defaultOption = null;
+
+        if (tokens[index] is { Kind: TokenKind.DefaultKeyword })
+        {
+            index++;
+            defaultOption = Expect(TokenKind.Identifier, ref index).Text;
+        }
+
+        _ = Expect(TokenKind.Semicolon, ref index);
+
+        return (name, optionBuilder.ToImmutable(), defaultOption, nodeIndex);
+    }
+
     private StatementBodyNode? ParseStatementBody(ref int index)
     {
         ImmutableArray<StatementNode>.Builder statementBuilder = ImmutableArray.CreateBuilder<StatementNode>();
@@ -358,6 +430,17 @@ public sealed class Parser
                 {
                     (string name, ImmutableArray<string> options, string? defaultOption, int nodeIndex) = ParseOutcomeDeclaration(ref index);
                     return new OutcomeDeclarationStatementNode
+                    {
+                        Name = name,
+                        Options = options,
+                        DefaultOption = defaultOption,
+                        Index = nodeIndex,
+                    };
+                }
+            case { Kind: TokenKind.SpectrumKeyword }:
+                {
+                    (string name, ImmutableArray<SpectrumOptionNode> options, string? defaultOption, int nodeIndex) = ParseSpectrumDeclaration(ref index);
+                    return new SpectrumDeclarationStatementNode
                     {
                         Name = name,
                         Options = options,

@@ -744,4 +744,103 @@ public sealed class ParserTests
 
         Assert.AreEqual(1, errors.Count);
     }
+
+    [TestMethod]
+    public void TestSpectrumDeclarations()
+    {
+        string code =
+            """
+            scene main
+            {
+                spectrum X (A <= 1/2, B);
+                spectrum Y (A <= 13/37, B < 17/19, C);
+                spectrum Z (A < 1/3, B < 2/3, C) default B;
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = parser.Parse();
+
+        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[0];
+
+        Assert.AreEqual(3, mainScene.Body.Statements.Length);
+
+        List<SpectrumDeclarationStatementNode> spectrumDeclarations = new();
+
+        foreach (StatementNode statement in mainScene.Body.Statements)
+        {
+            Assert.IsTrue(statement is SpectrumDeclarationStatementNode);
+
+            spectrumDeclarations.Add((SpectrumDeclarationStatementNode)statement);
+        }
+
+        // spectrum X
+        SpectrumDeclarationStatementNode x = spectrumDeclarations[0];
+        Assert.AreEqual("X", x.Name);
+        Assert.AreEqual(2, x.Options.Length);
+        Assert.IsNull(x.DefaultOption);
+
+        SpectrumOptionNode xa = x.Options[0];
+        Assert.AreEqual("A", xa.Name);
+        Assert.IsTrue(xa.Inclusive);
+        Assert.AreEqual(1, xa.Numerator);
+        Assert.AreEqual(2, xa.Denominator);
+
+        SpectrumOptionNode xb = x.Options[1];
+        Assert.AreEqual("B", xb.Name);
+        Assert.IsTrue(xb.Inclusive);
+        Assert.AreEqual(1, xb.Numerator);
+        Assert.AreEqual(1, xb.Denominator);
+
+        // spectrum Y
+        SpectrumDeclarationStatementNode y = spectrumDeclarations[1];
+        Assert.AreEqual("Y", y.Name);
+        Assert.AreEqual(3, y.Options.Length);
+        Assert.IsNull(y.DefaultOption);
+
+        SpectrumOptionNode ya = y.Options[0];
+        Assert.AreEqual("A", ya.Name);
+        Assert.IsTrue(ya.Inclusive);
+        Assert.AreEqual(13, ya.Numerator);
+        Assert.AreEqual(37, ya.Denominator);
+
+        SpectrumOptionNode yb = y.Options[1];
+        Assert.AreEqual("B", yb.Name);
+        Assert.IsFalse(yb.Inclusive);
+        Assert.AreEqual(17, yb.Numerator);
+        Assert.AreEqual(19, yb.Denominator);
+
+        SpectrumOptionNode yc = y.Options[2];
+        Assert.AreEqual("C", yc.Name);
+        Assert.IsTrue(yc.Inclusive);
+        Assert.AreEqual(1, yc.Numerator);
+        Assert.AreEqual(1, yc.Denominator);
+
+        // spectrum Z
+        SpectrumDeclarationStatementNode z = spectrumDeclarations[2];
+        Assert.AreEqual("Z", z.Name);
+        Assert.AreEqual(3, z.Options.Length);
+        Assert.AreEqual("B", z.DefaultOption);
+
+        SpectrumOptionNode za = z.Options[0];
+        Assert.AreEqual("A", za.Name);
+        Assert.IsFalse(za.Inclusive);
+        Assert.AreEqual(1, za.Numerator);
+        Assert.AreEqual(3, za.Denominator);
+
+        SpectrumOptionNode zb = z.Options[1];
+        Assert.AreEqual("B", zb.Name);
+        Assert.IsFalse(zb.Inclusive);
+        Assert.AreEqual(2, zb.Numerator);
+        Assert.AreEqual(3, zb.Denominator);
+
+        SpectrumOptionNode zc = z.Options[2];
+        Assert.AreEqual("C", zc.Name);
+        Assert.IsTrue(zc.Inclusive);
+        Assert.AreEqual(1, zc.Numerator);
+        Assert.AreEqual(1, zc.Denominator);
+    }
 }

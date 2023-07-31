@@ -82,9 +82,37 @@ public sealed class Lexer
                 ',' => new Token { Kind = TokenKind.Comma, Text = ",", Index = index++ },
                 '=' => new Token { Kind = TokenKind.Equals, Text = "=", Index = index++ },
                 '"' or '\'' => LexStringLiteral(ref index),
+                '/' => new Token { Kind = TokenKind.Slash, Text = "/", Index = index++ },
+                '<' => LexLessThan(ref index),
                 >= '0' and <= '9' => LexIntegerLiteral(ref index),
                 >= 'a' and <= 'z' or >= 'A' and <= 'Z' or '_' => LexIdentifierOrKeyword(ref index),
                 _ => new Token { Kind = TokenKind.Unknown, Text = historiaText[index].ToString(), Index = index++ },
+            };
+        }
+    }
+
+    private Token LexLessThan(ref int index)
+    {
+        Debug.Assert(historiaText[index] is '<');
+        index++;
+
+        if (historiaText[index] is '=')
+        {
+            index++;
+            return new Token
+            {
+                Kind = TokenKind.LessThanOrEquals,
+                Text = "<=",
+                Index = index - 2,
+            };
+        }
+        else
+        {
+            return new Token
+            {
+                Kind = TokenKind.LessThan,
+                Text = "<",
+                Index = index - 1,
             };
         }
     }
@@ -198,6 +226,10 @@ public sealed class Lexer
             "other" => TokenKind.OtherKeyword,
             "outcome" => TokenKind.OutcomeKeyword,
             "default" => TokenKind.DefaultKeyword,
+            "spectrum" => TokenKind.SpectrumKeyword,
+            "strengthen" => TokenKind.StrengthenKeyword,
+            "weaken" => TokenKind.WeakenKeyword,
+            "by" => TokenKind.ByKeyword,
             _ => TokenKind.Identifier,
         };
 

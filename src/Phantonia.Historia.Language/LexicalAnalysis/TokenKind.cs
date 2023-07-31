@@ -16,6 +16,9 @@ public enum TokenKind
     Colon, // :
     Comma, // ,
     Equals, // =
+    LessThan, // <
+    LessThanOrEquals, // <=
+    Slash, // /
 
     // keywords
     SceneKeyword,
@@ -29,6 +32,10 @@ public enum TokenKind
     OtherKeyword,
     OutcomeKeyword,
     DefaultKeyword,
+    SpectrumKeyword,
+    StrengthenKeyword,
+    WeakenKeyword,
+    ByKeyword,
 
     // literals
     Identifier,
