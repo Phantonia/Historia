@@ -843,4 +843,41 @@ public sealed class ParserTests
         Assert.AreEqual(1, zc.Numerator);
         Assert.AreEqual(1, zc.Denominator);
     }
+
+    [TestMethod]
+    public void TestStrengthenAndWeaken()
+    {
+        string code =
+            """
+            scene main
+            {
+                strengthen X by 1;
+                weaken Y by (4);
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = parser.Parse();
+
+        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[0];
+
+        Assert.AreEqual(2, mainScene.Body.Statements.Length);
+
+        SpectrumAdjustmentStatementNode strengthenStatement = (SpectrumAdjustmentStatementNode)mainScene.Body.Statements[0];
+
+        Assert.IsTrue(strengthenStatement.Strengthens);
+        Assert.IsFalse(strengthenStatement.Weakens);
+        Assert.AreEqual("X", strengthenStatement.SpectrumName);
+        Assert.IsTrue(strengthenStatement.AdjustmentAmount is IntegerLiteralExpressionNode { Value: 1 });
+
+        SpectrumAdjustmentStatementNode weakenStatement = (SpectrumAdjustmentStatementNode)mainScene.Body.Statements[1];
+
+        Assert.IsTrue(weakenStatement.Weakens);
+        Assert.IsFalse(weakenStatement.Strengthens);
+        Assert.AreEqual("Y", weakenStatement.SpectrumName);
+        Assert.IsTrue(weakenStatement.AdjustmentAmount is IntegerLiteralExpressionNode { Value: 4 });
+    }
 }

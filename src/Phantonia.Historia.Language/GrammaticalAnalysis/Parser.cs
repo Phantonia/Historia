@@ -448,6 +448,10 @@ public sealed class Parser
                         Index = nodeIndex,
                     };
                 }
+            case { Kind: TokenKind.StrengthenKeyword }:
+                return ParseSpectrumAdjustment(strengthens: true, ref index);
+            case { Kind: TokenKind.WeakenKeyword }:
+                return ParseSpectrumAdjustment(strengthens: false, ref index);
             case { Kind: TokenKind.Identifier }:
                 return ParseIdentifierLeadStatement(ref index);
             case { Kind: TokenKind.EndOfFile }:
@@ -690,6 +694,42 @@ public sealed class Parser
         {
             VariableName = identifier.Text,
             AssignedExpression = assignedExpression,
+            Index = nodeIndex,
+        };
+    }
+
+    private SpectrumAdjustmentStatementNode? ParseSpectrumAdjustment(bool strengthens, ref int index)
+    {
+        if (strengthens)
+        {
+            Debug.Assert(tokens[index] is { Kind: TokenKind.StrengthenKeyword });
+        }
+        else
+        {
+            Debug.Assert(tokens[index] is { Kind: TokenKind.WeakenKeyword });
+        }
+
+        int nodeIndex = tokens[index].Index;
+        index++;
+
+        string spectrumName = Expect(TokenKind.Identifier, ref index).Text;
+
+        _ = Expect(TokenKind.ByKeyword, ref index);
+
+        ExpressionNode? adjustmentAmount = ParseExpression(ref index);
+
+        if (adjustmentAmount is null)
+        {
+            return null;
+        }
+
+        _ = Expect(TokenKind.Semicolon, ref index);
+
+        return new SpectrumAdjustmentStatementNode
+        {
+            SpectrumName = spectrumName,
+            Strengthens = strengthens,
+            AdjustmentAmount = adjustmentAmount,
             Index = nodeIndex,
         };
     }

@@ -1212,4 +1212,74 @@ public sealed class BinderTests
         AssertIsError(7, Errors.DuplicatedOptionInOutcomeDeclaration("A", code.IndexOf("spectrum Y")));
         AssertIsError(8, Errors.OutcomeWithZeroOptions("Z", code.IndexOf("spectrum Z")));
     }
+
+    [TestMethod]
+    public void TestValidSpectrumAdjustment()
+    {
+        string code =
+            """
+            scene main
+            {
+                spectrum X (A <= 1/2, B);
+
+                strengthen X by 2;
+                weaken X by 3;
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        BindingResult result = binder.Bind();
+
+        StoryNode boundStory = result.BoundStory!;
+
+        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)((BoundSymbolDeclarationNode)result.BoundStory!.TopLevelNodes[0]).Declaration;
+
+        BoundSpectrumDeclarationStatementNode? boundSpectrumDeclaration = mainScene.Body.Statements[0] as BoundSpectrumDeclarationStatementNode;
+        Assert.IsNotNull(boundSpectrumDeclaration);
+
+        SpectrumSymbol symbol = boundSpectrumDeclaration.Spectrum;
+
+        BoundSpectrumAdjustmentStatementNode? boundStrengthen = mainScene.Body.Statements[1] as BoundSpectrumAdjustmentStatementNode;
+        Assert.IsNotNull(boundStrengthen);
+
+        BoundSpectrumAdjustmentStatementNode? boundWeaken = mainScene.Body.Statements[2] as BoundSpectrumAdjustmentStatementNode;
+        Assert.IsNotNull(boundWeaken);
+
+        Assert.AreEqual(symbol, boundStrengthen.Spectrum);
+        Assert.AreEqual(symbol, boundWeaken.Spectrum);
+    }
+
+    [TestMethod]
+    public void TestIllegalSpectrumAdjustments()
+    {
+        string code =
+            """
+            scene main
+            {
+                spectrum X (A <= 1/2, B);
+
+                strengthen Y by 2; // error: Y does not exist
+                X = A; // error: can't assign to spectrum
+                strengthen X by "xyz";
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+
+        List<Error> errors = new();
+        binder.ErrorFound += errors.Add;
+
+        BindingResult result = binder.Bind();
+
+        void AssertIsError(int index, Error error)
+        {
+            Assert.AreEqual(error, errors[index]);
+        }
+
+        AssertIsError(0, Errors.SymbolDoesNotExistInScope("Y", code.IndexOf("strengthen Y")));
+        AssertIsError(1, Errors.SymbolCannotBeAssignedTo("X", code.IndexOf("X = A;")));
+        AssertIsError(2, Errors.IncompatibleType((TypeSymbol)result.SymbolTable!["String"], (TypeSymbol)result.SymbolTable!["Int"], "strengthen/weaken amount", code.IndexOf("\"xyz\"")));
+    }
 }

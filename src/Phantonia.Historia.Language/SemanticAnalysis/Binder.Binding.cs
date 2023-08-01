@@ -369,6 +369,8 @@ public sealed partial class Binder
                 return BindBranchOnStatement(branchOnStatement, settings, table);
             case AssignmentStatementNode assignmentStatement:
                 return BindAssignmentStatement(assignmentStatement, table);
+            case SpectrumAdjustmentStatementNode adjustmentStatement:
+                return BindSpectrumAdjustmentStatement(adjustmentStatement, table);
             default:
                 Debug.Assert(false);
                 return default;
@@ -730,7 +732,7 @@ public sealed partial class Binder
 
         switch (symbol)
         {
-            case OutcomeSymbol outcomeSymbol:
+            case OutcomeSymbol outcomeSymbol and not SpectrumSymbol: // spectrums are outcomes but cannot be assigned to
                 {
                     if (assignmentStatement.AssignedExpression is not IdentifierExpressionNode { Identifier: string option })
                     {
@@ -758,6 +760,46 @@ public sealed partial class Binder
                 ErrorFound?.Invoke(Errors.SymbolCannotBeAssignedTo(symbol.Name, assignmentStatement.Index));
                 return (table, assignmentStatement);
         }
+    }
+
+    private (SymbolTable, StatementNode) BindSpectrumAdjustmentStatement(SpectrumAdjustmentStatementNode adjustmentStatement, SymbolTable table)
+    {
+        if (!table.IsDeclared(adjustmentStatement.SpectrumName))
+        {
+            ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(adjustmentStatement.SpectrumName, adjustmentStatement.Index));
+            return (table, adjustmentStatement);
+        }
+
+        Symbol symbol = table[adjustmentStatement.SpectrumName];
+
+        if (symbol is not SpectrumSymbol spectrumSymbol)
+        {
+            ErrorFound?.Invoke(Errors.SymbolIsNotSpectrum(adjustmentStatement.SpectrumName, adjustmentStatement.Index));
+            return (table, adjustmentStatement);
+        }
+
+        (table, ExpressionNode amount) = BindAndTypeExpression(adjustmentStatement.AdjustmentAmount, table);
+
+        if (amount is not TypedExpressionNode typedAmount)
+        {
+            return (table, adjustmentStatement);
+        }
+
+        if (!TypesAreCompatible(typedAmount.SourceType, (TypeSymbol)table["Int"]))
+        {
+            ErrorFound?.Invoke(Errors.IncompatibleType(typedAmount.SourceType, (TypeSymbol)table["Int"], "strengthen/weaken amount", typedAmount.Index));
+        }
+
+        BoundSpectrumAdjustmentStatementNode boundStatement = new()
+        {
+            Spectrum = spectrumSymbol,
+            Strengthens = adjustmentStatement.Strengthens,
+            SpectrumName = adjustmentStatement.SpectrumName,
+            AdjustmentAmount = typedAmount,
+            Index = adjustmentStatement.Index,
+        };
+
+        return (table, boundStatement);
     }
 
     private (SymbolTable, StatementNode) BindBranchOnStatement(BranchOnStatementNode branchOnStatement, Settings settings, SymbolTable table)

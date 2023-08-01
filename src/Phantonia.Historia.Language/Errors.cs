@@ -313,6 +313,15 @@ public static class Errors
         };
     }
 
+    public static Error SymbolIsNotSpectrum(string name, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Symbol '{name}' is not a spectrum, so it cannot be strengthened/weakened",
+            Index = index,
+        };
+    }
+
     public static Error OutcomeMayBeAssignedMoreThanOnce(string outcomeName, int index)
     {
         return new Error
