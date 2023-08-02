@@ -19,6 +19,9 @@ namespace Phantonia.Historia.Language;
 
 public sealed class Emitter
 {
+    private const int EndState = FlowGraph.EmptyVertex;
+    private const int StartState = -2;
+
     public Emitter(StoryNode boundStory, Settings settings, FlowGraph flowGraph)
     {
         this.boundStory = boundStory;
@@ -53,25 +56,9 @@ public sealed class Emitter
 
         writer.Indent++;
 
-        if (flowGraph.StartVertex == FlowGraph.EmptyVertex)
-        {
-            writer.Write("FinishedStory = true;");
-        }
-        else
-        {
-            writer.Write("Output = ");
-
-            if (flowGraph.Vertices[flowGraph.StartVertex].AssociatedStatement is IOutputStatementNode outputStatement)
-            {
-                GenerateExpression(writer, outputStatement.OutputExpression);
-            }
-            else
-            {
-                writer.Write("default");
-            }
-
-            writer.WriteLine(";");
-        }
+        writer.Write("state = ");
+        writer.Write(StartState);
+        writer.WriteLine(';');
 
         writer.Indent--;
 
@@ -79,10 +66,14 @@ public sealed class Emitter
           $$"""
             }
                       
-            private int state = {{flowGraph.StartVertex}};
+            private int state;
             """);
 
         GenerateOutcomeFields(writer);
+
+        writer.WriteLine();
+
+        writer.WriteLine("public bool NotStartedStory { get; private set; } = true;");
 
         writer.WriteLine();
 
@@ -116,7 +107,12 @@ public sealed class Emitter
                 Output = GetOutput();
                 Options = GetOptions();
             
-                if (state == -1)
+                if (state != {{StartState}})
+                {
+                    NotStartedStory = false;
+                }
+            
+                if (state == {{EndState}})
                 {
                     FinishedStory = true;
                 }
@@ -135,7 +131,12 @@ public sealed class Emitter
                 Output = GetOutput();
                 Options = GetOptions();
 
-                if (state == -1)
+                if (state != {{StartState}})
+                {
+                    NotStartedStory = false;
+                }
+
+                if (state == {{EndState}})
                 {
                     FinishedStory = true;
                 }
@@ -228,6 +229,25 @@ public sealed class Emitter
 
         writer.Indent += 3;
 
+        writer.Write("case (");
+        writer.Write(StartState);
+        writer.WriteLine(", _):");
+        writer.Indent++;
+        writer.Write("state = ");
+        writer.Write(flowGraph.StartVertex);
+        writer.WriteLine(';');
+
+        if (flowGraph.StartVertex == EndState || flowGraph.Vertices[flowGraph.StartVertex].IsVisible)
+        {
+            writer.WriteLine("return;");
+        }
+        else
+        {
+            writer.WriteLine("continue;");
+        }
+
+        writer.Indent--;
+
         foreach ((int index, ImmutableList<int> edges) in flowGraph.OutgoingEdges)
         {
             switch (flowGraph.Vertices[index].AssociatedStatement)
@@ -241,7 +261,7 @@ public sealed class Emitter
                         writer.Indent++;
                         writer.WriteLine($"state = {edges[0]};");
 
-                        if (edges[0] == FlowGraph.EmptyVertex || flowGraph.Vertices[edges[0]].IsVisible)
+                        if (edges[0] == EndState || flowGraph.Vertices[edges[0]].IsVisible)
                         {
                             writer.WriteLine("return;");
                         }
@@ -277,7 +297,7 @@ public sealed class Emitter
                                 writer.WriteLine($"{GetOutcomeFieldName(outcome)} = {outcome.OptionNames.IndexOf(switchStatement.Options[i].Name!)};");
                             }
 
-                            if (edges[i] == FlowGraph.EmptyVertex || flowGraph.Vertices[edges[i]].IsVisible)
+                            if (edges[i] == EndState || flowGraph.Vertices[edges[i]].IsVisible)
                             {
                                 writer.WriteLine("return;");
                             }
@@ -315,7 +335,7 @@ public sealed class Emitter
                                     writer.Indent++;
                                     writer.WriteLine($"state = {edges[i]};");
 
-                                    if (edges[i] == FlowGraph.EmptyVertex || flowGraph.Vertices[edges[i]].IsVisible)
+                                    if (edges[i] == EndState || flowGraph.Vertices[edges[i]].IsVisible)
                                     {
                                         writer.WriteLine("return;");
                                     }
@@ -332,7 +352,7 @@ public sealed class Emitter
                                     writer.Indent++;
                                     writer.WriteLine($"state = {flowGraph.OutgoingEdges[branchOnStatement.Index][i]};");
 
-                                    if (edges[i] == FlowGraph.EmptyVertex || flowGraph.Vertices[edges[i]].IsVisible)
+                                    if (edges[i] == EndState || flowGraph.Vertices[edges[i]].IsVisible)
                                     {
                                         writer.WriteLine("return;");
                                     }
@@ -462,7 +482,7 @@ public sealed class Emitter
             writer.Write(edges[index]);
             writer.WriteLine(';');
 
-            if (edges[i] == FlowGraph.EmptyVertex)
+            if (edges[i] == EndState || flowGraph.Vertices[edges[i]].IsVisible)
             {
                 writer.WriteLine("return;");
             }
@@ -484,7 +504,7 @@ public sealed class Emitter
         writer.Write(edges[branchOnStatement.Options.IndexOf(options[^1])]);
         writer.WriteLine(';');
 
-        if (edges[^1] == FlowGraph.EmptyVertex || flowGraph.Vertices[edges[^1]].IsVisible)
+        if (edges[^1] == EndState || flowGraph.Vertices[edges[^1]].IsVisible)
         {
             writer.WriteLine("return;");
         }
@@ -547,9 +567,12 @@ public sealed class Emitter
 
         writer.Indent -= 2;
 
+        writer.Write("case ");
+        writer.Write(EndState);
+        writer.WriteLine(":");
+
         writer.WriteManyLines(
             """
-                    case -1:
                         return default;
                 }
 
@@ -816,6 +839,11 @@ public sealed class Emitter
             writer.Write("this.");
             GenerateSubtypeName(subtype);
             writer.WriteLine(" = value;");
+            writer.Write("Discriminator = ");
+            writer.Write(union.Name);
+            writer.Write("Discriminator.");
+            GenerateSubtypeName(subtype);
+            writer.WriteLine(';');
             writer.Indent--;
             writer.WriteLine('}');
             writer.WriteLine();

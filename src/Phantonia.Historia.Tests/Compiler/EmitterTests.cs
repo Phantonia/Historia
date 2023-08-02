@@ -103,6 +103,10 @@ public sealed class EmitterTests
 
         IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(result.CSharpText);
 
+        Assert.IsTrue(story.NotStartedStory);
+        Assert.IsFalse(story.FinishedStory);
+        Assert.IsTrue(story.TryContinue());
+
         // output (16);
         Assert.AreEqual(16, story.Output);
         Assert.AreEqual(0, story.Options.Count);
@@ -218,6 +222,10 @@ public sealed class EmitterTests
         Assert.IsNotNull(result.CSharpText);
 
         IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(result.CSharpText);
+
+        Assert.IsTrue(story.NotStartedStory);
+        Assert.IsFalse(story.FinishedStory);
+        Assert.IsTrue(story.TryContinue());
 
         Assert.AreEqual(0, story.Output);
         Assert.IsTrue(story.TryContinue());
@@ -335,13 +343,7 @@ public sealed class EmitterTests
     {
         string code =
             """
-            record Line
-            {
-                Text: String;
-                Character: Int;
-            }
-
-            union X: String, Int, Line;
+            union X: String, Int;
 
             setting OutputType: X;
 
@@ -349,7 +351,6 @@ public sealed class EmitterTests
             {
                 output 2;
                 output "String";
-                output Line("Hey", 1);
             }
             """;
 
@@ -361,7 +362,27 @@ public sealed class EmitterTests
         Assert.AreEqual(0, result.Errors.Length);
         Assert.IsNotNull(result.CSharpText);
 
-        _ = DynamicCompiler.CompileToStory(result.CSharpText);
+        IStory story = DynamicCompiler.CompileToStory(result.CSharpText);
+
+        Assert.IsTrue(story.NotStartedStory);
+        Assert.IsFalse(story.FinishedStory);
+        Assert.IsTrue(story.TryContinue());
+
+        IUnion<string?, int>? output = story.Output as IUnion<string?, int>;
+        Assert.IsNotNull(output);
+        Assert.AreEqual(2, output.Value1);
+        Assert.IsTrue(output.AsObject() is int);
+        Assert.IsNull(output.Value0);
+
+        Assert.IsTrue(story.TryContinue());
+
+        output = story.Output as IUnion<string?, int>;
+        Assert.IsNotNull(output);
+        Assert.AreEqual("String", output.Value0);
+        Assert.IsTrue(output.AsObject() is string);
+        Assert.AreEqual(default, output.Value1);
+
+        Assert.AreEqual(0, output.Evaluate(s => 0, i => 1));
     }
 
     [TestMethod]
@@ -381,6 +402,10 @@ public sealed class EmitterTests
         Assert.IsNotNull(result.CSharpText);
 
         IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(result.CSharpText);
+
+        Assert.IsTrue(story.NotStartedStory);
+        Assert.IsFalse(story.FinishedStory);
+        Assert.IsTrue(story.TryContinue());
 
         Assert.IsTrue(story.FinishedStory);
         Assert.IsFalse(story.TryContinue());
@@ -435,6 +460,10 @@ public sealed class EmitterTests
 
         IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(result.CSharpText!);
 
+        Assert.IsTrue(story.NotStartedStory);
+        Assert.AreEqual(0, story.Output);
+
+        Assert.IsTrue(story.TryContinue());
         Assert.AreEqual(4, story.Output);
 
         Assert.IsTrue(story.TryContinue());

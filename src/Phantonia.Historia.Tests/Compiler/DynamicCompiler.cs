@@ -78,7 +78,7 @@ internal static class DynamicCompiler
     {
         IStory story = CompileToStory(csharpCode);
 
-        Assert.IsInstanceOfType(story, typeof(IStory<TOutput, TOption>));
+        Assert.IsTrue(story is IStory<TOutput, TOption>);
 
         return (IStory<TOutput, TOption>)story;
     }

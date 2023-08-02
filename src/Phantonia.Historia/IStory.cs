@@ -6,6 +6,8 @@ namespace Phantonia.Historia;
 
 public interface IStory
 {
+    bool NotStartedStory { get; }
+
     bool FinishedStory { get; }
 
     object? Output { get; }
@@ -19,7 +21,7 @@ public interface IStory
 
 public interface IStory<out TOutput, out TOption> : IStory
 {
-    new TOutput Output { get; }
+    new TOutput? Output { get; }
 
     new IReadOnlyList<TOption> Options { get; }
 
