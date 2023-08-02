@@ -385,4 +385,72 @@ public sealed class EmitterTests
         Assert.IsTrue(story.FinishedStory);
         Assert.IsFalse(story.TryContinue());
     }
+
+    [TestMethod]
+    public void TestSpectrum()
+    {
+        string code =
+            """
+            scene main
+            {
+                output 4;
+                
+                spectrum X (A < 1/3, B < 2/3, C <= 2/3, D);
+
+                strengthen X by 2;
+                weaken X by 5;
+                strengthen X by 9;
+
+                branchon X
+                {
+                    option D
+                    {
+                        output 3;
+                    }
+                    
+                    option A
+                    {
+                        output 0;
+                    }
+
+                    option C
+                    {
+                        output 2;
+                    }
+
+                    option B
+                    {
+                        output 1;
+                    }
+                }
+            }
+            """;
+
+        Language.Compiler compiler = new(code);
+        CompilationResult result = compiler.CompileToCSharpText();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+        Assert.IsNotNull(result.CSharpText);
+
+        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(result.CSharpText!);
+
+        Assert.AreEqual(4, story.Output);
+
+        Assert.IsTrue(story.TryContinue());
+
+        // total = 2 + 5 + 9 = 16
+        // positive = 2 + 9 = 11
+        // denominator = 3
+        // 11 * 3 = 33
+        // 2 * 16 = 32
+        // 32 < 33 => 2/3 < 11/16
+
+        Assert.AreEqual(3, story.Output);
+
+        Assert.IsTrue(story.TryContinue());
+
+        Assert.IsTrue(story.FinishedStory);
+        Assert.IsFalse(story.TryContinue());
+    }
 }

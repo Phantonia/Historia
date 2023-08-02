@@ -1,4 +1,5 @@
-﻿using Phantonia.Historia.Language.SemanticAnalysis;
+﻿using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
+using Phantonia.Historia.Language.SemanticAnalysis;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -95,22 +96,35 @@ public sealed partial class FlowAnalyzer
                 }
             }
 
-            if (dualFlowGraph.Vertices[vertex].AssociatedStatement is BoundOutcomeAssignmentStatementNode boundAssignment && boundAssignment.Outcome == outcome)
-            {
-                if (mightBeAssigned)
-                {
-                    ErrorFound?.Invoke(Errors.OutcomeMayBeAssignedMoreThanOnce(outcome.Name, boundAssignment.Index));
-                }
+            StatementNode statement = dualFlowGraph.Vertices[vertex].AssociatedStatement;
 
-                definitelyAssigned = true;
-                mightBeAssigned = true;
-            }
-            else if (dualFlowGraph.Vertices[vertex].AssociatedStatement is BoundBranchOnStatementNode boundBranchOn && boundBranchOn.Outcome == outcome)
+            switch (statement)
             {
-                if (!definitelyAssigned)
-                {
-                    ErrorFound?.Invoke(Errors.OutcomeNotDefinitelyAssigned(outcome.Name, boundBranchOn.Index));
-                }
+                case BoundOutcomeAssignmentStatementNode boundAssignment when boundAssignment.Outcome == outcome:
+                    if (mightBeAssigned)
+                    {
+                        ErrorFound?.Invoke(Errors.OutcomeMayBeAssignedMoreThanOnce(outcome.Name, boundAssignment.Index));
+                    }
+
+                    definitelyAssigned = true;
+                    mightBeAssigned = true;
+                    break;
+                case BoundSpectrumAdjustmentStatementNode boundAdjustment when boundAdjustment.Spectrum == outcome:
+                    definitelyAssigned = true;
+                    break;
+                case BoundBranchOnStatementNode boundBranchOn when boundBranchOn.Outcome == outcome:
+                    if (!definitelyAssigned)
+                    {
+                        if (outcome is SpectrumSymbol)
+                        {
+                            ErrorFound?.Invoke(Errors.SpectrumNotDefinitelyAssigned(outcome.Name, boundBranchOn.Index));
+                        }
+                        else
+                        {
+                            ErrorFound?.Invoke(Errors.OutcomeNotDefinitelyAssigned(outcome.Name, boundBranchOn.Index));
+                        }
+                    }
+                    break;
             }
 
             thisVertexData = thisVertexData with

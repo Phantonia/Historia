@@ -335,7 +335,16 @@ public static class Errors
     {
         return new Error
         {
-            ErrorMessage = $"The outcome '{outcomeName}' may not be assigned once this statement executes",
+            ErrorMessage = $"The outcome '{outcomeName}' may not be assigned once this statement executes. Consider adding a default option",
+            Index = index,
+        };
+    }
+
+    public static Error SpectrumNotDefinitelyAssigned(string spectrumName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"The spectrum '{spectrumName}' might never be strengthened/weakened, so has an undetermined value. Consider adding a default option",
             Index = index,
         };
     }

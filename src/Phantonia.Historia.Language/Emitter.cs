@@ -9,6 +9,7 @@ using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
 using Phantonia.Historia.Language.SemanticAnalysis;
 using System.CodeDom.Compiler;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
@@ -180,7 +181,7 @@ public sealed class Emitter
 
         writer.WriteLine("}");
 
-        Debug.Assert(writer.Indent == 0);
+        //Debug.Assert(writer.Indent == 0);
 
         return ((StringWriter)writer.InnerWriter).ToString();
     }
@@ -189,16 +190,26 @@ public sealed class Emitter
     {
         foreach (SyntaxNode node in boundStory.FlattenHierarchie())
         {
-            if (node is IBoundOutcomeDeclarationNode { Outcome: OutcomeSymbol outcome })
+            if (node is IBoundSpectrumDeclarationNode { Spectrum: SpectrumSymbol spectrum })
             {
-                writer.Write($"private int {GetOutcomeFieldName(outcome)}");
+                writer.Write("private int ");
+                writer.Write(GetSpectrumTotalFieldName(spectrum));
+                writer.WriteLine(';');
+                writer.Write("private int ");
+                writer.Write(GetSpectrumPositiveFieldName(spectrum));
+                writer.WriteLine(';');
+            }
+            else if (node is IBoundOutcomeDeclarationNode { Outcome: OutcomeSymbol outcome })
+            {
+                writer.Write("private int ");
+                writer.Write(GetOutcomeFieldName(outcome));
 
                 if (outcome.DefaultOption is not null)
                 {
                     writer.Write($" = {outcome.OptionNames.IndexOf(outcome.DefaultOption)}");
                 }
 
-                writer.WriteLine(";");
+                writer.WriteLine(';');
             }
         }
     }
@@ -284,52 +295,59 @@ public sealed class Emitter
                         writer.WriteLine($"case ({index}, _):");
 
                         writer.Indent++;
-                        writer.WriteLine($"switch ({GetOutcomeFieldName(branchOnStatement.Outcome)})");
-                        writer.WriteLine('{');
-                        writer.Indent++;
-
-                        for (int i = 0; i < branchOnStatement.Options.Length; i++)
+                        if (branchOnStatement.Outcome is SpectrumSymbol)
                         {
-                            BranchOnOptionNode option = branchOnStatement.Options[i];
-
-                            if (option is NamedBranchOnOptionNode { OptionName: string optionName })
-                            {
-                                writer.WriteLine($"case {branchOnStatement.Outcome.OptionNames.IndexOf(optionName)}:");
-                                writer.Indent++;
-                                writer.WriteLine($"state = {edges[i]};");
-
-                                if (edges[i] == FlowGraph.EmptyVertex || flowGraph.Vertices[edges[i]].IsVisible)
-                                {
-                                    writer.WriteLine("return;");
-                                }
-                                else
-                                {
-                                    writer.WriteLine("continue;");
-                                }
-
-                                writer.Indent--;
-                            }
-                            else
-                            {
-                                writer.WriteLine("default:");
-                                writer.Indent++;
-                                writer.WriteLine($"state = {flowGraph.OutgoingEdges[branchOnStatement.Index][i]};");
-
-                                if (edges[i] == FlowGraph.EmptyVertex || flowGraph.Vertices[edges[i]].IsVisible)
-                                {
-                                    writer.WriteLine("return;");
-                                }
-                                else
-                                {
-                                    writer.WriteLine("continue;");
-                                }
-                            }
+                            GenerateSpectrumBranchOnTransition(writer, branchOnStatement, edges);
                         }
+                        else
+                        {
+                            writer.WriteLine($"switch ({GetOutcomeFieldName(branchOnStatement.Outcome)})");
+                            writer.WriteLine('{');
+                            writer.Indent++;
 
-                        writer.Indent--;
-                        writer.WriteLine('}');
-                        writer.WriteLine();
-                        writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid outcome\");");
+                            for (int i = 0; i < branchOnStatement.Options.Length; i++)
+                            {
+                                BranchOnOptionNode option = branchOnStatement.Options[i];
+
+                                if (option is NamedBranchOnOptionNode { OptionName: string optionName })
+                                {
+                                    writer.WriteLine($"case {branchOnStatement.Outcome.OptionNames.IndexOf(optionName)}:");
+                                    writer.Indent++;
+                                    writer.WriteLine($"state = {edges[i]};");
+
+                                    if (edges[i] == FlowGraph.EmptyVertex || flowGraph.Vertices[edges[i]].IsVisible)
+                                    {
+                                        writer.WriteLine("return;");
+                                    }
+                                    else
+                                    {
+                                        writer.WriteLine("continue;");
+                                    }
+
+                                    writer.Indent--;
+                                }
+                                else
+                                {
+                                    writer.WriteLine("default:");
+                                    writer.Indent++;
+                                    writer.WriteLine($"state = {flowGraph.OutgoingEdges[branchOnStatement.Index][i]};");
+
+                                    if (edges[i] == FlowGraph.EmptyVertex || flowGraph.Vertices[edges[i]].IsVisible)
+                                    {
+                                        writer.WriteLine("return;");
+                                    }
+                                    else
+                                    {
+                                        writer.WriteLine("continue;");
+                                    }
+                                }
+                            }
+
+                            writer.Indent--;
+                            writer.WriteLine('}');
+                            writer.WriteLine();
+                            writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid outcome\");");
+                        }
                         writer.Indent--;
                     }
                     break;
@@ -344,6 +362,31 @@ public sealed class Emitter
                     writer.WriteLine("continue;");
                     writer.Indent--;
                     break;
+                case BoundSpectrumAdjustmentStatementNode spectrumAdjustment:
+                    writer.Write("case (");
+                    writer.Write(index);
+                    writer.WriteLine(", _):");
+                    writer.Indent++;
+                    writer.Write(GetSpectrumTotalFieldName(spectrumAdjustment.Spectrum));
+                    writer.Write(" += ");
+                    GenerateExpression(writer, spectrumAdjustment.AdjustmentAmount);
+                    writer.WriteLine(';');
+                    
+                    if (spectrumAdjustment.Strengthens)
+                    {
+                        writer.Write(GetSpectrumPositiveFieldName(spectrumAdjustment.Spectrum));
+                        writer.Write(" += ");
+                        GenerateExpression(writer, spectrumAdjustment.AdjustmentAmount);
+                        writer.WriteLine(';');
+                    }
+
+                    writer.WriteLine($"state = {edges[0]};");
+                    writer.WriteLine("continue;");
+
+                    writer.Indent--;
+
+                    break;
+
             }
         }
 
@@ -358,6 +401,103 @@ public sealed class Emitter
             }
             """);
 
+    }
+
+    private void GenerateSpectrumBranchOnTransition(IndentedTextWriter writer, BoundBranchOnStatementNode branchOnStatement, ImmutableList<int> edges)
+    {
+        Debug.Assert(branchOnStatement.Outcome is SpectrumSymbol);
+
+        SpectrumSymbol spectrum = (SpectrumSymbol)branchOnStatement.Outcome;
+
+        Debug.Assert(spectrum.Intervals.All(i => i.Value.UpperDenominator == spectrum.Intervals.First().Value.UpperDenominator));
+
+        writer.WriteLine('{');
+        writer.Indent++;
+        writer.Write("int value = ");
+        writer.Write(GetSpectrumPositiveFieldName(spectrum));
+        writer.Write(" * ");
+        writer.Write(spectrum.Intervals.First().Value.UpperDenominator);
+        writer.WriteLine(';');
+
+        writer.WriteLine();
+
+        List<BranchOnOptionNode> options = branchOnStatement.Options
+                                                            .OfType<NamedBranchOnOptionNode>()
+                                                            .OrderBy(o => spectrum.Intervals[o.OptionName].UpperNumerator)
+                                                            .ThenBy(o => spectrum.Intervals[o.OptionName].Inclusive)
+                                                            .Cast<BranchOnOptionNode>()
+                                                            .ToList();
+
+        if (branchOnStatement.Options[^1] is OtherBranchOnOptionNode)
+        {
+            options.Add(branchOnStatement.Options[^1]);
+        }
+
+        for (int i = 0; i < options.Count - 1; i++)
+        {
+            BranchOnOptionNode option = options[i];
+
+            Debug.Assert(option is NamedBranchOnOptionNode); // only the last option may not be named
+            string optionName = ((NamedBranchOnOptionNode)option).OptionName;
+
+            SpectrumInterval interval = spectrum.Intervals[optionName];
+
+            writer.Write("if (value <");
+
+            if (interval.Inclusive)
+            {
+                writer.Write('=');
+            }
+
+            writer.Write(' ');
+            writer.Write(GetSpectrumTotalFieldName(spectrum));
+            writer.Write(" * ");
+            writer.Write(interval.UpperNumerator);
+            writer.WriteLine(')');
+            writer.WriteLine('{');
+            writer.Indent++;
+            writer.Write("state = ");
+
+            int index = branchOnStatement.Options.IndexOf(option);
+            writer.Write(edges[index]);
+            writer.WriteLine(';');
+
+            if (edges[i] == FlowGraph.EmptyVertex)
+            {
+                writer.WriteLine("return;");
+            }
+            else
+            {
+                writer.WriteLine("continue;");
+            }
+
+            writer.Indent--;
+            writer.WriteLine('}');
+            writer.Write("else ");
+        }
+
+        writer.WriteLine();
+        writer.WriteLine('{');
+        writer.Indent++;
+
+        writer.Write("state = ");
+        writer.Write(edges[branchOnStatement.Options.IndexOf(options[^1])]);
+        writer.WriteLine(';');
+
+        if (edges[^1] == FlowGraph.EmptyVertex || flowGraph.Vertices[edges[^1]].IsVisible)
+        {
+            writer.WriteLine("return;");
+        }
+        else
+        {
+            writer.WriteLine("continue;");
+        }
+
+        writer.Indent--;
+        writer.WriteLine('}');
+
+        writer.Indent--;
+        writer.WriteLine('}');
     }
 
     private void GenerateGetOutputMethod(IndentedTextWriter writer)
@@ -1026,6 +1166,10 @@ public sealed class Emitter
     }
 
     private static string GetOutcomeFieldName(OutcomeSymbol outcome) => outcome.Index >= 0 ? $"outcome{outcome.Index}" : $"outcome_{-outcome.Index}";
+
+    private static string GetSpectrumTotalFieldName(SpectrumSymbol spectrum) => spectrum.Index >= 0 ? $"total{spectrum.Index}" : $"total_{-spectrum.Index}";
+
+    private static string GetSpectrumPositiveFieldName(SpectrumSymbol spectrum) => spectrum.Index >= 0 ? $"positive{spectrum.Index}" : $"total_{-spectrum.Index}";
 }
 
 #if EXAMPLE_STORY

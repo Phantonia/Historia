@@ -670,6 +670,7 @@ public sealed partial class Binder
             Name = spectrumDeclaration.Name,
             Intervals = intervalBuilder.ToImmutable(),
             OptionNames = spectrumDeclaration.Options.Select(o => o.Name).ToImmutableArray(),
+            DefaultOption = spectrumDeclaration.DefaultOption,
             Index = spectrumDeclaration.Index,
         };
 
@@ -789,6 +790,11 @@ public sealed partial class Binder
         {
             ErrorFound?.Invoke(Errors.IncompatibleType(typedAmount.SourceType, (TypeSymbol)table["Int"], "strengthen/weaken amount", typedAmount.Index));
         }
+
+        typedAmount = typedAmount with
+        {
+            TargetType = (TypeSymbol)table["Int"],
+        };
 
         BoundSpectrumAdjustmentStatementNode boundStatement = new()
         {

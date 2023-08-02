@@ -76,7 +76,14 @@ public sealed partial class FlowAnalyzer
             SwitchStatementNode switchStatement => GenerateSwitchFlowGraph(switchStatement),
             BranchOnStatementNode branchOnStatement => GenerateBranchOnFlowGraph(branchOnStatement),
             OutcomeDeclarationStatementNode => FlowGraph.Empty,
+            SpectrumDeclarationStatementNode => FlowGraph.Empty,
             AssignmentStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex
+            {
+                Index = statement.Index,
+                AssociatedStatement = statement,
+                IsVisible = false,
+            }),
+            SpectrumAdjustmentStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex
             {
                 Index = statement.Index,
                 AssociatedStatement = statement,

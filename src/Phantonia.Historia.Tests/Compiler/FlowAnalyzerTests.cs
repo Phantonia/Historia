@@ -398,4 +398,55 @@ public sealed class FlowAnalyzerTests
         Assert.IsTrue(expectedFirstError == errors[0] || expectedFirstError == errors[1]);
         Assert.IsTrue(expectedSecondError == errors[0] || expectedSecondError == errors[1]);
     }
+
+    [TestMethod]
+    public void TestSpectrumAssignment()
+    {
+        string code =
+            """
+            scene main
+            {
+                spectrum X (A <= 1/2, B);
+                spectrum Y (A <= 1/2, B) default A;
+
+                switch (0)
+                {
+                    option (1)
+                    {
+                        strengthen X by 1;
+                    }
+
+                    option (2)
+                    {
+                        weaken Y by 2;
+                    }
+                }
+
+                branchon X
+                {
+                    option A { }
+                    option B { }
+                }
+
+                branchon Y
+                {
+                    option A { }
+                    option B { }
+                }
+            }
+            """;
+
+        FlowAnalyzer analyzer = PrepareFlowAnalyzer(code);
+
+        List<Error> errors = new();
+        analyzer.ErrorFound += errors.Add;
+
+        _ = analyzer.GenerateMainFlowGraph();
+
+        Assert.AreEqual(1, errors.Count);
+
+        Error expectedError = Errors.SpectrumNotDefinitelyAssigned("X", code.IndexOf("branchon X"));
+
+        Assert.AreEqual(expectedError, errors[0]);
+    }
 }
