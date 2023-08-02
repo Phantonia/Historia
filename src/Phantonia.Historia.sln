@@ -7,7 +7,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Phantonia.Historia.Language
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Phantonia.Historia.Tests", "Phantonia.Historia.Tests\Phantonia.Historia.Tests.csproj", "{A9208CB0-B3ED-4A33-84B2-C04ADB34C1CB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Phantonia.Historia", "Phantonia.Historia\Phantonia.Historia.csproj", "{65088C1F-88F3-4CDF-8180-9F1178B3F403}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Phantonia.Historia", "Phantonia.Historia\Phantonia.Historia.csproj", "{65088C1F-88F3-4CDF-8180-9F1178B3F403}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Phantonia.Historia.TextAdventure", "Phantonia.Historia.TextAdventure\Phantonia.Historia.TextAdventure.csproj", "{E89D846F-FA28-4C66-8DFB-5B9C89795A06}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{65088C1F-88F3-4CDF-8180-9F1178B3F403}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{65088C1F-88F3-4CDF-8180-9F1178B3F403}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{65088C1F-88F3-4CDF-8180-9F1178B3F403}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E89D846F-FA28-4C66-8DFB-5B9C89795A06}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E89D846F-FA28-4C66-8DFB-5B9C89795A06}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E89D846F-FA28-4C66-8DFB-5B9C89795A06}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E89D846F-FA28-4C66-8DFB-5B9C89795A06}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -401,7 +401,15 @@ public sealed class Emitter
                     }
 
                     writer.WriteLine($"state = {edges[0]};");
-                    writer.WriteLine("continue;");
+
+                    if (edges[0] == EndState || flowGraph.Vertices[edges[0]].IsVisible)
+                    {
+                        writer.WriteLine("return;");
+                    }
+                    else
+                    {
+                        writer.WriteLine("continue;");
+                    }
 
                     writer.Indent--;
 
@@ -691,11 +699,13 @@ public sealed class Emitter
 
         foreach (PropertySymbol property in record.Properties.Take(record.Properties.Length - 1))
         {
+            writer.Write("public ");
             GenerateType(writer, property.Type);
             writer.WriteLine($" @{property.Name} {{ get; }}");
             writer.WriteLine();
         }
 
+        writer.Write("public ");
         GenerateType(writer, record.Properties[^1].Type);
         writer.WriteLine($" @{record.Properties[^1].Name} {{ get; }}");
         writer.WriteLine();
