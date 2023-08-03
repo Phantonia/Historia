@@ -1,31 +1,40 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.IO;
 
 namespace Phantonia.Historia.Language.LexicalAnalysis;
 
 public sealed class Lexer
 {
-    public Lexer(string historiaText)
+    private const int TheEnd = -1;
+
+    public Lexer(string code)
     {
-        this.historiaText = historiaText;
+        inputReader = new StringReader(code);
     }
 
-    private readonly string historiaText;
+    public Lexer(TextReader inputReader)
+    {
+        this.inputReader = inputReader;
+    }
+
+    private readonly TextReader inputReader;
+    private int currentIndex = 0;
 
     // reLex, take it easy
     public ImmutableArray<Token> Lex()
     {
         ImmutableArray<Token>.Builder tokenBuilder = ImmutableArray.CreateBuilder<Token>();
 
-        int index = 0;
-        Token nextToken = LexSingleToken(ref index);
+        Token nextToken = LexSingleToken();
 
         while (nextToken.Kind != TokenKind.EndOfFile)
         {
             tokenBuilder.Add(nextToken);
 
-            nextToken = LexSingleToken(ref index);
+            nextToken = LexSingleToken();
         }
 
         tokenBuilder.Add(nextToken);
@@ -33,77 +42,117 @@ public sealed class Lexer
         return tokenBuilder.ToImmutable();
     }
 
-    private Token LexSingleToken(ref int index)
+    private Token LexSingleToken()
     {
         while (true)
         {
-            if (index >= historiaText.Length)
+            if (inputReader.Peek() == TheEnd)
             {
-                return new Token { Kind = TokenKind.EndOfFile, Index = historiaText.Length, Text = "" };
+                return new Token { Kind = TokenKind.EndOfFile, Index = currentIndex, Text = "" };
             }
 
-            if (char.IsWhiteSpace(historiaText[index]))
+            if (char.IsWhiteSpace((char)inputReader.Peek()))
             {
-                for (; index < historiaText.Length; index++)
+                while (inputReader.Peek() != TheEnd)
                 {
-                    if (!char.IsWhiteSpace(historiaText[index]))
+                    if (!char.IsWhiteSpace((char)inputReader.Peek()))
                     {
                         break;
                     }
+
+                    _ = inputReader.Read();
+                    currentIndex++;
                 }
 
                 continue; // start again from the beginning
             }
 
-            if (historiaText[index] == '/' && index < historiaText.Length - 1 && historiaText[index + 1] == '/')
+            if (inputReader.Peek() == '/')
             {
-                index += 2;
+                _ = inputReader.Read();
+                currentIndex++;
 
-                for (; index < historiaText.Length; index++)
+                if (inputReader.Peek() == '/')
                 {
-                    if (historiaText[index] == '\r' || historiaText[index] == '\n')
-                    {
-                        index++;
-                        break; ;
-                    }
-                }
+                    _ = inputReader.Read();
+                    currentIndex++;
 
-                continue; // start again from the beginning
+                    do
+                    {
+                        currentIndex++;
+                    } while (inputReader.Read() is not ('\r' or '\n' or TheEnd));
+
+                    continue; // start again from the beginning
+                }
+                else
+                {
+                    return new Token
+                    {
+                        Kind = TokenKind.Slash,
+                        Text = "/",
+                        Index = currentIndex,
+                    };
+                }
             }
 
-            return historiaText[index] switch
+            switch (inputReader.Peek())
             {
-                '{' => new Token { Kind = TokenKind.OpenBrace, Text = "{", Index = index++ },
-                '}' => new Token { Kind = TokenKind.ClosedBrace, Text = "}", Index = index++ },
-                '(' => new Token { Kind = TokenKind.OpenParenthesis, Text = "(", Index = index++ },
-                ')' => new Token { Kind = TokenKind.ClosedParenthesis, Text = ")", Index = index++ },
-                ';' => new Token { Kind = TokenKind.Semicolon, Text = ";", Index = index++ },
-                ':' => new Token { Kind = TokenKind.Colon, Text = ":", Index = index++ },
-                ',' => new Token { Kind = TokenKind.Comma, Text = ",", Index = index++ },
-                '=' => new Token { Kind = TokenKind.Equals, Text = "=", Index = index++ },
-                '"' or '\'' => LexStringLiteral(ref index),
-                '/' => new Token { Kind = TokenKind.Slash, Text = "/", Index = index++ },
-                '<' => LexLessThan(ref index),
-                >= '0' and <= '9' => LexIntegerLiteral(ref index),
-                >= 'a' and <= 'z' or >= 'A' and <= 'Z' or '_' => LexIdentifierOrKeyword(ref index),
-                _ => new Token { Kind = TokenKind.Unknown, Text = historiaText[index].ToString(), Index = index++ },
-            };
+                case '{':
+                    _ = inputReader.Read();
+                    return new Token { Kind = TokenKind.OpenBrace, Text = "{", Index = currentIndex++, };
+                case '}':
+                    _ = inputReader.Read();
+                    return new Token { Kind = TokenKind.ClosedBrace, Text = "}", Index = currentIndex++, };
+                case '(':
+                    _ = inputReader.Read();
+                    return new Token { Kind = TokenKind.OpenParenthesis, Text = "(", Index = currentIndex++, };
+                case ')':
+                    _ = inputReader.Read();
+                    return new Token { Kind = TokenKind.ClosedParenthesis, Text = ")", Index = currentIndex++, };
+                case ';':
+                    _ = inputReader.Read();
+                    return new Token { Kind = TokenKind.Semicolon, Text = ";", Index = currentIndex++, };
+                case ':':
+                    _ = inputReader.Read();
+                    return new Token { Kind = TokenKind.Colon, Text = ":", Index = currentIndex++, };
+                case ',':
+                    _ = inputReader.Read();
+                    return new Token { Kind = TokenKind.Comma, Text = ",", Index = currentIndex++, };
+                case '=':
+                    _ = inputReader.Read();
+                    return new Token { Kind = TokenKind.Equals, Text = "=", Index = currentIndex++, };
+                case '"' or '\'':
+                    return LexStringLiteral();
+                case '<':
+                    return LexLessThan();
+                case >= '0' and <= '9':
+                    return LexIntegerLiteral();
+                case >= 'a' and <= 'z' or >= 'A' and <= 'Z' or '_':
+                    return LexIdentifierOrKeyword();
+                default:
+                    {
+                        char c = (char)inputReader.Read();
+                        return new Token { Kind = TokenKind.Unknown, Text = c.ToString(), Index = currentIndex++, };
+                    }
+            }
         }
     }
 
-    private Token LexLessThan(ref int index)
+    private Token LexLessThan()
     {
-        Debug.Assert(historiaText[index] is '<');
-        index++;
+        Debug.Assert(inputReader.Peek() is '<');
+        _ = inputReader.Read();
+        currentIndex++;
 
-        if (historiaText[index] is '=')
+        if (inputReader.Peek() is '=')
         {
-            index++;
+            _ = inputReader.Read();
+            currentIndex++;
             return new Token
             {
                 Kind = TokenKind.LessThanOrEquals,
                 Text = "<=",
-                Index = index - 2,
+                Index = currentIndex - 2,
             };
         }
         else
@@ -112,43 +161,58 @@ public sealed class Lexer
             {
                 Kind = TokenKind.LessThan,
                 Text = "<",
-                Index = index - 1,
+                Index = currentIndex - 1,
             };
         }
     }
 
-    private Token LexIntegerLiteral(ref int index)
+    private Token LexIntegerLiteral()
     {
-        int startIndex = index;
+        int startIndex = currentIndex;
 
-        while (historiaText[index] is >= '0' and <= '9')
+        List<char> characters = new();
+
+        while (inputReader.Peek() is >= '0' and <= '9')
         {
-            index++;
+            characters.Add((char)inputReader.Read());
+            currentIndex++;
 
-            if (index >= historiaText.Length)
+            if (inputReader.Peek() == TheEnd)
             {
                 break;
             }
         }
 
-        string text = historiaText[startIndex..index]; // upper bound is exclusive
+        string text = new(characters.ToArray());
         int value = int.Parse(text);
-        return new Token { Kind = TokenKind.IntegerLiteral, Text = text, IntegerValue = value, Index = startIndex };
+        return new Token
+        {
+            Kind = TokenKind.IntegerLiteral,
+            Text = text,
+            IntegerValue = value,
+            Index = startIndex,
+        };
     }
 
-    private Token LexStringLiteral(ref int index)
+    private Token LexStringLiteral()
     {
-        int startIndex = index;
-        Debug.Assert(historiaText[index] is '"' or '\'');
+        int startIndex = currentIndex;
+        Debug.Assert(inputReader.Peek() is '"' or '\'');
 
-        char delimiter = historiaText[index];
-        int delimiterCount = 0;
+        char delimiter = (char)inputReader.Read();
+        currentIndex++;
+        int delimiterCount = 1;
 
-        for (; index < historiaText.Length; index++)
+        List<char> characters = new() { delimiter };
+
+        while (inputReader.Peek() != TheEnd)
         {
-            if (historiaText[index] == delimiter)
+            if (inputReader.Peek() == delimiter)
             {
+                _ = inputReader.Read();
+                currentIndex++;
                 delimiterCount++;
+                characters.Add(delimiter);
             }
             else
             {
@@ -156,26 +220,20 @@ public sealed class Lexer
             }
         }
 
-        while (index < historiaText.Length && historiaText[index] != delimiter)
+        int delimiterCountdown = delimiterCount;
+
+        while (inputReader.Peek() != TheEnd && delimiterCountdown > 0)
         {
-            if (historiaText[index] is '\r' or '\n')
+            if (inputReader.Peek() is '\r' or '\n')
             {
                 return new Token
                 {
                     Kind = TokenKind.BrokenStringLiteral,
-                    Text = historiaText[startIndex..index],
+                    Text = new string(characters.ToArray()),
                     Index = startIndex,
                 };
             }
-
-            index++;
-        }
-
-        int delimiterCountdown = delimiterCount;
-
-        while (index < historiaText.Length && delimiterCountdown > 0)
-        {
-            if (historiaText[index] == delimiter)
+            else if (inputReader.Peek() == delimiter)
             {
                 delimiterCountdown--;
             }
@@ -184,34 +242,33 @@ public sealed class Lexer
                 delimiterCountdown = delimiterCount;
             }
 
-            index++;
+            characters.Add((char)inputReader.Read());
+            currentIndex++;
         }
 
-        string realString = StringParser.Parse(historiaText.AsSpan()[(startIndex + delimiterCount)..(index - delimiterCount)]);
+        string realString = StringParser.Parse(characters.ToArray().AsSpan()[delimiterCount..^delimiterCount]);
 
         return new Token
         {
             Kind = delimiterCountdown == 0 ? TokenKind.StringLiteral : TokenKind.BrokenStringLiteral,
-            Text = delimiterCountdown == 0 ? realString : historiaText[startIndex..index],
+            Text = delimiterCountdown == 0 ? realString : new string(characters.ToArray()),
             Index = startIndex,
         };
     }
 
-    private Token LexIdentifierOrKeyword(ref int index)
+    private Token LexIdentifierOrKeyword()
     {
-        int startIndex = index;
+        int startIndex = currentIndex;
 
-        while (historiaText[index] is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or >= '0' and <= '9' or '_')
+        List<char> characters = new();
+
+        while (inputReader.Peek() is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or >= '0' and <= '9' or '_')
         {
-            index++;
-
-            if (index >= historiaText.Length)
-            {
-                break;
-            }
+            characters.Add((char)inputReader.Read());
+            currentIndex++;
         }
 
-        string text = historiaText[startIndex..index]; // upper bound is exclusive
+        string text = new(characters.ToArray()); // upper bound is exclusive
 
         TokenKind kind = text switch
         {

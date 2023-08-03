@@ -12,12 +12,17 @@ namespace Phantonia.Historia.Language;
 
 public sealed class Compiler
 {
-    public Compiler(string historiaText)
+    public Compiler(string code)
     {
-        HistoriaText = historiaText;
+        inputReader = new StringReader(code);
     }
 
-    public string HistoriaText { get; }
+    public Compiler(TextReader inputReader)
+    {
+        this.inputReader = inputReader;
+    }
+
+    private readonly TextReader inputReader;
 
     public CompilationResult CompileToCSharpText()
     {
@@ -25,13 +30,10 @@ public sealed class Compiler
 
         void HandleError(Error error)
         {
-            Debug.WriteLine(Errors.GenerateFullMessage(HistoriaText, error));
-            Debug.WriteLine("");
-
             errors.Add(error);
         }
 
-        Lexer lexer = new(HistoriaText);
+        Lexer lexer = new(inputReader);
         ImmutableArray<Token> tokens = lexer.Lex();
 
         Parser parser = new(tokens);
