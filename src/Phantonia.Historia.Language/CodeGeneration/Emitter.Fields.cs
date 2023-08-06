@@ -7,7 +7,7 @@ namespace Phantonia.Historia.Language.CodeGeneration;
 
 public sealed partial class Emitter
 {
-    private void GenerateOutcomeFields(IndentedTextWriter writer)
+    private void GenerateOutcomeFields()
     {
         foreach (SyntaxNode node in boundStory.FlattenHierarchie())
         {

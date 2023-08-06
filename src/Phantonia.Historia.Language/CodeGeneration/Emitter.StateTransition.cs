@@ -12,7 +12,7 @@ namespace Phantonia.Historia.Language.CodeGeneration;
 
 public sealed partial class Emitter
 {
-    private void GenerateStateTransitionMethod(IndentedTextWriter writer)
+    private void GenerateStateTransitionMethod()
     {
         writer.WriteManyLines(
             """
@@ -26,26 +26,26 @@ public sealed partial class Emitter
 
         writer.Indent += 3;
 
-        GenerateStartTransition(writer);
+        GenerateStartTransition();
 
         foreach ((int index, ImmutableList<int> edges) in flowGraph.OutgoingEdges)
         {
             switch (flowGraph.Vertices[index].AssociatedStatement)
             {
                 case OutputStatementNode:
-                    GenerateOutputTransition(writer, index, edges);
+                    GenerateOutputTransition(index, edges);
                     break;
                 case SwitchStatementNode switchStatement:
-                    GenerateSwitchTransition(writer, switchStatement, edges);
+                    GenerateSwitchTransition(switchStatement, edges);
                     break;
                 case BoundBranchOnStatementNode branchOnStatement:
-                    GenerateBranchOnTransition(writer, branchOnStatement, edges);
+                    GenerateBranchOnTransition(branchOnStatement, edges);
                     break;
                 case BoundOutcomeAssignmentStatementNode outcomeAssignment:
-                    GenerateOutcomeAssignmentTransition(writer, outcomeAssignment, edges);
+                    GenerateOutcomeAssignmentTransition(outcomeAssignment, edges);
                     break;
                 case BoundSpectrumAdjustmentStatementNode spectrumAdjustment:
-                    GenerateSpectrumAdjustmentTransition(writer, spectrumAdjustment, edges);
+                    GenerateSpectrumAdjustmentTransition(spectrumAdjustment, edges);
                     break;
 
             }
@@ -64,7 +64,7 @@ public sealed partial class Emitter
 
     }
 
-    private void GenerateStartTransition(IndentedTextWriter writer)
+    private void GenerateStartTransition()
     {
         writer.Write("case (");
         writer.Write(StartState);
@@ -86,7 +86,7 @@ public sealed partial class Emitter
         writer.Indent--;
     }
 
-    private void GenerateOutputTransition(IndentedTextWriter writer, int index, ImmutableList<int> edges)
+    private void GenerateOutputTransition(int index, ImmutableList<int> edges)
     {
         Debug.Assert(flowGraph.OutgoingEdges[index].Count == 1);
 
@@ -107,7 +107,7 @@ public sealed partial class Emitter
         writer.Indent--;
     }
 
-    private void GenerateSwitchTransition(IndentedTextWriter writer, SwitchStatementNode switchStatement, ImmutableList<int> edges)
+    private void GenerateSwitchTransition(SwitchStatementNode switchStatement, ImmutableList<int> edges)
     {
         Debug.Assert(switchStatement.Options.Length == edges.Count);
 
@@ -144,7 +144,7 @@ public sealed partial class Emitter
         }
     }
 
-    private void GenerateBranchOnTransition(IndentedTextWriter writer, BoundBranchOnStatementNode branchOnStatement, ImmutableList<int> edges)
+    private void GenerateBranchOnTransition(BoundBranchOnStatementNode branchOnStatement, ImmutableList<int> edges)
     {
         int index = branchOnStatement.Index;
 
@@ -153,16 +153,16 @@ public sealed partial class Emitter
         writer.Indent++;
         if (branchOnStatement.Outcome is SpectrumSymbol)
         {
-            GenerateSpectrumBranchOnTransition(writer, branchOnStatement, edges);
+            GenerateSpectrumBranchOnTransition(branchOnStatement, edges);
         }
         else
         {
-            GenerateOutcomeBranchOnTransition(writer, branchOnStatement, edges);
+            GenerateOutcomeBranchOnTransition(branchOnStatement, edges);
         }
         writer.Indent--;
     }
 
-    private void GenerateOutcomeBranchOnTransition(IndentedTextWriter writer, BoundBranchOnStatementNode branchOnStatement, ImmutableList<int> edges)
+    private void GenerateOutcomeBranchOnTransition(BoundBranchOnStatementNode branchOnStatement, ImmutableList<int> edges)
     {
         string outcomeField = GetOutcomeFieldName(branchOnStatement.Outcome);
         writer.WriteLine($"switch ({outcomeField})");
@@ -227,7 +227,7 @@ public sealed partial class Emitter
         writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid outcome\");");
     }
 
-    private void GenerateSpectrumBranchOnTransition(IndentedTextWriter writer, BoundBranchOnStatementNode branchOnStatement, ImmutableList<int> edges)
+    private void GenerateSpectrumBranchOnTransition(BoundBranchOnStatementNode branchOnStatement, ImmutableList<int> edges)
     {
         Debug.Assert(branchOnStatement.Outcome is SpectrumSymbol);
 
@@ -324,7 +324,7 @@ public sealed partial class Emitter
         writer.WriteLine('}');
     }
 
-    private void GenerateOutcomeAssignmentTransition(IndentedTextWriter writer, BoundOutcomeAssignmentStatementNode outcomeAssignment, ImmutableList<int> edges)
+    private void GenerateOutcomeAssignmentTransition(BoundOutcomeAssignmentStatementNode outcomeAssignment, ImmutableList<int> edges)
     {
         writer.WriteLine($"case ({outcomeAssignment.Index}, _):");
         writer.Indent++;
@@ -337,7 +337,7 @@ public sealed partial class Emitter
         writer.Indent--;
     }
 
-    private void GenerateSpectrumAdjustmentTransition(IndentedTextWriter writer, BoundSpectrumAdjustmentStatementNode spectrumAdjustment, ImmutableList<int> edges)
+    private void GenerateSpectrumAdjustmentTransition(BoundSpectrumAdjustmentStatementNode spectrumAdjustment, ImmutableList<int> edges)
     {
         int index = spectrumAdjustment.Index;
 
@@ -347,14 +347,14 @@ public sealed partial class Emitter
         writer.Indent++;
         writer.Write(GetSpectrumTotalFieldName(spectrumAdjustment.Spectrum));
         writer.Write(" += ");
-        GenerateExpression(writer, spectrumAdjustment.AdjustmentAmount);
+        GenerateExpression(spectrumAdjustment.AdjustmentAmount);
         writer.WriteLine(';');
 
         if (spectrumAdjustment.Strengthens)
         {
             writer.Write(GetSpectrumPositiveFieldName(spectrumAdjustment.Spectrum));
             writer.Write(" += ");
-            GenerateExpression(writer, spectrumAdjustment.AdjustmentAmount);
+            GenerateExpression(spectrumAdjustment.AdjustmentAmount);
             writer.WriteLine(';');
         }
 

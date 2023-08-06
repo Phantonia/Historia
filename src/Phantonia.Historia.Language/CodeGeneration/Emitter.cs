@@ -16,28 +16,28 @@ public sealed partial class Emitter
     private const int EndState = FlowGraph.EmptyVertex;
     private const int StartState = -2;
 
-    public Emitter(StoryNode boundStory, Settings settings, FlowGraph flowGraph)
+    public Emitter(StoryNode boundStory, Settings settings, FlowGraph flowGraph, TextWriter outputWriter)
     {
         this.boundStory = boundStory;
         this.settings = settings;
         this.flowGraph = flowGraph;
+        writer = new IndentedTextWriter(outputWriter);
     }
 
     private readonly StoryNode boundStory;
     private readonly Settings settings;
     private readonly FlowGraph flowGraph;
+    private readonly IndentedTextWriter writer;
 
-    public string GenerateCSharpText()
+    public void GenerateOutputCode()
     {
-        IndentedTextWriter writer = new(new StringWriter());
-
         writer.WriteLine("#nullable enable");
         writer.Write("public sealed class @");
         writer.Write(settings.ClassName);
         writer.Write(" : global::Phantonia.Historia.IStory<");
-        GenerateType(writer, settings.OutputType);
+        GenerateType(settings.OutputType);
         writer.Write(", ");
-        GenerateType(writer, settings.OptionType);
+        GenerateType(settings.OptionType);
         writer.WriteLine('>');
         writer.WriteLine('{');
 
@@ -63,7 +63,7 @@ public sealed partial class Emitter
             private int state;
             """);
 
-        GenerateOutcomeFields(writer);
+        GenerateOutcomeFields();
 
         writer.WriteLine();
 
@@ -76,15 +76,15 @@ public sealed partial class Emitter
         writer.WriteLine();
 
         writer.Write("public global::System.Collections.Immutable.ImmutableArray<");
-        GenerateType(writer, settings.OptionType);
+        GenerateType(settings.OptionType);
         writer.Write("> Options { get; private set; } = global::System.Collections.Immutable.ImmutableArray<");
-        GenerateType(writer, settings.OptionType);
+        GenerateType(settings.OptionType);
         writer.WriteLine(">.Empty;");
 
         writer.WriteLine();
 
         writer.Write("public ");
-        GenerateType(writer, settings.OutputType);
+        GenerateType(settings.OutputType);
         writer.WriteLine(" Output { get; private set; }");
         writer.WriteLine();
 
@@ -140,27 +140,27 @@ public sealed partial class Emitter
 
             """);
 
-        GenerateStateTransitionMethod(writer);
+        GenerateStateTransitionMethod();
 
         writer.WriteLine();
 
-        GenerateGetOutputMethod(writer);
+        GenerateGetOutputMethod();
 
         writer.WriteLine();
 
-        GenerateGetOptionsMethod(writer);
+        GenerateGetOptionsMethod();
 
         writer.WriteLine();
 
-        GenerateTypeDeclarations(writer);
+        GenerateTypeDeclarations();
 
         writer.WriteLine();
         writer.Write("global::System.Collections.Generic.IReadOnlyList<");
-        GenerateType(writer, settings.OptionType);
+        GenerateType(settings.OptionType);
         writer.Write("> global::Phantonia.Historia.IStory<");
-        GenerateType(writer, settings.OutputType);
+        GenerateType(settings.OutputType);
         writer.Write(", ");
-        GenerateType(writer, settings.OptionType);
+        GenerateType(settings.OptionType);
         writer.WriteLine(">.Options");
         writer.WriteManyLines(
             """
@@ -177,11 +177,9 @@ public sealed partial class Emitter
         writer.WriteLine("}");
 
         Debug.Assert(writer.Indent == 0);
-
-        return ((StringWriter)writer.InnerWriter).ToString();
     }
 
-    private static void GenerateExpression(IndentedTextWriter writer, ExpressionNode expression)
+    private void GenerateExpression(ExpressionNode expression)
     {
         TypedExpressionNode? typedExpression = expression as TypedExpressionNode;
         Debug.Assert(typedExpression is not null);
@@ -193,7 +191,7 @@ public sealed partial class Emitter
             writer.Write("new @");
             writer.Write(typedExpression.TargetType.Name);
             writer.Write('(');
-            GenerateExpression(writer, typedExpression with
+            GenerateExpression(typedExpression with
             {
                 TargetType = typedExpression.SourceType,
             });
@@ -215,10 +213,10 @@ public sealed partial class Emitter
                 writer.Write('(');
                 foreach (BoundArgumentNode argument in recordCreation.BoundArguments.Take(recordCreation.BoundArguments.Length - 1))
                 {
-                    GenerateExpression(writer, argument.Expression);
+                    GenerateExpression(argument.Expression);
                     writer.Write(", ");
                 }
-                GenerateExpression(writer, recordCreation.BoundArguments[^1].Expression);
+                GenerateExpression(recordCreation.BoundArguments[^1].Expression);
                 writer.Write(')');
                 return;
         }
@@ -226,7 +224,7 @@ public sealed partial class Emitter
         Debug.Assert(false);
     }
 
-    private void GenerateType(IndentedTextWriter writer, TypeSymbol type)
+    private void GenerateType(TypeSymbol type)
     {
         switch (type)
         {

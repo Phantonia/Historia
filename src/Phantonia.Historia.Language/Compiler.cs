@@ -12,19 +12,22 @@ namespace Phantonia.Historia.Language;
 
 public sealed class Compiler
 {
-    public Compiler(string code)
+    public Compiler(string code, TextWriter outputWriter)
     {
         inputReader = new StringReader(code);
+        this.outputWriter = outputWriter;
     }
 
-    public Compiler(TextReader inputReader)
+    public Compiler(TextReader inputReader, TextWriter outputWriter)
     {
         this.inputReader = inputReader;
+        this.outputWriter = outputWriter;
     }
 
     private readonly TextReader inputReader;
+    private readonly TextWriter outputWriter;
 
-    public CompilationResult CompileToCSharpText()
+    public CompilationResult Compile()
     {
         List<Error> errors = new();
 
@@ -63,6 +66,8 @@ public sealed class Compiler
         FlowAnalyzer flowAnalyzer = new(boundStory, symbolTable);
         flowAnalyzer.ErrorFound += errors.Add;
 
+        FlowGraph mainGraph = flowAnalyzer.GenerateMainFlowGraph();
+
         if (errors.Count > 0)
         {
             return new CompilationResult
@@ -71,15 +76,10 @@ public sealed class Compiler
             };
         }
 
-        FlowGraph mainGraph = flowAnalyzer.GenerateMainFlowGraph();
+        Emitter emitter = new(boundStory, settings, mainGraph, outputWriter);
 
-        Emitter emitter = new(boundStory, settings, mainGraph);
+        emitter.GenerateOutputCode();
 
-        string csharpText = emitter.GenerateCSharpText();
-
-        return new CompilationResult
-        {
-            CSharpText = csharpText,
-        };
+        return new CompilationResult();
     }
 }

@@ -7,10 +7,10 @@ namespace Phantonia.Historia.Language.CodeGeneration;
 
 public sealed partial class Emitter
 {
-    private void GenerateGetOutputMethod(IndentedTextWriter writer)
+    private void GenerateGetOutputMethod()
     {
         writer.Write("private ");
-        GenerateType(writer, settings.OutputType);
+        GenerateType(settings.OutputType);
         writer.WriteLine(" GetOutput()");
 
         writer.WriteManyLines(
@@ -49,7 +49,7 @@ public sealed partial class Emitter
 
             writer.Indent++;
             writer.Write($"return ");
-            GenerateExpression(writer, outputExpression);
+            GenerateExpression(outputExpression);
             writer.WriteLine(";");
             writer.Indent--;
         }
@@ -70,10 +70,10 @@ public sealed partial class Emitter
             """);
     }
 
-    private void GenerateGetOptionsMethod(IndentedTextWriter writer)
+    private void GenerateGetOptionsMethod()
     {
         writer.Write("private global::System.Collections.Immutable.ImmutableArray<");
-        GenerateType(writer, settings.OptionType);
+        GenerateType(settings.OptionType);
         writer.WriteLine("> GetOptions()");
         writer.WriteLine('{');
 
@@ -96,7 +96,7 @@ public sealed partial class Emitter
 
                 foreach (SwitchOptionNode option in switchStatement.Options)
                 {
-                    GenerateExpression(writer, option.Expression);
+                    GenerateExpression(option.Expression);
                     writer.Write(", ");
                 }
 
@@ -111,7 +111,7 @@ public sealed partial class Emitter
         writer.WriteLine();
 
         writer.Write("return global::System.Collections.Immutable.ImmutableArray<");
-        GenerateType(writer, settings.OptionType);
+        GenerateType(settings.OptionType);
         writer.WriteLine(">.Empty;");
 
         writer.Indent--;

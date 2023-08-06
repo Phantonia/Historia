@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Phantonia.Historia.Language;
 using System;
+using System.IO;
 
 namespace Phantonia.Historia.Tests.Compiler;
 
@@ -47,13 +48,12 @@ public sealed class EmitterTests
             }
             """;
 
-        Language.Compiler comp = new(code);
-        CompilationResult result = comp.CompileToCSharpText();
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
 
         Assert.IsTrue(result.IsValid);
-        Assert.IsNotNull(result.CSharpText);
 
-        string csharpText = result.CSharpText;
+        string csharpText = sw.ToString();
     }
 
     [TestMethod]
@@ -94,13 +94,13 @@ public sealed class EmitterTests
             }
             """;
 
-        CompilationResult result = new Language.Compiler(code).CompileToCSharpText();
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-        Assert.IsNotNull(result.CSharpText);
 
-        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(result.CSharpText);
+        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString());
 
         Assert.IsTrue(story.NotStartedStory);
         Assert.IsFalse(story.FinishedStory);
@@ -213,14 +213,13 @@ public sealed class EmitterTests
             }
             """;
 
-        Language.Compiler compiler = new(code);
-        CompilationResult result = compiler.CompileToCSharpText();
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-        Assert.IsNotNull(result.CSharpText);
 
-        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(result.CSharpText);
+        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString());
 
         Assert.IsTrue(story.NotStartedStory);
         Assert.IsFalse(story.FinishedStory);
@@ -326,15 +325,13 @@ public sealed class EmitterTests
             }
             """;
 
-        Language.Compiler compiler = new(code);
-
-        CompilationResult result = compiler.CompileToCSharpText();
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-        Assert.IsNotNull(result.CSharpText);
 
-        _ = DynamicCompiler.CompileToStory<string, string>(result.CSharpText);
+        _ = DynamicCompiler.CompileToStory<string, string>(sw.ToString());
     }
 
     [TestMethod]
@@ -353,15 +350,13 @@ public sealed class EmitterTests
             }
             """;
 
-        Language.Compiler compiler = new(code);
-
-        CompilationResult result = compiler.CompileToCSharpText();
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-        Assert.IsNotNull(result.CSharpText);
 
-        IStory story = DynamicCompiler.CompileToStory(result.CSharpText);
+        IStory story = DynamicCompiler.CompileToStory(sw.ToString());
 
         Assert.IsTrue(story.NotStartedStory);
         Assert.IsFalse(story.FinishedStory);
@@ -392,15 +387,13 @@ public sealed class EmitterTests
             scene main { }
             """;
 
-        Language.Compiler compiler = new(code);
-
-        CompilationResult result = compiler.CompileToCSharpText();
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-        Assert.IsNotNull(result.CSharpText);
 
-        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(result.CSharpText);
+        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString());
 
         Assert.IsTrue(story.NotStartedStory);
         Assert.IsFalse(story.FinishedStory);
@@ -450,14 +443,13 @@ public sealed class EmitterTests
             }
             """;
 
-        Language.Compiler compiler = new(code);
-        CompilationResult result = compiler.CompileToCSharpText();
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-        Assert.IsNotNull(result.CSharpText);
 
-        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(result.CSharpText!);
+        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString());
 
         Assert.IsTrue(story.NotStartedStory);
         Assert.AreEqual(0, story.Output);

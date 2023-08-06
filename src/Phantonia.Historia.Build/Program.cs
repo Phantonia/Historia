@@ -10,6 +10,7 @@ internal static class Program
         if (args.Length == 0)
         {
             Console.Error.WriteLine("Error: no Historia code file was provided");
+            Console.Write("Press any key to exit...");
             _ = Console.ReadKey();
             return 2;
         }
@@ -20,12 +21,21 @@ internal static class Program
         {
             using StreamReader streamReader = new(args[0]);
 
-            Compiler compiler = new(streamReader);
-            result = compiler.CompileToCSharpText();
+            string? path = Path.GetDirectoryName(args[0]);
+            Debug.Assert(path is not null);
+
+            string outputPath = Path.Combine(path, "HistoriaStory.cs");
+
+            using StreamWriter streamWriter = new(outputPath);
+
+            Compiler compiler = new(streamReader, streamWriter);
+
+            result = compiler.Compile();
         }
         catch (IOException)
         {
             Console.Error.WriteLine($"Something went wrong with loading the file {args[0]}");
+            Console.Write("Press any key to exit...");
             _ = Console.ReadKey();
             return 2;
         }
@@ -42,26 +52,12 @@ internal static class Program
                 Console.Error.WriteLine(Errors.GenerateFullMessage(code, error));
             }
 
+            Console.Write("Press any key to exit...");
             _ = Console.ReadKey();
 
             return 1;
         }
-        else
-        {
-            string? path = Path.GetDirectoryName(args[0]);
-            Debug.Assert(path is not null);
 
-            string outputPath = Path.Combine(path, "HistoriaStory.cs");
-
-            using StreamWriter streamWriter = new(outputPath);
-
-            // the emitter should probably immediately write there
-            streamWriter.Write(result.CSharpText);
-
-            Console.WriteLine($"Emitted {outputPath}");
-            _ = Console.ReadKey();
-
-            return 0;
-        }
+        return 0;
     }
 }
