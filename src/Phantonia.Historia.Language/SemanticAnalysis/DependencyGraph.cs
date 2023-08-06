@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -68,7 +69,7 @@ public sealed class DependencyGraph
         }
     }
 
-    public IEnumerable<int> TopologicalSort()
+    public IEnumerable<int> GetDependencyRespectingOrder()
     {
         Debug.Assert(!IsCyclic(out _));
 

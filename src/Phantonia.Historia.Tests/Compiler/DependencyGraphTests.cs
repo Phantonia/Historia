@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Phantonia.Historia.Language.SemanticAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -101,7 +102,7 @@ public sealed class DependencyGraphTests
         Assert.IsFalse(graph.IsCyclic(out IEnumerable<int>? cycle));
         Assert.IsNull(cycle);
 
-        IEnumerable<int> topologicalOrdering = graph.TopologicalSort();
+        IEnumerable<int> topologicalOrdering = graph.GetDependencyRespectingOrder();
 
         // only in our specific case do we assume that a vertex only points at higher indexed vertices
         // in reality this might not be the case

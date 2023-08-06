@@ -1,10 +1,10 @@
-﻿using Phantonia.Historia.Language.GrammaticalAnalysis;
-using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
-using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
-using Phantonia.Historia.Language.SemanticAnalysis;
+﻿using Phantonia.Historia.Language.SemanticAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
+using Phantonia.Historia.Language.SyntaxAnalysis;
+using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
+using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using System;
 using System.Diagnostics;
-using System.Linq;
 
 namespace Phantonia.Historia.Language.FlowAnalysis;
 

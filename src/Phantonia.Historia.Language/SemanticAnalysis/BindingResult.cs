@@ -1,4 +1,4 @@
-﻿using Phantonia.Historia.Language.GrammaticalAnalysis;
+﻿using Phantonia.Historia.Language.SyntaxAnalysis;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 

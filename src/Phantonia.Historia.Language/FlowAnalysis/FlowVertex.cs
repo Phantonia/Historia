@@ -1,4 +1,4 @@
-﻿using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
+﻿using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
 namespace Phantonia.Historia.Language.FlowAnalysis;
 

@@ -1,8 +1,9 @@
-﻿using System;
+﻿using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using Scope = System.Collections.Immutable.ImmutableDictionary<string, Phantonia.Historia.Language.SemanticAnalysis.Symbol>;
+using Scope = System.Collections.Immutable.ImmutableDictionary<string, Phantonia.Historia.Language.SemanticAnalysis.Symbols.Symbol>;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 

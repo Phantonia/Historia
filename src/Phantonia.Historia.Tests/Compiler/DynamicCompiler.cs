@@ -1,14 +1,14 @@
-﻿using Microsoft.CodeAnalysis.CSharp;
+﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
-using Microsoft.CodeAnalysis;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Collections.Immutable;
-using System.Diagnostics;
 
 namespace Phantonia.Historia.Tests.Compiler;
 

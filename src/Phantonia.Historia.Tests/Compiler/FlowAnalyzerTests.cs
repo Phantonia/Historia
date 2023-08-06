@@ -1,14 +1,14 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Phantonia.Historia.Language;
 using Phantonia.Historia.Language.FlowAnalysis;
-using Phantonia.Historia.Language.GrammaticalAnalysis;
-using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
-using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
 using Phantonia.Historia.Language.LexicalAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
+using Phantonia.Historia.Language.SyntaxAnalysis;
+using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
+using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Linq;
 
 namespace Phantonia.Historia.Tests.Compiler;

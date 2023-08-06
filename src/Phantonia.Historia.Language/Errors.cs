@@ -1,6 +1,5 @@
-﻿using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
-using Phantonia.Historia.Language.LexicalAnalysis;
-using Phantonia.Historia.Language.SemanticAnalysis;
+﻿using Phantonia.Historia.Language.LexicalAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

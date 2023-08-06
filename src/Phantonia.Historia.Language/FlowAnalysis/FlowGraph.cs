@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Linq;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using Edges = System.Collections.Immutable.ImmutableDictionary<
     int, System.Collections.Immutable.ImmutableList<int>>;
 using MutEdges = System.Collections.Generic.Dictionary<
     int, System.Collections.Generic.List<int>>;
-using System.Diagnostics;
 
 namespace Phantonia.Historia.Language.FlowAnalysis;
 

@@ -220,5 +220,5 @@ public sealed class LexerTests
 
         Assert.IsTrue(tokens.Select(t => t.Kind).SequenceEqual(expectedKinds));
     }
-   
+
 }

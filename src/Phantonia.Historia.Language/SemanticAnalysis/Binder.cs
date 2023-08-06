@@ -1,6 +1,7 @@
-﻿using Phantonia.Historia.Language.GrammaticalAnalysis;
-using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
-using Phantonia.Historia.Language.GrammaticalAnalysis.Types;
+﻿using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
+using Phantonia.Historia.Language.SyntaxAnalysis;
+using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
+using Phantonia.Historia.Language.SyntaxAnalysis.Types;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -42,7 +43,7 @@ public sealed partial class Binder
         }
 
         // 2. bind everything except for scene bodies into pseudo symbols
-        (table, StoryNode halfboundStory) = BindPseudoSymbols(table);
+        (table, StoryNode halfboundStory) = BindPseudoSymbolDeclarations(table);
 
         // 3. build dependency graph + check it is not cyclic
         DependencyGraph? dependencyGraph = BuildTypeDependencyGraph(halfboundStory, table);

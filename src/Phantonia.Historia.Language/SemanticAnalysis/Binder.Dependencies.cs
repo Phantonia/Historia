@@ -1,11 +1,12 @@
-﻿using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
-using Phantonia.Historia.Language.GrammaticalAnalysis.Types;
-using Phantonia.Historia.Language.GrammaticalAnalysis;
+﻿using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
+using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
+using Phantonia.Historia.Language.SyntaxAnalysis;
+using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
+using Phantonia.Historia.Language.SyntaxAnalysis.Types;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
-using System.Collections.Immutable;
-using System;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 
@@ -13,7 +14,7 @@ public sealed partial class Binder
 {
     private SymbolTable FixPseudoSymbols(DependencyGraph dependencyGraph, SymbolTable table)
     {
-        IEnumerable<int>? topologicalOrdering = dependencyGraph.TopologicalSort();
+        IEnumerable<int>? topologicalOrdering = dependencyGraph.GetDependencyRespectingOrder();
 
         foreach (Symbol symbol in topologicalOrdering.Select(i => dependencyGraph.Symbols[i]))
         {

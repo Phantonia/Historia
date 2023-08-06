@@ -1,4 +1,4 @@
-﻿using Phantonia.Historia.Language.SemanticAnalysis;
+﻿using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using System.Collections.Immutable;
 
 namespace Phantonia.Historia.Language;

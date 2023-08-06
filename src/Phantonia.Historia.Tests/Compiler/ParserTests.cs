@@ -1,14 +1,13 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Phantonia.Historia.Language;
-using Phantonia.Historia.Language.GrammaticalAnalysis;
-using Phantonia.Historia.Language.GrammaticalAnalysis.Expressions;
-using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
-using Phantonia.Historia.Language.GrammaticalAnalysis.TopLevel;
-using Phantonia.Historia.Language.GrammaticalAnalysis.Types;
 using Phantonia.Historia.Language.LexicalAnalysis;
+using Phantonia.Historia.Language.SyntaxAnalysis;
+using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
+using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
+using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
+using Phantonia.Historia.Language.SyntaxAnalysis.Types;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 
 namespace Phantonia.Historia.Tests.Compiler;
@@ -290,21 +289,21 @@ public sealed class ParserTests
         Assert.IsTrue(story.TopLevelNodes is
         [
             TypeSettingDirectiveNode
+        {
+            SettingName: nameof(Settings.OutputType),
+            Type: IdentifierTypeNode
             {
-                SettingName: nameof(Settings.OutputType),
-                Type: IdentifierTypeNode
-                {
-                    Identifier: "Int",
-                }
-            },
+                Identifier: "Int",
+            }
+        },
             TypeSettingDirectiveNode
+        {
+            SettingName: nameof(Settings.OptionType),
+            Type: IdentifierTypeNode
             {
-                SettingName: nameof(Settings.OptionType),
-                Type: IdentifierTypeNode
-                {
-                    Identifier: "String",
-                }
-            },
+                Identifier: "String",
+            }
+        },
             SceneSymbolDeclarationNode
         ]);
     }
@@ -398,26 +397,26 @@ public sealed class ParserTests
             TopLevelNodes:
             [
                 SceneSymbolDeclarationNode
-                {
-                    Name: "main",
-                    Body.Statements:
+            {
+                Name: "main",
+                Body.Statements:
                     [
                         OutputStatementNode
+                    {
+                        OutputExpression: StringLiteralExpressionNode
                         {
-                            OutputExpression: StringLiteralExpressionNode
-                            {
-                                StringLiteral: "String",
-                            }
-                        },
-                        OutputStatementNode
-                        {
-                            OutputExpression: StringLiteralExpressionNode
-                            {
-                                StringLiteral: "Another String",
-                            }
+                            StringLiteral: "String",
                         }
+                    },
+                        OutputStatementNode
+                    {
+                        OutputExpression: StringLiteralExpressionNode
+                        {
+                            StringLiteral: "Another String",
+                        }
+                    }
                     ]
-                }
+            }
             ]
         });
     }
@@ -448,20 +447,20 @@ public sealed class ParserTests
             Name: "Line",
             Properties:
             [
+            {
+                Name: "Text",
+                Type: IdentifierTypeNode
                 {
-                    Name: "Text",
-                    Type: IdentifierTypeNode
-                    {
-                        Identifier: "String",
-                    }
-                },
+                    Identifier: "String",
+                }
+            },
+            {
+                Name: "Character",
+                Type: IdentifierTypeNode
                 {
-                    Name: "Character",
-                    Type: IdentifierTypeNode
-                    {
-                        Identifier: "Int",
-                    }
-                },
+                    Identifier: "Int",
+                }
+            },
             ]
         });
     }
@@ -611,7 +610,7 @@ public sealed class ParserTests
                 }
             }
             """;
-        
+
         Parser parser = new(new Lexer(code).Lex());
 
         List<Error> errors = new();

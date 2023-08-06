@@ -1,5 +1,6 @@
-﻿using Phantonia.Historia.Language.GrammaticalAnalysis.Statements;
-using Phantonia.Historia.Language.SemanticAnalysis;
+﻿using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
+using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
+using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
