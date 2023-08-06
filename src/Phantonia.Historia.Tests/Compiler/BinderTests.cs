@@ -1284,4 +1284,57 @@ public sealed class BinderTests
         AssertIsError(1, Errors.SymbolCannotBeAssignedTo("X", code.IndexOf("X = A;")));
         AssertIsError(2, Errors.IncompatibleType((TypeSymbol)result.SymbolTable!["String"], (TypeSymbol)result.SymbolTable!["Int"], "strengthen/weaken amount", code.IndexOf("\"xyz\"")));
     }
+
+    [TestMethod]
+    public void TestMultipleScenes()
+    {
+        string code =
+            """
+            scene A
+            {
+                output 0;
+            }
+            
+            scene B
+            {
+                output 1;
+            }
+            
+            scene C
+            {
+                output 2;
+            }
+
+            scene main { }
+            """;
+
+        Binder binder = PrepareBinder(code);
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        BindingResult result = binder.Bind();
+
+        Assert.IsTrue(result.IsValid);
+
+        SymbolTable table = result.SymbolTable;
+
+        for (int i = 0; i < 3; i++)
+        {
+            string name = ((char)(i + 'A')).ToString();
+
+            Assert.IsTrue(table.IsDeclared(name));
+
+            SceneSymbol? scene = table[name] as SceneSymbol;
+            Assert.IsNotNull(scene);
+
+            Assert.AreEqual(name, scene.Name);
+
+            BoundSymbolDeclarationNode? boundScene = result.BoundStory.TopLevelNodes[i] as BoundSymbolDeclarationNode;
+            Assert.IsNotNull(boundScene);
+
+            Assert.AreEqual(scene, boundScene.Symbol); 
+
+            SceneSymbolDeclarationNode? sceneDeclaration = boundScene.Declaration as SceneSymbolDeclarationNode;
+            Assert.IsNotNull(sceneDeclaration);
+        }
+    }
 }

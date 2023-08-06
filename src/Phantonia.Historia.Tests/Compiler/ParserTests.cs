@@ -879,4 +879,45 @@ public sealed class ParserTests
         Assert.AreEqual("Y", weakenStatement.SpectrumName);
         Assert.IsTrue(weakenStatement.AdjustmentAmount is IntegerLiteralExpressionNode { Value: 4 });
     }
+
+    [TestMethod]
+    public void TestMultipleScenes()
+    {
+        string code =
+            """
+            scene A
+            {
+                output 0;
+            }
+
+            scene B
+            {
+                output 1;
+            }
+
+            scene C
+            {
+                output 2;
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = parser.Parse();
+
+        for (int i = 0; i < 3; i++)
+        {
+            SceneSymbolDeclarationNode? scene = story.TopLevelNodes[i] as SceneSymbolDeclarationNode;
+            Assert.IsNotNull(scene);
+
+            Assert.AreEqual(((char)(i + 'A')).ToString(), scene.Name);
+            Assert.AreEqual(1, scene.Body.Statements.Length);
+
+            OutputStatementNode? outputStatement = scene.Body.Statements[0] as OutputStatementNode;
+            Assert.IsNotNull(outputStatement);
+            Assert.IsTrue(outputStatement.OutputExpression is IntegerLiteralExpressionNode { Value: int value } && value == i);
+        }
+    }
 }

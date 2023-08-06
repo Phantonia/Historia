@@ -1,4 +1,5 @@
 ﻿using Phantonia.Historia.Language.SyntaxAnalysis;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 
@@ -14,6 +15,7 @@ public readonly record struct BindingResult
         IsValid = true;
     }
 
+    [MemberNotNullWhen(returnValue: true, nameof(BoundStory), nameof(Settings), nameof(SymbolTable))]
     public bool IsValid { get; init; }
 
     public StoryNode? BoundStory { get; init; }
