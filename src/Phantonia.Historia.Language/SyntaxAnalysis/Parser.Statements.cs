@@ -1,6 +1,7 @@
 ﻿using Phantonia.Historia.Language.LexicalAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
+using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 
@@ -47,6 +48,8 @@ public sealed partial class Parser
                 return ParseSwitchStatement(ref index);
             case { Kind: TokenKind.BranchOnKeyword }:
                 return ParseBranchOnStatement(ref index);
+            case { Kind: TokenKind.CallKeyword }:
+                return ParseCallStatement(ref index);
             case { Kind: TokenKind.OutcomeKeyword }:
                 {
                     (string name, ImmutableArray<string> options, string? defaultOption, int nodeIndex) = ParseOutcomeDeclaration(ref index);
@@ -289,6 +292,24 @@ public sealed partial class Parser
         }
 
         return optionBuilder.ToImmutable();
+    }
+
+    private CallStatementNode? ParseCallStatement(ref int index)
+    {
+        Debug.Assert(tokens[index] is { Kind: TokenKind.CallKeyword });
+
+        int nodeIndex = tokens[index].Index;
+        index++;
+
+        string sceneName = Expect(TokenKind.Identifier, ref index).Text;
+
+        _ = Expect(TokenKind.Semicolon, ref index);
+
+        return new CallStatementNode
+        {
+            SceneName = sceneName,
+            Index = nodeIndex,
+        };
     }
 
     private StatementNode? ParseIdentifierLeadStatement(ref int index)

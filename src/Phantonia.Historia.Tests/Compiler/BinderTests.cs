@@ -1337,4 +1337,33 @@ public sealed class BinderTests
             Assert.IsNotNull(sceneDeclaration);
         }
     }
+
+    [TestMethod]
+    public void TestValidCallStatement()
+    {
+        string code =
+            """
+            scene main
+            {
+                call A;
+            }
+
+            scene A { }
+            """;
+
+        Binder binder = PrepareBinder(code);
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        BindingResult result = binder.Bind();
+        Assert.IsTrue(result.IsValid);
+
+        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)((BoundSymbolDeclarationNode)result.BoundStory.TopLevelNodes[0]).Declaration;
+
+        Assert.AreEqual(1, mainScene.Body.Statements.Length);
+        Assert.IsTrue(mainScene.Body.Statements[0] is BoundCallStatementNode
+        {
+            Scene.Name: "A",
+            SceneName: "A",
+        });
+    }
 }

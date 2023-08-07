@@ -920,4 +920,28 @@ public sealed class ParserTests
             Assert.IsTrue(outputStatement.OutputExpression is IntegerLiteralExpressionNode { Value: int value } && value == i);
         }
     }
+
+    [TestMethod]
+    public void TestCallStatement()
+    {
+        string code =
+            """
+            scene main
+            {
+                call A;
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = parser.Parse();
+
+        SceneSymbolDeclarationNode? mainScene = story.TopLevelNodes[0] as SceneSymbolDeclarationNode;
+        Assert.IsTrue(mainScene is
+        {
+            Body.Statements: [CallStatementNode { SceneName: "A" }],
+        });
+    }
 }

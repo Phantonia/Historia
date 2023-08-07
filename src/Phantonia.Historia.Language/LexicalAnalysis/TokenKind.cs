@@ -36,6 +36,7 @@ public enum TokenKind
     StrengthenKeyword,
     WeakenKeyword,
     ByKeyword,
+    CallKeyword,
 
     // literals
     Identifier,

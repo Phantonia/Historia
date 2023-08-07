@@ -2,6 +2,7 @@
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -74,6 +75,8 @@ public sealed partial class Binder
                 return BindAssignmentStatement(assignmentStatement, table);
             case SpectrumAdjustmentStatementNode adjustmentStatement:
                 return BindSpectrumAdjustmentStatement(adjustmentStatement, table);
+            case CallStatementNode callStatement:
+                return BindCallStatement(callStatement, table);
             default:
                 Debug.Assert(false);
                 return default;
@@ -399,5 +402,29 @@ public sealed partial class Binder
         };
 
         return (table, boundStatement);
+    }
+
+    private (SymbolTable, StatementNode) BindCallStatement(CallStatementNode callStatement, SymbolTable table)
+    {
+        if (!table.IsDeclared(callStatement.SceneName))
+        {
+            ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(callStatement.SceneName, callStatement.Index));
+            return (table, callStatement);
+        }
+
+        if (table[callStatement.SceneName] is not SceneSymbol sceneSymbol)
+        {
+            ErrorFound?.Invoke(Errors.SymbolIsNotOutcome(callStatement.SceneName, callStatement.Index));
+            return (table, callStatement);
+        }
+
+        BoundCallStatementNode boundCallStatement = new()
+        {
+            Scene = sceneSymbol,
+            SceneName = callStatement.SceneName,
+            Index = callStatement.Index,
+        };
+
+        return (table, boundCallStatement);
     }
 }

@@ -287,6 +287,7 @@ public sealed class Lexer
             "strengthen" => TokenKind.StrengthenKeyword,
             "weaken" => TokenKind.WeakenKeyword,
             "by" => TokenKind.ByKeyword,
+            "call" => TokenKind.CallKeyword,
             _ => TokenKind.Identifier,
         };
 
