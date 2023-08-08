@@ -1,4 +1,5 @@
-﻿using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
+﻿using Phantonia.Historia.Language.SemanticAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using System.Collections.Generic;
@@ -9,30 +10,14 @@ namespace Phantonia.Historia.Language.FlowAnalysis;
 
 public sealed partial class FlowAnalyzer
 {
-    private void PerformReachabilityAnalysis(FlowGraph mainFlowGraph)
+    private void PerformReachabilityAnalysis(SymbolTable symbolTable, IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs)
     {
-        FlowGraph dual = mainFlowGraph.Reverse();
-        IEnumerable<int> order = mainFlowGraph.TopologicalSort();
-
-        if (!order.Any())
-        {
-            return;
-        }
-
-        VertexData defaultVertexData = InductiveStart(dual, order.First());
-
-        Dictionary<int, VertexData> data = new()
-        {
-            [order.First()] = defaultVertexData,
-        };
-
-        foreach (int vertex in order.Skip(1))
-        {
-            data[vertex] = InductiveStep(dual, vertex, data, defaultVertexData);
-        }
+        SceneSymbol mainScene = (SceneSymbol)symbolTable["main"];
+        VertexData defaultVertexData = GetDefaultData();
+        _ = ProcessScene(sceneFlowGraphs[mainScene], defaultVertexData, sceneFlowGraphs);
     }
 
-    private VertexData InductiveStart(FlowGraph dualFlowGraph, int startVertex)
+    private VertexData GetDefaultData()
     {
         ImmutableDictionary<OutcomeSymbol, OutcomeData>.Builder outcomes = ImmutableDictionary.CreateBuilder<OutcomeSymbol, OutcomeData>();
 
@@ -46,7 +31,7 @@ public sealed partial class FlowAnalyzer
                         outcomes.Add(outcomeSymbol, new OutcomeData
                         {
                             DefinitelyAssigned = true,
-                            MightBeAssigned = false,
+                            PossiblyAssigned = false,
                         });
                     }
                     else
@@ -58,57 +43,73 @@ public sealed partial class FlowAnalyzer
             }
         }
 
-        if (dualFlowGraph.Vertices[startVertex].AssociatedStatement is BoundOutcomeAssignmentStatementNode outcomeAssignment)
-        {
-            OutcomeData data = outcomes[outcomeAssignment.Outcome];
-            data = data with
-            {
-                DefinitelyAssigned = true,
-                MightBeAssigned = true,
-            };
-            outcomes[outcomeAssignment.Outcome] = data;
-        }
-
         return new VertexData
         {
             Outcomes = outcomes.ToImmutable(),
         };
     }
 
-    private VertexData InductiveStep(FlowGraph dualFlowGraph, int vertex, IReadOnlyDictionary<int, VertexData> previousData, VertexData defaultVertexData)
+    private VertexData ProcessScene(FlowGraph sceneFlowGraph, VertexData defaultVertexData, IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs)
+    {
+        FlowGraph dual = sceneFlowGraph.Reverse();
+        IEnumerable<int> order = sceneFlowGraph.TopologicalSort();
+
+        if (!order.Any())
+        {
+            return defaultVertexData;
+        }
+
+        Dictionary<int, VertexData> data = new();
+
+        int firstVertex = order.First();
+        data[firstVertex] = ProcessVertex(sceneFlowGraph, firstVertex, previousData: new[] { defaultVertexData }, defaultVertexData, sceneFlowGraphs);
+
+        foreach (int vertex in order.Skip(1))
+        {
+            data[vertex] = ProcessVertex(sceneFlowGraph, vertex, dual.OutgoingEdges[vertex].Select(i => data[i]), defaultVertexData, sceneFlowGraphs);
+        }
+
+        IEnumerable<VertexData> finalVertexData =
+            data.Where(p => sceneFlowGraph.OutgoingEdges[p.Key].Contains(FlowGraph.EmptyVertex))
+                .Select(p => p.Value);
+
+        return ProcessVertex(sceneFlowGraph, FlowGraph.EmptyVertex, finalVertexData, defaultVertexData, sceneFlowGraphs);
+    }
+
+    private VertexData ProcessVertex(FlowGraph flowGraph, int vertex, IEnumerable<VertexData> previousData, VertexData defaultVertexData, IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs)
     {
         VertexData thisVertexData = defaultVertexData;
 
-        foreach ((OutcomeSymbol outcome, OutcomeData data) in defaultVertexData.Outcomes)
+        StatementNode? statement = vertex == FlowGraph.EmptyVertex ? null : flowGraph.Vertices[vertex].AssociatedStatement;
+
+        foreach ((OutcomeSymbol outcome, OutcomeData outcomeData) in defaultVertexData.Outcomes)
         {
             bool definitelyAssigned = true;
-            bool mightBeAssigned = false;
+            bool possiblyAssigned = false;
 
-            foreach (int pointingVertex in dualFlowGraph.OutgoingEdges[vertex])
+            foreach (VertexData data in previousData)
             {
-                if (!previousData[pointingVertex].Outcomes[outcome].DefinitelyAssigned)
+                if (!data.Outcomes[outcome].DefinitelyAssigned)
                 {
                     definitelyAssigned = false;
                 }
 
-                if (previousData[pointingVertex].Outcomes[outcome].MightBeAssigned)
+                if (data.Outcomes[outcome].PossiblyAssigned)
                 {
-                    mightBeAssigned = true;
+                    possiblyAssigned = true;
                 }
             }
-
-            StatementNode statement = dualFlowGraph.Vertices[vertex].AssociatedStatement;
 
             switch (statement)
             {
                 case BoundOutcomeAssignmentStatementNode boundAssignment when boundAssignment.Outcome == outcome:
-                    if (mightBeAssigned)
+                    if (possiblyAssigned)
                     {
                         ErrorFound?.Invoke(Errors.OutcomeMayBeAssignedMoreThanOnce(outcome.Name, boundAssignment.Index));
                     }
 
                     definitelyAssigned = true;
-                    mightBeAssigned = true;
+                    possiblyAssigned = true;
                     break;
                 case BoundSpectrumAdjustmentStatementNode boundAdjustment when boundAdjustment.Spectrum == outcome:
                     definitelyAssigned = true;
@@ -133,9 +134,18 @@ public sealed partial class FlowAnalyzer
                 Outcomes = thisVertexData.Outcomes.SetItem(outcome, new OutcomeData
                 {
                     DefinitelyAssigned = definitelyAssigned,
-                    MightBeAssigned = mightBeAssigned
+                    PossiblyAssigned = possiblyAssigned,
                 }),
             };
+        }
+
+        if (statement is BoundCallStatementNode { Scene: SceneSymbol calledScene })
+        {
+            // this processes a scene as often as it is called
+            // we just assume that is not a lot
+            // it is necessary to process it as 'thisVertexData' might differ a lot for different callsites
+            // we might optimize this to process local outcomes only once and only process global outcomes multiple times
+            return ProcessScene(sceneFlowGraphs[calledScene], thisVertexData, sceneFlowGraphs);
         }
 
         return thisVertexData;
@@ -150,6 +160,6 @@ public sealed partial class FlowAnalyzer
     {
         public bool DefinitelyAssigned { get; init; }
 
-        public bool MightBeAssigned { get; init; }
+        public bool PossiblyAssigned { get; init; }
     }
 }

@@ -1,9 +1,11 @@
 ﻿using Phantonia.Historia.Language.SemanticAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
+using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace Phantonia.Historia.Language.FlowAnalysis;
@@ -25,29 +27,28 @@ public sealed partial class FlowAnalyzer
 
     public FlowGraph GenerateMainFlowGraph()
     {
-        FlowGraph? mainFlowGraph = null;
+        Dictionary<SceneSymbol, FlowGraph> sceneFlowGraphs = new();
 
         foreach (TopLevelNode symbolDeclaration in story.TopLevelNodes)
         {
             if (symbolDeclaration is BoundSymbolDeclarationNode
                 {
-                    Name: "main",
                     Declaration: SceneSymbolDeclarationNode
                     {
                         Body: StatementBodyNode body,
-                    }
-                } mainScene)
+                    },
+                    Symbol: SceneSymbol scene,
+                })
             {
-                mainFlowGraph = GenerateBodyFlowGraph(body);
-                break;
+                FlowGraph sceneFlowGraph = GenerateBodyFlowGraph(body);
+                sceneFlowGraphs[scene] = sceneFlowGraph;
             }
         }
 
-        Debug.Assert(mainFlowGraph is not null); // we don't have a main scene - should have been caught by the binder already
+        IReadOnlyDictionary<SceneSymbol, int> referenceCounts = GetSceneReferenceCounts(sceneFlowGraphs);
+        PerformReachabilityAnalysis(symbolTable, sceneFlowGraphs);
 
-        PerformReachabilityAnalysis(mainFlowGraph);
-
-        return mainFlowGraph;
+        return sceneFlowGraphs[(SceneSymbol)symbolTable["main"]];
     }
 
     private FlowGraph GenerateBodyFlowGraph(StatementBodyNode body)
@@ -88,6 +89,12 @@ public sealed partial class FlowAnalyzer
                 Index = statement.Index,
                 AssociatedStatement = statement,
                 IsVisible = false,
+            }),
+            CallStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex
+            {
+                Index = statement.Index,
+                AssociatedStatement = statement,
+                IsVisible = true,
             }),
             _ => throw new NotImplementedException($"Unknown statement type {statement.GetType().FullName}"),
         };

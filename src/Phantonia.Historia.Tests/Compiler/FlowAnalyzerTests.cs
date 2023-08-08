@@ -449,4 +449,36 @@ public sealed class FlowAnalyzerTests
 
         Assert.AreEqual(expectedError, errors[0]);
     }
+
+    [TestMethod]
+    public void TestCyclicScenes()
+    {
+        string code =
+            """
+            scene A
+            {
+                call B;
+            }
+
+            scene B
+            {
+                call A;
+            }
+
+            scene main { }
+            """;
+
+        FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
+
+        List<Error> errors = new();
+        flowAnalyzer.ErrorFound += errors.Add;
+
+        _ = flowAnalyzer.GenerateMainFlowGraph();
+
+        Assert.AreEqual(1, errors.Count);
+
+        Error expectedError = Errors.CyclicSceneDefinition(new[] { "B", "A", "B" }, code.IndexOf("scene B"));
+
+        Assert.AreEqual(expectedError, errors[0]);
+    }
 }

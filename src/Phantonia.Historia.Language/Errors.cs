@@ -199,7 +199,16 @@ public static class Errors
     {
         return new Error
         {
-            ErrorMessage = $"Cyclic type definition: {string.Join(", ", cycle.Select(s => s))}",
+            ErrorMessage = $"Cyclic type definition: {string.Join(", ", cycle.Select(s => $"'{s}'"))}",
+            Index = index,
+        };
+    }
+
+    public static Error CyclicSceneDefinition(IEnumerable<string> cycle, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"The scene '{cycle.First()}' directly or indirectly calls itself; cycle: {string.Join(", ", cycle.Select(s => $"'{s}'"))}",
             Index = index,
         };
     }
