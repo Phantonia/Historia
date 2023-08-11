@@ -10,4 +10,6 @@ public sealed record IntegerLiteralExpressionNode : ExpressionNode
     public required int Value { get; init; }
 
     public override IEnumerable<SyntaxNode> Children => Enumerable.Empty<SyntaxNode>();
+
+    protected internal override string GetDebuggerDisplay() => $"integer {Value}";
 }

@@ -10,4 +10,6 @@ public sealed record StringLiteralExpressionNode : ExpressionNode
     public required string StringLiteral { get; init; }
 
     public override IEnumerable<SyntaxNode> Children => Enumerable.Empty<SyntaxNode>();
+
+    protected internal override string GetDebuggerDisplay() => $"string {StringLiteral}";
 }

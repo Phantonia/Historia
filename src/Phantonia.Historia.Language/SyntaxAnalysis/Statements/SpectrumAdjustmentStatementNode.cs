@@ -16,4 +16,6 @@ public record SpectrumAdjustmentStatementNode : StatementNode
     public required ExpressionNode AdjustmentAmount { get; init; }
 
     public override IEnumerable<SyntaxNode> Children => new[] { AdjustmentAmount };
+
+    protected internal override string GetDebuggerDisplay() => $"{(Strengthens ? "strengthen" : "weaken")} {SpectrumName} by {AdjustmentAmount.GetDebuggerDisplay()}";
 }

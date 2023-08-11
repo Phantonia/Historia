@@ -14,4 +14,6 @@ public sealed record BoundSymbolDeclarationNode : SymbolDeclarationNode
     public required Symbol Symbol { get; init; }
 
     public override IEnumerable<SyntaxNode> Children => new[] { Declaration };
+
+    protected internal override string GetDebuggerDisplay() => $"{Declaration.GetDebuggerDisplay()} bound @ {Symbol.GetDebuggerDisplay()}";
 }

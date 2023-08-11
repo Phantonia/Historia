@@ -15,4 +15,6 @@ public sealed record CallerResolutionStatement : StatementNode
     public required ImmutableArray<int> CallSites { get; init; }
 
     public override IEnumerable<SyntaxNode> Children => Enumerable.Empty<SyntaxNode>();
+
+    protected internal override string GetDebuggerDisplay() => $"resolve tracker for scene {Tracker.CalledScene.Name}";
 }

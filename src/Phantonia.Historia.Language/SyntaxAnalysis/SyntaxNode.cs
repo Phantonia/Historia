@@ -1,7 +1,9 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis;
 
+[DebuggerDisplay($"{{{nameof(GetDebuggerDisplay)}(),nq}}")]
 public abstract record SyntaxNode : ISyntaxNode
 {
     protected SyntaxNode() { }
@@ -24,4 +26,6 @@ public abstract record SyntaxNode : ISyntaxNode
             }
         }
     }
+
+    protected internal abstract string GetDebuggerDisplay();
 }

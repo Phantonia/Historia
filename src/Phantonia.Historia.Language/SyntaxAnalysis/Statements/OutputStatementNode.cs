@@ -10,4 +10,6 @@ public sealed record OutputStatementNode : StatementNode, IOutputStatementNode
     public required ExpressionNode OutputExpression { get; init; }
 
     public override IEnumerable<SyntaxNode> Children => new[] { OutputExpression };
+
+    protected internal override string GetDebuggerDisplay() => $"output {OutputExpression.GetDebuggerDisplay()}";
 }

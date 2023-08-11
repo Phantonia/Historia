@@ -28,4 +28,6 @@ public record SpectrumDeclarationStatementNode : StatementNode, ISpectrumDeclara
     public override IEnumerable<SyntaxNode> Children => Options;
 
     ImmutableArray<string> IOutcomeDeclarationNode.Options => stringOptions;
+
+    protected internal override string GetDebuggerDisplay() => $"declare spectrum {Name} ({string.Join(", ", Options.Select(o => o.GetDebuggerDisplay()))}) {(DefaultOption is not null ? "default " : "")}{DefaultOption}";
 }

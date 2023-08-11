@@ -1,5 +1,8 @@
-﻿namespace Phantonia.Historia.Language.SemanticAnalysis.Symbols;
+﻿using System.Diagnostics;
 
+namespace Phantonia.Historia.Language.SemanticAnalysis.Symbols;
+
+[DebuggerDisplay($"{{{nameof(GetDebuggerDisplay)}(),nq}}")]
 public abstract record Symbol
 {
     protected Symbol() { }
@@ -7,4 +10,6 @@ public abstract record Symbol
     public required int Index { get; init; }
 
     public required string Name { get; init; }
+
+    protected internal abstract string GetDebuggerDisplay();
 }

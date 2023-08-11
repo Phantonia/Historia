@@ -14,4 +14,6 @@ public sealed record CallerTrackerStatement : StatementNode
     public required int CallSiteIndex { get; init; }
 
     public override IEnumerable<SyntaxNode> Children => Enumerable.Empty<SyntaxNode>();
+
+    protected internal override string GetDebuggerDisplay() => $"track scene {Tracker.CalledScene.Name} @ callsite {CallSiteIndex}";
 }

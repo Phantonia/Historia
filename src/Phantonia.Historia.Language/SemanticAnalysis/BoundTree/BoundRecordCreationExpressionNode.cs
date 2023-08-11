@@ -28,4 +28,6 @@ public sealed record BoundRecordCreationExpressionNode : ExpressionNode
             }
         }
     }
+
+    protected internal override string GetDebuggerDisplay() => $"{CreationExpression.GetDebuggerDisplay()} bound @ {Record.GetDebuggerDisplay()}";
 }

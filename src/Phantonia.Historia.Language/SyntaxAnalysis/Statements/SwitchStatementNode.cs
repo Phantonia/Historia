@@ -1,6 +1,7 @@
 ﻿using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
@@ -26,4 +27,6 @@ public record SwitchStatementNode : StatementNode, IOutputStatementNode
             }
         }
     }
+
+    protected internal override string GetDebuggerDisplay() => $"switch {Name}{(Name is not null ? " " : "")} {{ {string.Join(", ", Options.Select(o => o.GetDebuggerDisplay()))} }}";
 }

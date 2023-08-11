@@ -12,4 +12,6 @@ public record AssignmentStatementNode : StatementNode
     public required ExpressionNode AssignedExpression { get; init; }
 
     public override IEnumerable<SyntaxNode> Children => new[] { AssignedExpression };
+
+    protected internal override string GetDebuggerDisplay() => $"assignment {VariableName} = {AssignedExpression.GetDebuggerDisplay()}";
 }

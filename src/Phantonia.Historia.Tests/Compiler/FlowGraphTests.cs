@@ -21,6 +21,8 @@ public sealed class FlowGraphTests
         }
 
         public override IEnumerable<SyntaxNode> Children => Enumerable.Empty<SyntaxNode>();
+
+        protected override string GetDebuggerDisplay() => "stub";
     }
 
     [TestMethod]

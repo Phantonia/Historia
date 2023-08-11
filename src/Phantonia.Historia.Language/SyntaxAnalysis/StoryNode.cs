@@ -11,4 +11,6 @@ public sealed record StoryNode : SyntaxNode
     public required ImmutableArray<TopLevelNode> TopLevelNodes { get; init; }
 
     public override IEnumerable<SyntaxNode> Children => TopLevelNodes;
+
+    protected internal override string GetDebuggerDisplay() => $"story w/ {TopLevelNodes.Length} top level nodes";
 }

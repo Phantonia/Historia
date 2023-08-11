@@ -10,4 +10,6 @@ public sealed record StatementBodyNode : SyntaxNode
     public required ImmutableArray<StatementNode> Statements { get; init; }
 
     public override IEnumerable<SyntaxNode> Children => Statements;
+
+    protected internal override string GetDebuggerDisplay() => $"body w/ {Statements.Length} statements";
 }

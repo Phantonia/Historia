@@ -15,4 +15,6 @@ public sealed record SwitchOptionNode : SyntaxNode
     public required StatementBodyNode Body { get; init; }
 
     public override IEnumerable<SyntaxNode> Children => new SyntaxNode[] { Expression, Body };
+
+    protected internal override string GetDebuggerDisplay() => $"option {Name}{(Name is not null ? " " : "")} w/ {Body.Statements.Length} statements";
 }

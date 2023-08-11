@@ -10,4 +10,6 @@ public sealed record TypeSettingDirectiveNode : SettingDirectiveNode
     public required TypeNode Type { get; init; }
 
     public override IEnumerable<SyntaxNode> Children => new[] { Type };
+
+    protected internal override string GetDebuggerDisplay() => $"setting {SettingName}: {Type.GetDebuggerDisplay()}";
 }

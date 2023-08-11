@@ -10,4 +10,6 @@ public record CallStatementNode : StatementNode
     public required string SceneName { get; init; }
 
     public override IEnumerable<SyntaxNode> Children => Enumerable.Empty<SyntaxNode>();
+
+    protected internal override string GetDebuggerDisplay() => $"call {SceneName}";
 }

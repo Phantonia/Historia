@@ -10,4 +10,6 @@ public sealed record IdentifierExpressionNode : ExpressionNode
     public required string Identifier { get; init; }
 
     public override IEnumerable<SyntaxNode> Children => Enumerable.Empty<SyntaxNode>();
+
+    protected internal override string GetDebuggerDisplay() => $"identifier {Identifier}";
 }

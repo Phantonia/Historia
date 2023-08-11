@@ -15,4 +15,6 @@ public record OutcomeDeclarationStatementNode : StatementNode, IOutcomeDeclarati
     public string? DefaultOption { get; init; }
 
     public override IEnumerable<SyntaxNode> Children => Enumerable.Empty<SyntaxNode>();
+
+    protected internal override string GetDebuggerDisplay() => $"declare outcome {Name} ({string.Join(", ", Options)}) {(DefaultOption is not null ? "default " : "")}{DefaultOption}";
 }
