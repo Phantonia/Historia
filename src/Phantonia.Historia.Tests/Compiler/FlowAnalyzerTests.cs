@@ -47,7 +47,7 @@ public sealed class FlowAnalyzerTests
         FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
         flowAnalyzer.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        FlowGraph? graph = flowAnalyzer.GenerateMainFlowGraph();
+        FlowGraph? graph = flowAnalyzer.PerformFlowAnalysis().MainFlowGraph;
         Assert.IsNotNull(graph);
 
         Assert.AreEqual(4, graph.Vertices.Count);
@@ -94,7 +94,7 @@ public sealed class FlowAnalyzerTests
         FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
         flowAnalyzer.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        FlowGraph? flowGraph = flowAnalyzer.GenerateMainFlowGraph();
+        FlowGraph? flowGraph = flowAnalyzer.PerformFlowAnalysis().MainFlowGraph;
         Assert.IsNotNull(flowGraph);
 
         Assert.AreEqual(5, flowGraph.Vertices.Count);
@@ -182,7 +182,7 @@ public sealed class FlowAnalyzerTests
         FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
         flowAnalyzer.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        FlowGraph? graph = flowAnalyzer.GenerateMainFlowGraph();
+        FlowGraph? graph = flowAnalyzer.PerformFlowAnalysis().MainFlowGraph;
         Assert.IsNotNull(graph);
 
         int output0Index = code.IndexOf("output (0)");
@@ -237,7 +237,7 @@ public sealed class FlowAnalyzerTests
         List<Error> errors = new();
         flowAnalyzer.ErrorFound += errors.Add;
 
-        _ = flowAnalyzer.GenerateMainFlowGraph();
+        _ = flowAnalyzer.PerformFlowAnalysis();
 
         Assert.AreEqual(1, errors.Count);
 
@@ -279,7 +279,7 @@ public sealed class FlowAnalyzerTests
         FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
         flowAnalyzer.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        _ = flowAnalyzer.GenerateMainFlowGraph();
+        _ = flowAnalyzer.PerformFlowAnalysis();
     }
 
     [TestMethod]
@@ -302,7 +302,7 @@ public sealed class FlowAnalyzerTests
         List<Error> errors = new();
         flowAnalyzer.ErrorFound += errors.Add;
 
-        _ = flowAnalyzer.GenerateMainFlowGraph();
+        _ = flowAnalyzer.PerformFlowAnalysis();
 
         Assert.AreEqual(1, errors.Count);
 
@@ -339,7 +339,7 @@ public sealed class FlowAnalyzerTests
         List<Error> errors = new();
         flowAnalyzer.ErrorFound += errors.Add;
 
-        _ = flowAnalyzer.GenerateMainFlowGraph();
+        _ = flowAnalyzer.PerformFlowAnalysis();
 
         Assert.AreEqual(2, errors.Count);
 
@@ -395,7 +395,7 @@ public sealed class FlowAnalyzerTests
         List<Error> errors = new();
         flowAnalyzer.ErrorFound += errors.Add;
 
-        _ = flowAnalyzer.GenerateMainFlowGraph();
+        _ = flowAnalyzer.PerformFlowAnalysis();
 
         Assert.AreEqual(2, errors.Count);
 
@@ -448,7 +448,7 @@ public sealed class FlowAnalyzerTests
         List<Error> errors = new();
         analyzer.ErrorFound += errors.Add;
 
-        _ = analyzer.GenerateMainFlowGraph();
+        _ = analyzer.PerformFlowAnalysis();
 
         Assert.AreEqual(1, errors.Count);
 
@@ -480,7 +480,7 @@ public sealed class FlowAnalyzerTests
         List<Error> errors = new();
         flowAnalyzer.ErrorFound += errors.Add;
 
-        _ = flowAnalyzer.GenerateMainFlowGraph();
+        _ = flowAnalyzer.PerformFlowAnalysis();
 
         Assert.AreEqual(1, errors.Count);
 
@@ -543,7 +543,7 @@ public sealed class FlowAnalyzerTests
         FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
         flowAnalyzer.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        FlowGraph? mainFlowGraph = flowAnalyzer.GenerateMainFlowGraph();
+        FlowGraph? mainFlowGraph = flowAnalyzer.PerformFlowAnalysis().MainFlowGraph;
         Assert.IsNotNull(mainFlowGraph);
 
         Assert.AreEqual(7, mainFlowGraph.Vertices.Count);
@@ -553,7 +553,7 @@ public sealed class FlowAnalyzerTests
         int s3 = code.IndexOf("output 3"); // S3 nach Erkner
         int s4 = code.IndexOf("output 4"); // S46 nach Königs Wusterhausen (close)
         int s5 = code.IndexOf("switch (5)"); // S5 nach Strausberg Nord
-        int s6 = code.IndexOf("output 6"); // also no S6 in Berlin :(
+        int s6 = code.IndexOf("output 6"); // sadly no S6 in Berlin :(
         int s7 = code.IndexOf("output 7"); // S7 nach Potsdam Hauptbahnhof
 
         void AssertIsOutput(int index, int expectedOutputValue)
@@ -655,7 +655,7 @@ public sealed class FlowAnalyzerTests
         FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
         flowAnalyzer.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        FlowGraph? graph = flowAnalyzer.GenerateMainFlowGraph();
+        FlowGraph? graph = flowAnalyzer.PerformFlowAnalysis().MainFlowGraph;
         Assert.IsNotNull(graph);
 
         int o0 = code.IndexOf("output 0");

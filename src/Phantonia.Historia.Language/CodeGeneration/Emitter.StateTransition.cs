@@ -47,7 +47,12 @@ public sealed partial class Emitter
                 case BoundSpectrumAdjustmentStatementNode spectrumAdjustment:
                     GenerateSpectrumAdjustmentTransition(spectrumAdjustment, edges);
                     break;
-
+                case CallerTrackerStatementNode trackerStatement:
+                    GenerateCallerTrackerTransition(trackerStatement, edges);
+                    break;
+                case CallerResolutionStatementNode resolutionStatement:
+                    GenerateCallerResolutionTransition(resolutionStatement, edges);
+                    break;
             }
         }
 
@@ -57,7 +62,7 @@ public sealed partial class Emitter
             """
                     }
 
-                    throw new global::System.InvalidOperationException("Invalid state");
+                    throw new global::System.InvalidOperationException("Fatal internal error: Invalid state");
                 }
             }
             """);
@@ -224,7 +229,7 @@ public sealed partial class Emitter
         writer.Indent--;
         writer.WriteLine('}');
         writer.WriteLine();
-        writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid outcome\");");
+        writer.WriteLine("throw new global::System.InvalidOperationException(\"Fatal internal error: Invalid outcome\");");
     }
 
     private void GenerateSpectrumBranchOnTransition(BoundBranchOnStatementNode branchOnStatement, ImmutableList<int> edges)
@@ -368,6 +373,79 @@ public sealed partial class Emitter
         {
             writer.WriteLine("continue;");
         }
+
+        writer.Indent--;
+    }
+
+    private void GenerateCallerTrackerTransition(CallerTrackerStatementNode trackerStatement, ImmutableList<int> edges)
+    {
+        int index = trackerStatement.Index;
+
+        writer.Write("case (");
+        writer.Write(index);
+        writer.WriteLine(", _):");
+        writer.Indent++;
+
+        writer.Write(GetTrackerFieldName(trackerStatement.Tracker));
+        writer.Write(" = ");
+        writer.Write(trackerStatement.CallSiteIndex);
+        writer.WriteLine(';');
+
+        writer.WriteLine($"state = {edges[0]};");
+
+        if (edges[0] == EndState || flowGraph.Vertices[edges[0]].IsVisible)
+        {
+            writer.WriteLine("return;");
+        }
+        else
+        {
+            writer.WriteLine("continue;");
+        }
+
+        writer.Indent--;
+    }
+
+    private void GenerateCallerResolutionTransition(CallerResolutionStatementNode resolutionStatement, ImmutableList<int> edges)
+    {
+        int index = resolutionStatement.Index;
+
+        writer.WriteLine($"case ({index}, _):");
+
+        writer.Indent++;
+
+        string trackerField = GetTrackerFieldName(resolutionStatement.Tracker);
+        writer.WriteLine($"switch ({trackerField})");
+        writer.WriteLine('{');
+        writer.Indent++;
+
+        for (int i = 0; i < resolutionStatement.Tracker.CallSiteCount; i++)
+        {
+            writer.Write("case ");
+            writer.Write(i);
+            writer.WriteLine(':');
+            writer.Indent++;
+
+            writer.Write("state = ");
+            writer.Write(edges[i]);
+            writer.WriteLine(';');
+
+            FlowVertex followingVertex = flowGraph.Vertices[edges[i]];
+            if (edges[i] == EndState || followingVertex.IsVisible)
+            {
+                writer.WriteLine("return;");
+            }
+            else
+            {
+                writer.WriteLine("continue;");
+            }
+
+            writer.Indent--;
+        }
+
+        writer.Indent--;
+        writer.WriteLine('}');
+        writer.WriteLine();
+        writer.WriteLine("throw new global::System.InvalidOperationException(\"Fatal internal error: Invalid call site\");");
 
         writer.Indent--;
     }

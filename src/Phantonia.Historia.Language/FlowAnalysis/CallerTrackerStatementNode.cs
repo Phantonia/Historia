@@ -5,9 +5,9 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.FlowAnalysis;
 
-public sealed record CallerTrackerStatement : StatementNode
+public sealed record CallerTrackerStatementNode : StatementNode
 {
-    public CallerTrackerStatement() { }
+    public CallerTrackerStatementNode() { }
 
     public required CallerTrackerSymbol Tracker { get; init; }
 

@@ -473,4 +473,63 @@ public sealed class EmitterTests
         Assert.IsTrue(story.FinishedStory);
         Assert.IsFalse(story.TryContinue());
     }
+
+    [TestMethod]
+    public void TestScenes()
+    {
+        string code =
+            """
+            scene main
+            {
+                output 0;
+                call A;
+                output 1;
+                call B;
+                output 2;
+            }
+            
+            scene A
+            {
+                output 10;
+            }
+            
+            scene B
+            {
+                output 20;
+                call A;
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString());
+
+        Assert.IsTrue(story.NotStartedStory);
+        Assert.IsFalse(story.FinishedStory);
+
+        Assert.IsTrue(story.TryContinue());
+        Assert.AreEqual(0, story.Output);
+
+        Assert.IsTrue(story.TryContinue());
+        Assert.AreEqual(10, story.Output);
+
+        Assert.IsTrue(story.TryContinue());
+        Assert.AreEqual(1, story.Output);
+
+        Assert.IsTrue(story.TryContinue());
+        Assert.AreEqual(20, story.Output);
+
+        Assert.IsTrue(story.TryContinue());
+        Assert.AreEqual(10, story.Output);
+
+        Assert.IsTrue(story.TryContinue());
+        Assert.AreEqual(2, story.Output);
+
+        Assert.IsTrue(story.TryContinue());
+        Assert.IsTrue(story.FinishedStory);
+    }
 }

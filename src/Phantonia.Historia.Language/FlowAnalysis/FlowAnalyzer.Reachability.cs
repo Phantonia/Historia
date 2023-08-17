@@ -10,7 +10,7 @@ namespace Phantonia.Historia.Language.FlowAnalysis;
 
 public sealed partial class FlowAnalyzer
 {
-    private void PerformReachabilityAnalysis(SymbolTable symbolTable, IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs)
+    private void PerformReachabilityAnalysis(IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs)
     {
         SceneSymbol mainScene = (SceneSymbol)symbolTable["main"];
         VertexData defaultVertexData = GetDefaultData();

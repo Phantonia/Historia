@@ -1,24 +1,19 @@
-﻿using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
+﻿using Phantonia.Historia.Language.SemanticAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
-using Edges = System.Collections.Immutable.ImmutableDictionary<
-    int, System.Collections.Immutable.ImmutableList<int>>;
-using MutEdges = System.Collections.Generic.Dictionary<
-    int, System.Collections.Generic.List<int>>;
-using MutVertices = System.Collections.Generic.Dictionary<
-    int, Phantonia.Historia.Language.FlowAnalysis.FlowVertex>;
-using Vertices = System.Collections.Immutable.ImmutableDictionary<
-    int, Phantonia.Historia.Language.FlowAnalysis.FlowVertex>;
 
 namespace Phantonia.Historia.Language.FlowAnalysis;
 
 public sealed partial class FlowAnalyzer
 {
-    private FlowGraph MergeFlowGraphs(IEnumerable<SceneSymbol> topologicalOrder, IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs, IReadOnlyDictionary<SceneSymbol, int> referenceCounts)
+    private (FlowGraph, SymbolTable) MergeFlowGraphs(IEnumerable<SceneSymbol> topologicalOrder, IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs, IReadOnlyDictionary<SceneSymbol, int> referenceCounts)
     {
+        SymbolTable symbolTable = this.symbolTable;
+
         Debug.Assert(topologicalOrder.First().Name == "main");
 
         FlowGraph mainFlowGraph = sceneFlowGraphs[topologicalOrder.First()];
@@ -36,13 +31,25 @@ public sealed partial class FlowAnalyzer
             }
             else
             {
-                mainFlowGraph = EmbedMultiReferenceScene(mainFlowGraph, sceneFlowGraphs[scene], scene, refCount);
+                CallerTrackerSymbol tracker = new()
+                {
+                    CalledScene = scene,
+                    Name = $"${scene.Name}", // unspeakable name
+                    CallSiteCount = refCount,
+                    // the indices are the literal character indices in the source code
+                    // and since a scene declaration is at least scene A{}, one more than its index is not taken
+                    Index = scene.Index + 1,
+                };
+
+                symbolTable = symbolTable.Declare(tracker);
+
+                mainFlowGraph = EmbedMultiReferenceScene(mainFlowGraph, sceneFlowGraphs[scene], scene, tracker);
             }
         }
 
         Debug.Assert(mainFlowGraph.Vertices.Values.All(v => v.AssociatedStatement is not BoundCallStatementNode));
 
-        return mainFlowGraph;
+        return (mainFlowGraph, symbolTable);
     }
 
     private FlowGraph EmbedSingleReferenceScene(FlowGraph mainFlowGraph, FlowGraph sceneFlowGraph, SceneSymbol scene)
@@ -129,18 +136,8 @@ public sealed partial class FlowAnalyzer
         return mainFlowGraph;
     }
 
-    private FlowGraph EmbedMultiReferenceScene(FlowGraph mainFlowGraph, FlowGraph sceneFlowGraph, SceneSymbol scene, int refCount)
+    private FlowGraph EmbedMultiReferenceScene(FlowGraph mainFlowGraph, FlowGraph sceneFlowGraph, SceneSymbol scene, CallerTrackerSymbol tracker)
     {
-        CallerTrackerSymbol tracker = new()
-        {
-            CalledScene = scene,
-            Name = scene.Name,
-            CallSiteCount = refCount,
-            // the indices are the literal character indices in the source code
-            // and since a scene declaration is at least scene A{}, one more than its index is not taken
-            Index = scene.Index + 1,
-        };
-
         // 1. add all scene vertices
         foreach (int vertex in sceneFlowGraph.Vertices.Keys)
         {
@@ -167,7 +164,7 @@ public sealed partial class FlowAnalyzer
 
             FlowVertex trackerVertex = vertex with
             {
-                AssociatedStatement = new CallerTrackerStatement
+                AssociatedStatement = new CallerTrackerStatementNode
                 {
                     CallSiteIndex = callSites.Count,
                     Index = vertex.Index,
@@ -188,7 +185,7 @@ public sealed partial class FlowAnalyzer
         }
 
         // 3. synthesize resolution statement
-        CallerResolutionStatement resolution = new()
+        CallerResolutionStatementNode resolution = new()
         {
             Tracker = tracker,
             Index = scene.Index + 2,

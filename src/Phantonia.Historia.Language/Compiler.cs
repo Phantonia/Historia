@@ -46,10 +46,10 @@ public sealed class Compiler
 
         Binder binder = new(story);
         binder.ErrorFound += HandleError;
-        BindingResult result = binder.Bind();
+        BindingResult bindingResult = binder.Bind();
         binder.ErrorFound -= HandleError;
 
-        if (!result.IsValid || errors.Count > 0)
+        if (!bindingResult.IsValid || errors.Count > 0)
         {
             return new CompilationResult
             {
@@ -57,7 +57,7 @@ public sealed class Compiler
             };
         }
 
-        (StoryNode? boundStory, Settings? settings, SymbolTable? symbolTable) = result;
+        (StoryNode? boundStory, Settings? settings, SymbolTable? symbolTable) = bindingResult;
 
         Debug.Assert(boundStory is not null);
         Debug.Assert(settings is not null);
@@ -66,7 +66,7 @@ public sealed class Compiler
         FlowAnalyzer flowAnalyzer = new(boundStory, symbolTable);
         flowAnalyzer.ErrorFound += errors.Add;
 
-        FlowGraph? mainGraph = flowAnalyzer.GenerateMainFlowGraph();
+        FlowAnalysisResult flowAnalysisResult = flowAnalyzer.PerformFlowAnalysis();
 
         if (errors.Count > 0)
         {
@@ -76,9 +76,9 @@ public sealed class Compiler
             };
         }
 
-        Debug.Assert(mainGraph is not null);
+        Debug.Assert(flowAnalysisResult.IsValid);
 
-        Emitter emitter = new(boundStory, settings, mainGraph, outputWriter);
+        Emitter emitter = new(boundStory, settings, flowAnalysisResult.MainFlowGraph, flowAnalysisResult.SymbolTable, outputWriter);
 
         emitter.GenerateOutputCode();
 

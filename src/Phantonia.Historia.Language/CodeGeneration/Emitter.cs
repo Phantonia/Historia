@@ -1,5 +1,6 @@
 ﻿using Microsoft.CodeAnalysis.CSharp;
 using Phantonia.Historia.Language.FlowAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis;
@@ -16,17 +17,19 @@ public sealed partial class Emitter
     private const int EndState = FlowGraph.EmptyVertex;
     private const int StartState = -2;
 
-    public Emitter(StoryNode boundStory, Settings settings, FlowGraph flowGraph, TextWriter outputWriter)
+    public Emitter(StoryNode boundStory, Settings settings, FlowGraph flowGraph, SymbolTable symbolTable, TextWriter outputWriter)
     {
         this.boundStory = boundStory;
         this.settings = settings;
         this.flowGraph = flowGraph;
+        this.symbolTable = symbolTable;
         writer = new IndentedTextWriter(outputWriter);
     }
 
     private readonly StoryNode boundStory;
     private readonly Settings settings;
     private readonly FlowGraph flowGraph;
+    private readonly SymbolTable symbolTable;
     private readonly IndentedTextWriter writer;
 
     public void GenerateOutputCode()

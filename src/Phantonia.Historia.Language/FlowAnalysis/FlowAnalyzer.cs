@@ -24,7 +24,7 @@ public sealed partial class FlowAnalyzer
 
     public event Action<Error>? ErrorFound;
 
-    public FlowGraph? GenerateMainFlowGraph()
+    public FlowAnalysisResult PerformFlowAnalysis()
     {
         Dictionary<SceneSymbol, FlowGraph> sceneFlowGraphs = new();
 
@@ -48,12 +48,22 @@ public sealed partial class FlowAnalyzer
 
         if (topologicalOrder is null)
         {
-            return null;
+            return new FlowAnalysisResult
+            {
+                MainFlowGraph = null,
+                SymbolTable = null,
+            };
         }
 
-        PerformReachabilityAnalysis(symbolTable, sceneFlowGraphs);
+        PerformReachabilityAnalysis(sceneFlowGraphs);
 
-        return MergeFlowGraphs(topologicalOrder, sceneFlowGraphs, referenceCounts);
+        (FlowGraph mainFlowGraph, SymbolTable updatedSymbolTable) = MergeFlowGraphs(topologicalOrder, sceneFlowGraphs, referenceCounts);
+
+        return new FlowAnalysisResult
+        {
+            MainFlowGraph = mainFlowGraph,
+            SymbolTable = updatedSymbolTable,
+        };
     }
 
     private FlowGraph GenerateBodyFlowGraph(StatementBodyNode body)
