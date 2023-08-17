@@ -8,7 +8,7 @@ namespace Phantonia.Historia.Language.FlowAnalysis;
 
 public sealed partial class FlowAnalyzer
 {
-    private IReadOnlyDictionary<SceneSymbol, int> GetSceneReferenceCounts(IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs)
+    private (IEnumerable<SceneSymbol>? topologicalOrder, IReadOnlyDictionary<SceneSymbol, int> referenceCounts) PerformDependencyAnalysis(IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs)
     {
         Dictionary<int, IReadOnlyList<int>> dependencies = new();
         Dictionary<int, Symbol> symbols = new();
@@ -22,14 +22,8 @@ public sealed partial class FlowAnalyzer
 
             foreach (int dep in theseDependencies)
             {
-                if (referenceCounts.ContainsKey(dep))
-                {
-                    referenceCounts[dep]++;
-                }
-                else
-                {
-                    referenceCounts[dep] = 1;
-                }
+                referenceCounts.TryAdd(dep, 0);
+                referenceCounts[dep]++;
             }
         }
 
@@ -39,12 +33,17 @@ public sealed partial class FlowAnalyzer
             Symbols = symbols,
         };
 
+        Dictionary<SceneSymbol, int> finalReferenceCounts = referenceCounts.ToDictionary(p => (SceneSymbol)dependencyGraph.Symbols[p.Key], p => p.Value);
+
         if (dependencyGraph.IsCyclic(out IEnumerable<int>? cycle))
         {
             ErrorFound?.Invoke(Errors.CyclicSceneDefinition(cycle.Select(i => dependencyGraph.Symbols[i].Name), dependencyGraph.Symbols[cycle.First()].Index));
+            return (null, finalReferenceCounts);
         }
 
-        return referenceCounts.ToDictionary(p => (SceneSymbol)dependencyGraph.Symbols[p.Key], p => p.Value);
+        IEnumerable<SceneSymbol> topologicalOrder = dependencyGraph.TopologicalSort().Select(i => (SceneSymbol)dependencyGraph.Symbols[i]);
+
+        return (topologicalOrder, finalReferenceCounts);
     }
 
     private IReadOnlyList<int> GetDependencies(SceneSymbol scene, FlowGraph flowGraph)

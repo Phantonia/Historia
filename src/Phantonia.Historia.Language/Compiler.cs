@@ -66,7 +66,7 @@ public sealed class Compiler
         FlowAnalyzer flowAnalyzer = new(boundStory, symbolTable);
         flowAnalyzer.ErrorFound += errors.Add;
 
-        FlowGraph mainGraph = flowAnalyzer.GenerateMainFlowGraph();
+        FlowGraph? mainGraph = flowAnalyzer.GenerateMainFlowGraph();
 
         if (errors.Count > 0)
         {
@@ -75,6 +75,8 @@ public sealed class Compiler
                 Errors = errors.ToImmutableArray(),
             };
         }
+
+        Debug.Assert(mainGraph is not null);
 
         Emitter emitter = new(boundStory, settings, mainGraph, outputWriter);
 

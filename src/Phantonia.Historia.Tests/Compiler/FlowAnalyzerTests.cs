@@ -7,6 +7,7 @@ using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SyntaxAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -44,8 +45,10 @@ public sealed class FlowAnalyzerTests
                       """;
 
         FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
+        flowAnalyzer.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        FlowGraph graph = flowAnalyzer.GenerateMainFlowGraph();
+        FlowGraph? graph = flowAnalyzer.GenerateMainFlowGraph();
+        Assert.IsNotNull(graph);
 
         Assert.AreEqual(4, graph.Vertices.Count);
 
@@ -89,8 +92,10 @@ public sealed class FlowAnalyzerTests
                       """;
 
         FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
+        flowAnalyzer.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        FlowGraph flowGraph = flowAnalyzer.GenerateMainFlowGraph();
+        FlowGraph? flowGraph = flowAnalyzer.GenerateMainFlowGraph();
+        Assert.IsNotNull(flowGraph);
 
         Assert.AreEqual(5, flowGraph.Vertices.Count);
         Assert.AreEqual(5, flowGraph.OutgoingEdges.Count);
@@ -175,8 +180,10 @@ public sealed class FlowAnalyzerTests
             """;
 
         FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
+        flowAnalyzer.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        FlowGraph graph = flowAnalyzer.GenerateMainFlowGraph();
+        FlowGraph? graph = flowAnalyzer.GenerateMainFlowGraph();
+        Assert.IsNotNull(graph);
 
         int output0Index = code.IndexOf("output (0)");
 
@@ -480,5 +487,217 @@ public sealed class FlowAnalyzerTests
         Error expectedError = Errors.CyclicSceneDefinition(new[] { "B", "A", "B" }, code.IndexOf("scene B"));
 
         Assert.AreEqual(expectedError, errors[0]);
+    }
+
+    [TestMethod]
+    public void TestSingleReferenceSceneMerging()
+    {
+        string code =
+            """
+            scene main
+            {
+                call A;
+
+                switch (1) // s1
+                {
+                    option (0)
+                    {
+                        call B;
+                    }
+
+                    option (0)
+                    {
+                        call C;
+                    }
+                }
+            }
+
+            scene A
+            {
+                output 2; // s2
+            }
+
+            scene B
+            {
+                output 3; // s3
+                output 4; // s4
+            }
+
+            scene C
+            {
+                switch (5) // s5
+                {
+                    option (0)
+                    {
+                        output 6; // s6
+                    }
+
+                    option (0)
+                    {
+                        output 7; // s7
+                    }
+                }
+            }
+            """;
+
+        FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
+        flowAnalyzer.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        FlowGraph? mainFlowGraph = flowAnalyzer.GenerateMainFlowGraph();
+        Assert.IsNotNull(mainFlowGraph);
+
+        Assert.AreEqual(7, mainFlowGraph.Vertices.Count);
+
+        int s1 = code.IndexOf("switch (1)"); // S1 nach Oranienburg
+        int s2 = code.IndexOf("output 2"); // S2 nach Bernau
+        int s3 = code.IndexOf("output 3"); // S3 nach Erkner
+        int s4 = code.IndexOf("output 4"); // S46 nach Königs Wusterhausen (close)
+        int s5 = code.IndexOf("switch (5)"); // S5 nach Strausberg Nord
+        int s6 = code.IndexOf("output 6"); // also no S6 in Berlin :(
+        int s7 = code.IndexOf("output 7"); // S7 nach Potsdam Hauptbahnhof
+
+        void AssertIsOutput(int index, int expectedOutputValue)
+        {
+            StatementNode statement = mainFlowGraph.Vertices[index].AssociatedStatement;
+
+            Assert.IsTrue(statement is OutputStatementNode
+            {
+                OutputExpression: TypedExpressionNode
+                {
+                    Expression: IntegerLiteralExpressionNode
+                    {
+                        Value: int value,
+                    }
+                }
+            } && value == expectedOutputValue);
+        }
+
+        void AssertIsSwitch(int index, int expectedOutputValue)
+        {
+            StatementNode statement = mainFlowGraph.Vertices[index].AssociatedStatement;
+
+            Assert.IsTrue(statement is SwitchStatementNode
+            {
+                OutputExpression: TypedExpressionNode
+                {
+                    Expression: IntegerLiteralExpressionNode
+                    {
+                        Value: int value,
+                    }
+                }
+            } && value == expectedOutputValue);
+        }
+
+        AssertIsSwitch(s1, 1);
+        AssertIsOutput(s2, 2);
+        AssertIsOutput(s3, 3);
+        AssertIsOutput(s4, 4);
+        AssertIsSwitch(s5, 5);
+        AssertIsOutput(s6, 6);
+        AssertIsOutput(s7, 7);
+
+        // -> s2
+        Assert.AreEqual(s2, mainFlowGraph.StartVertex);
+
+        // s2 -> s1
+        Assert.AreEqual(s1, mainFlowGraph.OutgoingEdges[s2].Single());
+
+        // s1 -> s3
+        //   \-> s5
+        Assert.AreEqual(2, mainFlowGraph.OutgoingEdges[s1].Count);
+        Assert.IsTrue(new[] { s3, s5 }.SequenceEqual(mainFlowGraph.OutgoingEdges[s1].Order()));
+
+        // s3 -> s4
+        Assert.AreEqual(s4, mainFlowGraph.OutgoingEdges[s3].Single());
+
+        // s4 ->
+        Assert.AreEqual(FlowGraph.EmptyVertex, mainFlowGraph.OutgoingEdges[s4].Single());
+
+        // s5 -> s6
+        //   \-> s7
+        Assert.AreEqual(2, mainFlowGraph.OutgoingEdges[s5].Count);
+        Assert.IsTrue(new[] { s6, s7 }.SequenceEqual(mainFlowGraph.OutgoingEdges[s5].Order()));
+
+        // s6 ->
+        Assert.AreEqual(FlowGraph.EmptyVertex, mainFlowGraph.OutgoingEdges[s6].Single());
+
+        // s7 ->
+        Assert.AreEqual(FlowGraph.EmptyVertex, mainFlowGraph.OutgoingEdges[s7].Single());
+    }
+
+    [TestMethod]
+    public void TestSceneMerging()
+    {
+        string code =
+            """
+            scene main
+            {
+                output 0; // o0
+                call A; // 0 // t0
+                output 1; // o1
+                call B;
+                output 2; // o2
+            }
+
+            scene A
+            {
+                output 10; // o10
+                // rA
+            }
+
+            scene B
+            {
+                output 20; // o20
+                call A; // 1 // t1
+            }
+            """;
+
+        FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
+        flowAnalyzer.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        FlowGraph? graph = flowAnalyzer.GenerateMainFlowGraph();
+        Assert.IsNotNull(graph);
+
+        int o0 = code.IndexOf("output 0");
+        int o1 = code.IndexOf("output 1");
+        int o2 = code.IndexOf("output 2");
+        int o10 = code.IndexOf("output 10");
+        int o20 = code.IndexOf("output 20");
+
+        int t0 = code.IndexOf("call A; // 0");
+        int t1 = code.IndexOf("call A; // 1");
+
+        int rA = code.IndexOf("scene A") + 2;
+
+        Assert.IsTrue(new[] { o0, o1, o2, o10, o20, t0, t1, rA }.Order().SequenceEqual(graph.Vertices.Keys.Order()));
+
+        // -> o0
+        Assert.AreEqual(o0, graph.StartVertex);
+
+        // o0 -> t0
+        Assert.AreEqual(t0, graph.OutgoingEdges[o0].Single());
+
+        // t0 -> o10
+        Assert.AreEqual(o10, graph.OutgoingEdges[t0].Single());
+
+        // o10 -> rA
+        Assert.AreEqual(rA, graph.OutgoingEdges[o10].Single());
+
+        // rA -> o1
+        //   \-> o2
+        Assert.AreEqual(2, graph.OutgoingEdges[rA].Count);
+        Assert.IsTrue(new[] { o1, o2 }.SequenceEqual(graph.OutgoingEdges[rA].Order()));
+
+        // o1 -> o20
+        Assert.AreEqual(o20, graph.OutgoingEdges[o1].Single());
+
+        // o20 -> t1
+        Assert.AreEqual(t1, graph.OutgoingEdges[o20].Single());
+
+        // t1 -> o10
+        Assert.AreEqual(o10, graph.OutgoingEdges[t1].Single());
+
+        // o2 ->
+        Assert.AreEqual(FlowGraph.EmptyVertex, graph.OutgoingEdges[o2].Single());
     }
 }

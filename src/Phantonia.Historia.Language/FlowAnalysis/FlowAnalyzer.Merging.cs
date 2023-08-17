@@ -1,185 +1,233 @@
 ﻿using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
-using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using Edges = System.Collections.Immutable.ImmutableDictionary<
     int, System.Collections.Immutable.ImmutableList<int>>;
-using Vertices = System.Collections.Immutable.ImmutableDictionary<
-    int, Phantonia.Historia.Language.FlowAnalysis.FlowVertex>;
 using MutEdges = System.Collections.Generic.Dictionary<
     int, System.Collections.Generic.List<int>>;
 using MutVertices = System.Collections.Generic.Dictionary<
     int, Phantonia.Historia.Language.FlowAnalysis.FlowVertex>;
-using System.Collections.Immutable;
+using Vertices = System.Collections.Immutable.ImmutableDictionary<
+    int, Phantonia.Historia.Language.FlowAnalysis.FlowVertex>;
 
 namespace Phantonia.Historia.Language.FlowAnalysis;
 
 public sealed partial class FlowAnalyzer
 {
-    private FlowGraph MergeFlowGraphs(IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs, IReadOnlyDictionary<SceneSymbol, int> referenceCounts)
+    private FlowGraph MergeFlowGraphs(IEnumerable<SceneSymbol> topologicalOrder, IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs, IReadOnlyDictionary<SceneSymbol, int> referenceCounts)
     {
-        SceneSymbol mainScene = (SceneSymbol)symbolTable["main"];
-        FlowGraph mainFlowGraph = sceneFlowGraphs[mainScene];
+        Debug.Assert(topologicalOrder.First().Name == "main");
 
-        Vertices vertices = mainFlowGraph.Vertices;
-        Edges edges = mainFlowGraph.OutgoingEdges;
+        FlowGraph mainFlowGraph = sceneFlowGraphs[topologicalOrder.First()];
 
-        foreach ((SceneSymbol scene, FlowGraph graph) in sceneFlowGraphs)
+        foreach (SceneSymbol scene in topologicalOrder.Skip(1))
         {
-            if (referenceCounts[scene] == 0)
+            if (!referenceCounts.TryGetValue(scene, out int refCount) || refCount == 0)
             {
                 continue;
             }
 
-            vertices = vertices.AddRange(graph.Vertices);
-            edges = edges.AddRange(graph.OutgoingEdges);
+            if (refCount == 1)
+            {
+                mainFlowGraph = EmbedSingleReferenceScene(mainFlowGraph, sceneFlowGraphs[scene], scene);
+            }
+            else
+            {
+                mainFlowGraph = EmbedMultiReferenceScene(mainFlowGraph, sceneFlowGraphs[scene], scene, refCount);
+            }
         }
 
-        FlowGraph finalFlowGraph = FlowGraph.Empty with
-        {
-            StartVertex = mainFlowGraph.StartVertex,
-            Vertices = vertices,
-            OutgoingEdges = edges,
-        };
+        Debug.Assert(mainFlowGraph.Vertices.Values.All(v => v.AssociatedStatement is not BoundCallStatementNode));
 
-        Dictionary<SceneSymbol, CallerTrackerSymbol> trackers =
-            referenceCounts.Where(p => p.Value >= 2)
-                           .ToDictionary(
-                                p => p.Key,
-                                p => new CallerTrackerSymbol
-                                {
-                                    CalledScene = p.Key,
-                                    CallSiteCount = p.Value,
-                                    Name = p.Key.Name,
-                                    Index = p.Key.Index + 1,
-                                });
-
-        return RedirectCallStatements(finalFlowGraph, sceneFlowGraphs, referenceCounts, trackers);
+        return mainFlowGraph;
     }
 
-    private FlowGraph RedirectCallStatements(FlowGraph totalFlowGraph, IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs, IReadOnlyDictionary<SceneSymbol, int> referenceCounts, IReadOnlyDictionary<SceneSymbol, CallerTrackerSymbol> trackers)
+    private FlowGraph EmbedSingleReferenceScene(FlowGraph mainFlowGraph, FlowGraph sceneFlowGraph, SceneSymbol scene)
     {
-        MutEdges edges = totalFlowGraph.OutgoingEdges.ToDictionary(p => p.Key, p => p.Value.ToList());
-        MutVertices vertices = totalFlowGraph.Vertices.ToDictionary(p => p.Key, p => p.Value);
-
-        Dictionary<SceneSymbol, List<int>> callSites = new();
-
-        // handle all call statements
-        foreach (FlowVertex vertex in totalFlowGraph.Vertices.Values)
+        // 1. add all scene vertices
+        foreach (int vertex in sceneFlowGraph.Vertices.Keys)
         {
-            if (vertex.AssociatedStatement is BoundCallStatementNode { Scene: SceneSymbol calledScene })
+            mainFlowGraph = mainFlowGraph with
             {
-                FlowGraph sceneGraph = sceneFlowGraphs[calledScene];
-
-                if (referenceCounts[calledScene] == 1)
-                {
-                    // redirect every edge to this vertex to the start vertex of the scene flow graph
-                    // redirect every edge to the empty vertex (in the scene flow graph) to the next vertex
-                    Debug.Assert(edges[vertex.Index].Count == 1);
-                    int nextVertex = edges[vertex.Index][0];
-
-                    foreach ((int v, List<int> vEdges) in edges)
-                    {
-                        for (int i = 0; i < vEdges.Count; i++)
-                        {
-                            if (vEdges[i] == vertex.Index)
-                            {
-                                vEdges.RemoveAt(i);
-                                vEdges.Add(sceneGraph.StartVertex);
-                            }
-                        }
-                    }
-
-                    foreach (int v in sceneGraph.OutgoingEdges.Keys)
-                    {
-                        for (int i = 0; i < edges[v].Count; i++)
-                        {
-                            if (edges[v][i] == nextVertex)
-                            {
-                                edges[v].RemoveAt(i);
-                                edges[v].Add(nextVertex);
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    callSites.TryAdd(calledScene, new List<int>());
-                    int callSiteIndex = callSites[calledScene].Count;
-                    callSites[calledScene].Add(vertex.Index);
-
-                    CallerTrackerSymbol tracker = trackers[calledScene];
-
-                    CallerTrackerStatement trackerStatement = new()
-                    {
-                        CallSiteIndex = callSiteIndex,
-                        Tracker = tracker,
-                        Index = vertex.Index,
-                    };
-
-                    // replace the call statement with the tracker statement
-                    vertices[vertex.Index] = new FlowVertex
-                    {
-                        AssociatedStatement = trackerStatement,
-                        IsVisible = false,
-                        Index = vertex.Index,
-                    };
-
-                    // redirect the tracker statement to the scene start vertex
-                    edges[vertex.Index].Clear();
-                    edges[vertex.Index].Add(sceneGraph.StartVertex);
-                }
-            }
+                Vertices = mainFlowGraph.Vertices.Add(vertex, sceneFlowGraph.Vertices[vertex]),
+                OutgoingEdges = mainFlowGraph.OutgoingEdges.Add(vertex, sceneFlowGraph.OutgoingEdges[vertex]),
+            };
         }
 
-        // add caller resolutions
-        foreach ((SceneSymbol scene, FlowGraph sceneGraph) in sceneFlowGraphs)
+        // 2. find callVertex and nextVertex (the single vertex that callVertex points to, since it's linear)
+        int callVertex = int.MinValue;
+        int nextVertex = int.MinValue;
+
+        foreach (FlowVertex vertex in mainFlowGraph.Vertices.Values)
         {
-            if (referenceCounts[scene] <= 1)
+            if (vertex.AssociatedStatement is not BoundCallStatementNode { Scene: SceneSymbol calledScene } || calledScene != scene)
             {
                 continue;
             }
 
-            CallerTrackerSymbol tracker = trackers[scene];
+            callVertex = vertex.Index;
 
-            CallerResolutionStatement resolution = new()
+            Debug.Assert(mainFlowGraph.OutgoingEdges[vertex.Index].Count == 1); // assert vertex is infact linear
+            nextVertex = mainFlowGraph.OutgoingEdges[vertex.Index][0];
+            break;
+        }
+
+        Debug.Assert(callVertex != int.MinValue);
+        Debug.Assert(nextVertex != int.MinValue);
+
+        // 3. for all vertices V s.t. (V -> callVertex) instead let (V -> sceneFlowGraph.StartVertex)
+        if (callVertex == mainFlowGraph.StartVertex)
+        {
+            mainFlowGraph = mainFlowGraph with
             {
-                CallSites = callSites[scene].ToImmutableArray(),
-                Tracker = tracker,
-                Index = scene.Index + 2,
+                StartVertex = sceneFlowGraph.StartVertex,
             };
+        }
 
-            FlowVertex resolutionVertex = new()
+        foreach (FlowVertex vertex in mainFlowGraph.Vertices.Values)
+        {
+            if (mainFlowGraph.OutgoingEdges[vertex.Index].Contains(callVertex))
             {
-                AssociatedStatement = resolution,
-                IsVisible = false,
-                Index = resolution.Index,
-            };
-
-            vertices[resolution.Index] = resolutionVertex;
-            edges[resolution.Index] = callSites[scene];
-
-            // redirect edges into the empty vertex for the scene to the new resolution vertex
-            foreach ((int v, ImmutableList<int> vEdges) in sceneGraph.OutgoingEdges)
-            {
-                for (int i = 0; i < vEdges.Count; i++)
+                mainFlowGraph = mainFlowGraph with
                 {
-                    if (vEdges[i] == FlowGraph.EmptyVertex)
-                    {
-                        vEdges.RemoveAt(i);
-                        vEdges.Add(resolution.Index);
-                        break;
-                    }
-                }
+                    OutgoingEdges =
+                        mainFlowGraph.OutgoingEdges.SetItem(
+                            vertex.Index,
+                            mainFlowGraph.OutgoingEdges[vertex.Index]
+                                         .Remove(callVertex)
+                                         .Add(sceneFlowGraph.StartVertex)),
+                };
             }
         }
 
-        return totalFlowGraph with
+        // 4. for all vertices V s.t. V is in sceneFlowGraph and V points to the empty vertex, remove edge to empty vertex and instead let (V -> N)
+        foreach (FlowVertex vertex in sceneFlowGraph.Vertices.Values)
         {
-            OutgoingEdges = edges.ToImmutableDictionary(p => p.Key, p => p.Value.ToImmutableList()),
-            Vertices = vertices.ToImmutableDictionary(),
+            if (sceneFlowGraph.OutgoingEdges[vertex.Index].Contains(FlowGraph.EmptyVertex))
+            {
+                mainFlowGraph = mainFlowGraph with
+                {
+                    OutgoingEdges =
+                        mainFlowGraph.OutgoingEdges.SetItem(
+                            vertex.Index,
+                            mainFlowGraph.OutgoingEdges[vertex.Index]
+                                         .Remove(FlowGraph.EmptyVertex)
+                                         .Add(nextVertex)),
+                };
+            }
+        }
+
+        mainFlowGraph = mainFlowGraph with
+        {
+            Vertices = mainFlowGraph.Vertices.Remove(callVertex),
+            OutgoingEdges = mainFlowGraph.OutgoingEdges.Remove(callVertex),
         };
+
+        return mainFlowGraph;
+    }
+
+    private FlowGraph EmbedMultiReferenceScene(FlowGraph mainFlowGraph, FlowGraph sceneFlowGraph, SceneSymbol scene, int refCount)
+    {
+        CallerTrackerSymbol tracker = new()
+        {
+            CalledScene = scene,
+            Name = scene.Name,
+            CallSiteCount = refCount,
+            // the indices are the literal character indices in the source code
+            // and since a scene declaration is at least scene A{}, one more than its index is not taken
+            Index = scene.Index + 1,
+        };
+
+        // 1. add all scene vertices
+        foreach (int vertex in sceneFlowGraph.Vertices.Keys)
+        {
+            mainFlowGraph = mainFlowGraph with
+            {
+                Vertices = mainFlowGraph.Vertices.Add(vertex, sceneFlowGraph.Vertices[vertex]),
+                OutgoingEdges = mainFlowGraph.OutgoingEdges.Add(vertex, sceneFlowGraph.OutgoingEdges[vertex]),
+            };
+        }
+
+        // 2. find all callsites, replace them with tracker statements and redirect them correctly
+        Dictionary<int, int> nextVertices = new();
+        List<int> callSites = new();
+
+        foreach (FlowVertex vertex in mainFlowGraph.Vertices.Values)
+        {
+            if (vertex.AssociatedStatement is not BoundCallStatementNode { Scene: SceneSymbol calledScene } || calledScene != scene)
+            {
+                continue;
+            }
+
+            Debug.Assert(mainFlowGraph.OutgoingEdges[vertex.Index].Count == 1); // assert vertex is infact linear
+            nextVertices[vertex.Index] = mainFlowGraph.OutgoingEdges[vertex.Index][0];
+
+            FlowVertex trackerVertex = vertex with
+            {
+                AssociatedStatement = new CallerTrackerStatement
+                {
+                    CallSiteIndex = callSites.Count,
+                    Index = vertex.Index,
+                    Tracker = tracker,
+                },
+                IsVisible = false,
+            };
+
+            callSites.Add(vertex.Index);
+
+            mainFlowGraph = mainFlowGraph with
+            {
+                Vertices = mainFlowGraph.Vertices.SetItem(vertex.Index, trackerVertex),
+                OutgoingEdges = mainFlowGraph.OutgoingEdges.SetItem(
+                    vertex.Index,
+                    ImmutableList.Create(sceneFlowGraph.StartVertex)),
+            };
+        }
+
+        // 3. synthesize resolution statement
+        CallerResolutionStatement resolution = new()
+        {
+            Tracker = tracker,
+            Index = scene.Index + 2,
+        };
+
+        FlowVertex resolutionVertex = new()
+        {
+            AssociatedStatement = resolution,
+            Index = resolution.Index,
+            IsVisible = false,
+        };
+
+        ImmutableList<int>.Builder edgesBuilder = ImmutableList.CreateBuilder<int>();
+
+        foreach (int site in callSites)
+        {
+            edgesBuilder.Add(nextVertices[site]);
+        }
+
+        mainFlowGraph = mainFlowGraph with
+        {
+            Vertices = mainFlowGraph.Vertices.Add(resolutionVertex.Index, resolutionVertex),
+            OutgoingEdges = mainFlowGraph.OutgoingEdges.Add(resolutionVertex.Index, edgesBuilder.ToImmutable()),
+        };
+
+        // 4. for all vertices V s.t. V is in scene flow graph and V -> empty vertex, make V instead point to resolutionVertex
+        foreach (FlowVertex vertex in sceneFlowGraph.Vertices.Values)
+        {
+            if (sceneFlowGraph.OutgoingEdges[vertex.Index].Contains(FlowGraph.EmptyVertex))
+            {
+                mainFlowGraph = mainFlowGraph with
+                {
+                    OutgoingEdges = mainFlowGraph.OutgoingEdges.SetItem(
+                        vertex.Index,
+                        mainFlowGraph.OutgoingEdges[vertex.Index].Remove(FlowGraph.EmptyVertex).Add(resolution.Index)),
+                };
+            }
+        }
+
+        return mainFlowGraph;
     }
 }

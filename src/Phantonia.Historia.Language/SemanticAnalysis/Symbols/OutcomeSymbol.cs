@@ -8,6 +8,8 @@ public record OutcomeSymbol : Symbol
 
     public required ImmutableArray<string> OptionNames { get; init; }
 
+    public required bool AlwaysAssigned { get; init; } = false;
+
     public string? DefaultOption { get; init; }
 
     protected internal override string GetDebuggerDisplay() => $"outcome symbol {Name} w/ options ({string.Join(", ", OptionNames)}) {(DefaultOption is not null ? "default " : "")}{DefaultOption}";

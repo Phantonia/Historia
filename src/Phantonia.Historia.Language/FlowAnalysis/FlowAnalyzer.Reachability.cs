@@ -26,7 +26,15 @@ public sealed partial class FlowAnalyzer
             switch (symbol)
             {
                 case OutcomeSymbol outcomeSymbol:
-                    if (outcomeSymbol.DefaultOption is not null)
+                    if (outcomeSymbol.AlwaysAssigned)
+                    {
+                        outcomes.Add(outcomeSymbol, new OutcomeData
+                        {
+                            DefinitelyAssigned = true,
+                            PossiblyAssigned = true,
+                        });
+                    }
+                    else if (outcomeSymbol.DefaultOption is not null)
                     {
                         outcomes.Add(outcomeSymbol, new OutcomeData
                         {
@@ -51,7 +59,7 @@ public sealed partial class FlowAnalyzer
 
     private VertexData ProcessScene(FlowGraph sceneFlowGraph, VertexData defaultVertexData, IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs)
     {
-        FlowGraph dual = sceneFlowGraph.Reverse();
+        FlowGraph reversedFlowGraph = sceneFlowGraph.Reverse();
         IEnumerable<int> order = sceneFlowGraph.TopologicalSort();
 
         if (!order.Any())
@@ -66,7 +74,7 @@ public sealed partial class FlowAnalyzer
 
         foreach (int vertex in order.Skip(1))
         {
-            data[vertex] = ProcessVertex(sceneFlowGraph, vertex, dual.OutgoingEdges[vertex].Select(i => data[i]), defaultVertexData, sceneFlowGraphs);
+            data[vertex] = ProcessVertex(sceneFlowGraph, vertex, reversedFlowGraph.OutgoingEdges[vertex].Select(i => data[i]), defaultVertexData, sceneFlowGraphs);
         }
 
         IEnumerable<VertexData> finalVertexData =

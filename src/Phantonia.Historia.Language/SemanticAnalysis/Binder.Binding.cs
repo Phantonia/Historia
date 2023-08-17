@@ -152,6 +152,7 @@ public sealed partial class Binder
             Name = outcomeDeclaration.Name,
             OptionNames = optionNames.ToImmutableArray(),
             DefaultOption = outcomeDeclaration.DefaultOption,
+            AlwaysAssigned = false,
             Index = outcomeDeclaration.Index,
         };
 
@@ -285,6 +286,7 @@ public sealed partial class Binder
             Intervals = intervalBuilder.ToImmutable(),
             OptionNames = spectrumDeclaration.Options.Select(o => o.Name).ToImmutableArray(),
             DefaultOption = spectrumDeclaration.DefaultOption,
+            AlwaysAssigned = false,
             Index = spectrumDeclaration.Index,
         };
 

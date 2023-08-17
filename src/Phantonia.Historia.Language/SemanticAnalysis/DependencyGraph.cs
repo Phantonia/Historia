@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 
@@ -69,7 +68,7 @@ public sealed class DependencyGraph
         }
     }
 
-    public IEnumerable<int> GetDependencyRespectingOrder()
+    public IEnumerable<int> TopologicalSort()
     {
         Debug.Assert(!IsCyclic(out _));
 
@@ -90,10 +89,7 @@ public sealed class DependencyGraph
             }
         }
 
-        // the way topological sort is implemented, we expect vertex A to be output before vertex B, if A directly or indirectly points to B
-        // we assume the difference: vertex A has to be output before vertex B, if B directly or indirectly points to A, as it depends on A
-        // reversing does the trick
-        return postOrder.Reverse();
+        return postOrder;
 
         void DepthFirstSearch(int vertex)
         {
@@ -109,6 +105,24 @@ public sealed class DependencyGraph
 
             postOrder.Push(vertex);
         }
+    }
+
+    public IEnumerable<int> GetDependencyRespectingOrder()
+    {
+        IEnumerable<int> order = TopologicalSort();
+        Debug.Assert(order is Stack<int>);
+
+        Stack<int> stack = (Stack<int>)order;
+
+        Stack<int> newOrder = new();
+
+        // reverse stack
+        while (stack.Count > 0)
+        {
+            newOrder.Push(stack.Pop());
+        }
+
+        return newOrder;
     }
 
     private readonly record struct VertexData

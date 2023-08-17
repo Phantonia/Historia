@@ -6,12 +6,11 @@ using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 
 namespace Phantonia.Historia.Language.FlowAnalysis;
 
 // there is no abbreviation for this thing
-// always use its full name, im serious
+// always use its full name, i'm serious
 public sealed partial class FlowAnalyzer
 {
     public FlowAnalyzer(StoryNode story, SymbolTable symbolTable)
@@ -25,7 +24,7 @@ public sealed partial class FlowAnalyzer
 
     public event Action<Error>? ErrorFound;
 
-    public FlowGraph GenerateMainFlowGraph()
+    public FlowGraph? GenerateMainFlowGraph()
     {
         Dictionary<SceneSymbol, FlowGraph> sceneFlowGraphs = new();
 
@@ -45,10 +44,16 @@ public sealed partial class FlowAnalyzer
             }
         }
 
-        IReadOnlyDictionary<SceneSymbol, int> referenceCounts = GetSceneReferenceCounts(sceneFlowGraphs);
+        (IEnumerable<SceneSymbol>? topologicalOrder, IReadOnlyDictionary<SceneSymbol, int> referenceCounts) = PerformDependencyAnalysis(sceneFlowGraphs);
+
+        if (topologicalOrder is null)
+        {
+            return null;
+        }
+
         PerformReachabilityAnalysis(symbolTable, sceneFlowGraphs);
 
-        return sceneFlowGraphs[(SceneSymbol)symbolTable["main"]];
+        return MergeFlowGraphs(topologicalOrder, sceneFlowGraphs, referenceCounts);
     }
 
     private FlowGraph GenerateBodyFlowGraph(StatementBodyNode body)

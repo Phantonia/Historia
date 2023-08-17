@@ -130,6 +130,7 @@ public sealed partial class Binder
                 {
                     Name = switchStatement.Name,
                     OptionNames = optionNames.ToImmutableArray(),
+                    AlwaysAssigned = true,
                     Index = switchStatement.Index,
                 };
 
