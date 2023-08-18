@@ -59,12 +59,10 @@ public sealed partial class Emitter
 
         writer.Indent--;
 
-        writer.WriteManyLines(
-          $$"""
-            }
-                      
-            private int state;
-            """);
+        writer.WriteLine('}');
+        writer.WriteLine();
+
+        writer.WriteLine("private int state;");
 
         GenerateOutcomeFields();
 
@@ -140,8 +138,9 @@ public sealed partial class Emitter
 
                 return true;
             }
-
             """);
+
+        writer.WriteLine();
 
         GenerateStateTransitionMethod();
 

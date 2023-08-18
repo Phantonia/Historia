@@ -532,4 +532,46 @@ public sealed class EmitterTests
         Assert.IsTrue(story.TryContinue());
         Assert.IsTrue(story.FinishedStory);
     }
+
+    [TestMethod]
+    public void TestSpectrumDefault()
+    {
+        string code =
+            """
+            spectrum X(A <= 1/2, B) default A;
+
+            scene main
+            {
+                branchon X
+                {
+                    option A
+                    {
+                        output 0;
+                    }
+
+                    option B
+                    {
+                        output 1;
+                    }
+                }
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString());
+
+        Assert.IsTrue(story.NotStartedStory);
+        Assert.IsFalse(story.FinishedStory);
+
+        Assert.IsTrue(story.TryContinue());
+        Assert.AreEqual(0, story.Output);
+
+        Assert.IsTrue(story.TryContinue());
+        Assert.IsTrue(story.FinishedStory);
+    }
 }

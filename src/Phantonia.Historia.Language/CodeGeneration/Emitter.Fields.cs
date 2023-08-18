@@ -1,8 +1,5 @@
 ﻿using Phantonia.Historia.Language.FlowAnalysis;
-using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
-using Phantonia.Historia.Language.SyntaxAnalysis;
-using System.CodeDom.Compiler;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
@@ -16,15 +13,15 @@ public sealed partial class Emitter
             {
                 case SpectrumSymbol spectrum:
                     writer.Write("private int ");
-                    writer.Write(GetSpectrumTotalFieldName(spectrum));
+                    WriteSpectrumTotalFieldName(spectrum);
                     writer.WriteLine(';');
                     writer.Write("private int ");
-                    writer.Write(GetSpectrumPositiveFieldName(spectrum));
+                    WriteSpectrumPositiveFieldName(spectrum);
                     writer.WriteLine(';');
                     break;
                 case OutcomeSymbol outcome:
                     writer.Write("private int ");
-                    writer.Write(GetOutcomeFieldName(outcome));
+                    WriteOutcomeFieldName(outcome);
 
                     if (outcome.DefaultOption is not null)
                     {
@@ -35,18 +32,70 @@ public sealed partial class Emitter
                     break;
                 case CallerTrackerSymbol tracker:
                     writer.Write("private int ");
-                    writer.Write(GetTrackerFieldName(tracker));
+                    WriteTrackerFieldName(tracker);
                     writer.WriteLine(";");
                     break;
             }
         }
     }
 
-    private static string GetOutcomeFieldName(OutcomeSymbol outcome) => outcome.Index >= 0 ? $"outcome{outcome.Index}" : $"outcome_{-outcome.Index}";
+    private void WriteOutcomeFieldName(OutcomeSymbol outcome)
+    {
+        writer.Write("outcome");
 
-    private static string GetSpectrumTotalFieldName(SpectrumSymbol spectrum) => spectrum.Index >= 0 ? $"total{spectrum.Index}" : $"total_{-spectrum.Index}";
+        if (outcome.Index >= 0)
+        {
+            writer.Write(outcome.Index);
+        }
+        else
+        {
+            writer.Write('_');
+            writer.Write(-outcome.Index);
+        }
+    }
 
-    private static string GetTrackerFieldName(CallerTrackerSymbol tracker) => tracker.Index >= 0 ? $"tracker{tracker.Index}" : $"tracker_{-tracker.Index}";
+    private void WriteSpectrumTotalFieldName(SpectrumSymbol spectrum)
+    {
+        writer.Write("total");
 
-    private static string GetSpectrumPositiveFieldName(SpectrumSymbol spectrum) => spectrum.Index >= 0 ? $"positive{spectrum.Index}" : $"total_{-spectrum.Index}";
+        if (spectrum.Index >= 0)
+        {
+            writer.Write(spectrum.Index);
+        }
+        else
+        {
+            writer.Write('_');
+            writer.Write(-spectrum.Index);
+        }
+    }
+
+    private void WriteSpectrumPositiveFieldName(SpectrumSymbol spectrum)
+    {
+        writer.Write("positive");
+
+        if (spectrum.Index >= 0)
+        {
+            writer.Write(spectrum.Index);
+        }
+        else
+        {
+            writer.Write('_');
+            writer.Write(-spectrum.Index);
+        }
+    }
+
+    private void WriteTrackerFieldName(CallerTrackerSymbol tracker)
+    {
+        writer.Write("tracker");
+
+        if (tracker.Index >= 0)
+        {
+            writer.Write(tracker.Index);
+        }
+        else
+        {
+            writer.Write('_');
+            writer.Write(-tracker.Index);
+        }
+    }
 }

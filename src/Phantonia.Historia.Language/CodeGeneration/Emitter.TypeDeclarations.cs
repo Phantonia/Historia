@@ -15,7 +15,7 @@ public sealed partial class Emitter
         {
             if (topLevelNode is not BoundSymbolDeclarationNode
                 {
-                    Declaration: TypeSymbolDeclarationNode declaration,
+                    Declaration: TypeSymbolDeclarationNode,
                     Symbol: TypeSymbol symbol,
                 })
             {

@@ -13,14 +13,13 @@ public sealed partial class Emitter
         GenerateType(settings.OutputType);
         writer.WriteLine(" GetOutput()");
 
-        writer.WriteManyLines(
-            """
-            {
-                switch (state)
-                {
-            """);
+        writer.WriteLine('{');
+        writer.Indent++;
 
-        writer.Indent += 2;
+        writer.WriteLine("switch (state)");
+        writer.WriteLine('{');
+
+        writer.Indent++;
 
         foreach ((int index, FlowVertex vertex) in flowGraph.Vertices)
         {
