@@ -2,6 +2,7 @@
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 
@@ -330,29 +331,29 @@ public static class Errors
         };
     }
 
-    public static Error OutcomeMayBeAssignedMoreThanOnce(string outcomeName, int index)
+    public static Error OutcomeMayBeAssignedMoreThanOnce(string outcomeName, IEnumerable<string> callStack, int index)
     {
         return new Error
         {
-            ErrorMessage = $"The outcome '{outcomeName}' may already be assigned once this assignment executes. Keep in mind that outcomes may only be assigned once",
+            ErrorMessage = $"The outcome '{outcomeName}' may already be assigned once this assignment executes through the following scene calls: {string.Join(", ", callStack.Reverse())}. Keep in mind that outcomes may only be assigned once",
             Index = index,
         };
     }
 
-    public static Error OutcomeNotDefinitelyAssigned(string outcomeName, int index)
+    public static Error OutcomeNotDefinitelyAssigned(string outcomeName, IEnumerable<string> callStack, int index)
     {
         return new Error
         {
-            ErrorMessage = $"The outcome '{outcomeName}' may not be assigned once this statement executes. Consider adding a default option",
+            ErrorMessage = $"The outcome '{outcomeName}' may not be assigned once this statement executes through the following scene calls: {string.Join(", ", callStack.Reverse())}. Consider adding a default option",
             Index = index,
         };
     }
 
-    public static Error SpectrumNotDefinitelyAssigned(string spectrumName, int index)
+    public static Error SpectrumNotDefinitelyAssigned(string spectrumName, IEnumerable<string> callStack, int index)
     {
         return new Error
         {
-            ErrorMessage = $"The spectrum '{spectrumName}' might never be strengthened/weakened, so has an undetermined value. Consider adding a default option",
+            ErrorMessage = $"The spectrum '{spectrumName}' might never be strengthened/weakened, so has an undetermined value, when this statement executes through the following scene calls: {string.Join(", ", callStack.Reverse())}. Consider adding a default option",
             Index = index,
         };
     }

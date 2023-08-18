@@ -1,5 +1,4 @@
-﻿using Phantonia.Historia.Language.SemanticAnalysis;
-using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
+﻿using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using System.Collections.Generic;
@@ -14,7 +13,7 @@ public sealed partial class FlowAnalyzer
     {
         SceneSymbol mainScene = (SceneSymbol)symbolTable["main"];
         VertexData defaultVertexData = GetDefaultData();
-        _ = ProcessScene(sceneFlowGraphs[mainScene], defaultVertexData, sceneFlowGraphs);
+        _ = ProcessScene(sceneFlowGraphs[mainScene], defaultVertexData, sceneFlowGraphs, ImmutableStack.Create(mainScene));
     }
 
     private VertexData GetDefaultData()
@@ -57,7 +56,10 @@ public sealed partial class FlowAnalyzer
         };
     }
 
-    private VertexData ProcessScene(FlowGraph sceneFlowGraph, VertexData defaultVertexData, IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs)
+    private VertexData ProcessScene(FlowGraph sceneFlowGraph,
+                                    VertexData defaultVertexData,
+                                    IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs,
+                                    ImmutableStack<SceneSymbol> callStack)
     {
         FlowGraph reversedFlowGraph = sceneFlowGraph.Reverse();
         IEnumerable<int> order = sceneFlowGraph.TopologicalSort();
@@ -70,21 +72,26 @@ public sealed partial class FlowAnalyzer
         Dictionary<int, VertexData> data = new();
 
         int firstVertex = order.First();
-        data[firstVertex] = ProcessVertex(sceneFlowGraph, firstVertex, previousData: new[] { defaultVertexData }, defaultVertexData, sceneFlowGraphs);
+        data[firstVertex] = ProcessVertex(sceneFlowGraph, firstVertex, previousData: new[] { defaultVertexData }, defaultVertexData, sceneFlowGraphs, callStack);
 
         foreach (int vertex in order.Skip(1))
         {
-            data[vertex] = ProcessVertex(sceneFlowGraph, vertex, reversedFlowGraph.OutgoingEdges[vertex].Select(i => data[i]), defaultVertexData, sceneFlowGraphs);
+            data[vertex] = ProcessVertex(sceneFlowGraph, vertex, reversedFlowGraph.OutgoingEdges[vertex].Select(i => data[i]), defaultVertexData, sceneFlowGraphs, callStack);
         }
 
         IEnumerable<VertexData> finalVertexData =
             data.Where(p => sceneFlowGraph.OutgoingEdges[p.Key].Contains(FlowGraph.EmptyVertex))
                 .Select(p => p.Value);
 
-        return ProcessVertex(sceneFlowGraph, FlowGraph.EmptyVertex, finalVertexData, defaultVertexData, sceneFlowGraphs);
+        return ProcessVertex(sceneFlowGraph, FlowGraph.EmptyVertex, finalVertexData, defaultVertexData, sceneFlowGraphs, callStack);
     }
 
-    private VertexData ProcessVertex(FlowGraph flowGraph, int vertex, IEnumerable<VertexData> previousData, VertexData defaultVertexData, IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs)
+    private VertexData ProcessVertex(FlowGraph flowGraph,
+                                     int vertex,
+                                     IEnumerable<VertexData> previousData,
+                                     VertexData defaultVertexData,
+                                     IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs,
+                                     ImmutableStack<SceneSymbol> callStack)
     {
         VertexData thisVertexData = defaultVertexData;
 
@@ -113,7 +120,7 @@ public sealed partial class FlowAnalyzer
                 case BoundOutcomeAssignmentStatementNode boundAssignment when boundAssignment.Outcome == outcome:
                     if (possiblyAssigned)
                     {
-                        ErrorFound?.Invoke(Errors.OutcomeMayBeAssignedMoreThanOnce(outcome.Name, boundAssignment.Index));
+                        ErrorFound?.Invoke(Errors.OutcomeMayBeAssignedMoreThanOnce(outcome.Name, callStack.Select(s => s.Name), boundAssignment.Index));
                     }
 
                     definitelyAssigned = true;
@@ -127,11 +134,11 @@ public sealed partial class FlowAnalyzer
                     {
                         if (outcome is SpectrumSymbol)
                         {
-                            ErrorFound?.Invoke(Errors.SpectrumNotDefinitelyAssigned(outcome.Name, boundBranchOn.Index));
+                            ErrorFound?.Invoke(Errors.SpectrumNotDefinitelyAssigned(outcome.Name, callStack.Select(s => s.Name), boundBranchOn.Index));
                         }
                         else
                         {
-                            ErrorFound?.Invoke(Errors.OutcomeNotDefinitelyAssigned(outcome.Name, boundBranchOn.Index));
+                            ErrorFound?.Invoke(Errors.OutcomeNotDefinitelyAssigned(outcome.Name, callStack.Select(s => s.Name), boundBranchOn.Index));
                         }
                     }
                     break;
@@ -153,7 +160,7 @@ public sealed partial class FlowAnalyzer
             // we just assume that is not a lot
             // it is necessary to process it as 'thisVertexData' might differ a lot for different callsites
             // we might optimize this to process local outcomes only once and only process global outcomes multiple times
-            return ProcessScene(sceneFlowGraphs[calledScene], thisVertexData, sceneFlowGraphs);
+            return ProcessScene(sceneFlowGraphs[calledScene], thisVertexData, sceneFlowGraphs, callStack.Push(calledScene));
         }
 
         return thisVertexData;
