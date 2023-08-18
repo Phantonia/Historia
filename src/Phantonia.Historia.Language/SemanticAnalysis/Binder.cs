@@ -3,8 +3,10 @@ using Phantonia.Historia.Language.SyntaxAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using Phantonia.Historia.Language.SyntaxAnalysis.Types;
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 
@@ -101,7 +103,7 @@ public sealed partial class Binder
         return table;
     }
 
-    private static Symbol? CreateSymbolFromDeclaration(TopLevelNode declaration)
+    private Symbol? CreateSymbolFromDeclaration(TopLevelNode declaration)
     {
         switch (declaration)
         {
@@ -111,6 +113,10 @@ public sealed partial class Binder
                 return CreateRecordSymbolFromDeclaration(recordDeclaration);
             case UnionTypeSymbolDeclarationNode unionDeclaration:
                 return CreateUnionSymbolFromDeclaration(unionDeclaration);
+            case OutcomeSymbolDeclarationNode outcomeDeclaration:
+                return CreateOutcomeSymbolFromDeclaration(outcomeDeclaration);
+            case SpectrumSymbolDeclarationNode spectrumDeclaration:
+                return CreateSpectrumSymbolFromDeclaration(spectrumDeclaration);
             case SettingDirectiveNode:
                 return null;
             default:
@@ -162,6 +168,166 @@ public sealed partial class Binder
                 Debug.Assert(false);
                 return null;
         }
+    }
+
+    private OutcomeSymbol? CreateOutcomeSymbolFromDeclaration(IOutcomeDeclarationNode outcomeDeclaration)
+    {
+        bool error = false;
+
+        HashSet<string> optionNames = new();
+
+        foreach (string option in outcomeDeclaration.Options)
+        {
+            if (!optionNames.Add(option))
+            {
+                ErrorFound?.Invoke(Errors.DuplicatedOptionInOutcomeDeclaration(option, outcomeDeclaration.Index));
+                error = true;
+            }
+        }
+
+        if (outcomeDeclaration.DefaultOption is not null && !optionNames.Contains(outcomeDeclaration.DefaultOption))
+        {
+            ErrorFound?.Invoke(Errors.OutcomeDefaultOptionNotAnOption(outcomeDeclaration.Name, outcomeDeclaration.Index));
+            error = true;
+        }
+
+        if (error)
+        {
+            return null;
+        }
+
+        return new OutcomeSymbol()
+        {
+            Name = outcomeDeclaration.Name,
+            OptionNames = optionNames.ToImmutableArray(),
+            DefaultOption = outcomeDeclaration.DefaultOption,
+            AlwaysAssigned = false,
+            Index = outcomeDeclaration.Index,
+        };
+    }
+
+    private SpectrumSymbol? CreateSpectrumSymbolFromDeclaration(ISpectrumDeclarationNode spectrumDeclaration)
+    {
+        bool error = false;
+
+        if (spectrumDeclaration.Options.Length == 0)
+        {
+            ErrorFound?.Invoke(Errors.OutcomeWithZeroOptions(spectrumDeclaration.Name, spectrumDeclaration.Index));
+            error = true;
+        }
+
+        HashSet<string> optionNames = new();
+
+        foreach (SpectrumOptionNode option in spectrumDeclaration.Options)
+        {
+            if (!optionNames.Add(option.Name))
+            {
+                ErrorFound?.Invoke(Errors.DuplicatedOptionInOutcomeDeclaration(option.Name, spectrumDeclaration.Index));
+                error = true;
+            }
+
+            if (option.Denominator == 0)
+            {
+                ErrorFound?.Invoke(Errors.SpectrumBoundDivisionByZero(spectrumDeclaration.Name, option.Name, option.Index));
+                error = true;
+            }
+            else if (option.Numerator > option.Denominator)
+            {
+                ErrorFound?.Invoke(Errors.SpectrumBoundNotInRange(spectrumDeclaration.Name, option.Name, option.Index));
+                error = true;
+            }
+            else if (option.Numerator < 0 || option.Denominator < 0)
+            {
+                Debug.Assert(false);
+            }
+        }
+
+        if (spectrumDeclaration.DefaultOption is not null && !optionNames.Contains(spectrumDeclaration.DefaultOption))
+        {
+            ErrorFound?.Invoke(Errors.OutcomeDefaultOptionNotAnOption(spectrumDeclaration.Name, spectrumDeclaration.Index));
+            error = true;
+        }
+
+        if (spectrumDeclaration.Options.Length == 0)
+        {
+            Debug.Assert(error);
+            return null;
+        }
+
+        if (error)
+        {
+            return null;
+        }
+
+        static int Gcd(int a, int b)
+        {
+            while (b != 0)
+            {
+                int temp = b;
+                b = a % b;
+                a = temp;
+            }
+            return a;
+        }
+
+        static int Lcm(int a, int b)
+        {
+            return a * b / Gcd(a, b);
+        }
+
+        int commonDenominator = 1;
+
+        foreach (SpectrumOptionNode option in spectrumDeclaration.Options)
+        {
+            commonDenominator = Lcm(commonDenominator, option.Denominator);
+        }
+
+        Debug.Assert(commonDenominator != 0);
+
+        ImmutableDictionary<string, SpectrumInterval>.Builder intervalBuilder = ImmutableDictionary.CreateBuilder<string, SpectrumInterval>();
+
+        (int, int) previousFraction = (0, 1);
+        int previousNumerator = 0;
+        bool previousInclusive = true;
+
+        foreach (SpectrumOptionNode option in spectrumDeclaration.Options)
+        {
+            // let x be the common denominator
+            // then a fraction a/b = (a * (x/b))/x
+            // x/b is an integer by definition of lcm
+            SpectrumInterval interval = new()
+            {
+                Inclusive = option.Inclusive,
+                UpperDenominator = commonDenominator,
+                UpperNumerator = option.Numerator * commonDenominator / option.Denominator,
+            };
+
+            if (interval.UpperNumerator <= previousNumerator)
+            {
+                // this is only okay if the previous one was exclusive and this one is inclusive
+                if (previousInclusive || !option.Inclusive)
+                {
+                    ErrorFound?.Invoke(Errors.SpectrumNotIncreasing(spectrumDeclaration.Name, previousFraction, (option.Numerator, option.Denominator), option.Index));
+                    error = true;
+                }
+            }
+
+            intervalBuilder.Add(option.Name, interval);
+
+            previousFraction = (option.Numerator, option.Denominator);
+            previousNumerator = interval.UpperNumerator;
+            previousInclusive = interval.Inclusive;
+        }
+
+        return new SpectrumSymbol()
+        {
+            Name = spectrumDeclaration.Name,
+            Intervals = intervalBuilder.ToImmutable(),
+            OptionNames = spectrumDeclaration.Options.Select(o => o.Name).ToImmutableArray(),
+            DefaultOption = spectrumDeclaration.DefaultOption,
+            AlwaysAssigned = false,
+            Index = spectrumDeclaration.Index,
+        };
     }
 
     private static bool TypesAreCompatible(TypeSymbol sourceType, TypeSymbol targetType)

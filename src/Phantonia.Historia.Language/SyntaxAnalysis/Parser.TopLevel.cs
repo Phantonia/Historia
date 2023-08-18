@@ -26,6 +26,30 @@ public sealed partial class Parser
                 return ParseUnionSymbolDeclaration(ref index);
             case { Kind: TokenKind.SettingKeyword }:
                 return ParseSettingDirective(ref index);
+            case { Kind: TokenKind.OutcomeKeyword }:
+                {
+                    (string name, ImmutableArray<string> options, string? defaultOption, int nodeIndex) = ParseOutcomeDeclaration(ref index);
+
+                    return new OutcomeSymbolDeclarationNode
+                    {
+                        Name = name,
+                        Options = options,
+                        DefaultOption = defaultOption,
+                        Index = nodeIndex,
+                    };
+                }
+            case { Kind: TokenKind.SpectrumKeyword }:
+                {
+                    (string name, ImmutableArray<SpectrumOptionNode> options, string? defaultOption, int nodeIndex) = ParseSpectrumDeclaration(ref index);
+
+                    return new SpectrumSymbolDeclarationNode
+                    {
+                        Name = name,
+                        Options = options,
+                        DefaultOption = defaultOption,
+                        Index = nodeIndex,
+                    };
+                }
             case { Kind: TokenKind.EndOfFile }:
                 return null;
             default:

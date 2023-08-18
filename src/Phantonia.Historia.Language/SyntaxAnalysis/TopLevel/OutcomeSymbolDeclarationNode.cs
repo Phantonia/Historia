@@ -1,15 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 
-namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
+namespace Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 
-public record OutcomeDeclarationStatementNode : StatementNode, IOutcomeDeclarationNode
+public sealed record OutcomeSymbolDeclarationNode : SymbolDeclarationNode, IOutcomeDeclarationNode
 {
-    public OutcomeDeclarationStatementNode() { }
-
-    public required string Name { get; init; }
-
     public required ImmutableArray<string> Options { get; init; }
 
     public required string? DefaultOption { get; init; }

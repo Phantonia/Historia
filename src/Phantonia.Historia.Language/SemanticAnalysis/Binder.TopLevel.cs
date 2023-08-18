@@ -27,6 +27,22 @@ public sealed partial class Binder
                 return BindRecordDeclaration(recordDeclaration, table);
             case UnionTypeSymbolDeclarationNode unionDeclaration:
                 return BindUnionDeclaration(unionDeclaration, table);
+            case OutcomeSymbolDeclarationNode outcomeDeclaration:
+                return (table, new BoundSymbolDeclarationNode
+                {
+                    Declaration = outcomeDeclaration,
+                    Symbol = table[outcomeDeclaration.Name],
+                    Name = outcomeDeclaration.Name,
+                    Index = outcomeDeclaration.Index,
+                });
+            case SpectrumSymbolDeclarationNode spectrumDeclaration:
+                return (table, new BoundSymbolDeclarationNode
+                {
+                    Declaration = spectrumDeclaration,
+                    Symbol = table[spectrumDeclaration.Name],
+                    Name = spectrumDeclaration.Name,
+                    Index = spectrumDeclaration.Index,
+                });
             default:
                 Debug.Assert(false);
                 return default;

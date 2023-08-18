@@ -1366,4 +1366,68 @@ public sealed class BinderTests
             SceneName: "A",
         });
     }
+
+    [TestMethod]
+    public void TestGlobalOutcomes()
+    {
+        string code =
+            """
+            outcome Engaged(Yes, No);
+            spectrum Relationship(Apart < 3/10, Neutral <= 7/10, Close);
+
+            scene main
+            {
+                call A;
+
+                branchon Engaged
+                {
+                    option Yes { }
+                    option No { }
+                }
+
+                branchon Relationship
+                {
+                    option Apart { }
+                    option Neutral { }
+                    option Close { }
+                }
+            }
+
+            scene A
+            {
+                Engaged = Yes;
+                strengthen Relationship by 10;
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = binder.Bind().BoundStory!;
+
+        Assert.IsTrue(story.TopLevelNodes[0] is BoundSymbolDeclarationNode
+        {
+            Symbol: OutcomeSymbol
+            {
+                Name: "Engaged",
+                OptionNames: ["Yes", "No"],
+                DefaultOption: null,
+                AlwaysAssigned: false,
+            },
+            Declaration: OutcomeSymbolDeclarationNode
+            {
+                Name: "Engaged"
+            }
+        });
+
+        Assert.IsTrue(story.TopLevelNodes[1] is BoundSymbolDeclarationNode
+        {
+            Symbol: SpectrumSymbol
+            {
+                Name: "Relationship",
+                OptionNames: ["Apart", "Neutral", "Close"],
+                DefaultOption: null,
+            }
+        });
+    }
 }
