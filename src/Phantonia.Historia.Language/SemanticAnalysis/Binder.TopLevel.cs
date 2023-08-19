@@ -102,22 +102,6 @@ public sealed partial class Binder
         return (table, boundUnionDeclaration);
     }
 
-    private (SymbolTable, SettingDirectiveNode) BindSingleSettingDirective(SettingDirectiveNode directive, SymbolTable table)
-    {
-        switch (directive)
-        {
-            case TypeSettingDirectiveNode typeSetting:
-                (table, TypeNode boundType) = BindType(typeSetting.Type, table);
-                return (table, typeSetting with { Type = boundType });
-            case ExpressionSettingDirectiveNode expressionSetting:
-                (table, ExpressionNode boundExpression) = BindAndTypeExpression(expressionSetting.Expression, table);
-                return (table, expressionSetting with { Expression = boundExpression });
-            default:
-                Debug.Assert(false);
-                return default;
-        }
-    }
-
     private (SymbolTable, BoundSymbolDeclarationNode) BindSceneDeclaration(SceneSymbolDeclarationNode sceneDeclaration, Settings settings, SymbolTable table)
     {
         Debug.Assert(table.IsDeclared(sceneDeclaration.Name) && table[sceneDeclaration.Name] is SceneSymbol);

@@ -1430,4 +1430,189 @@ public sealed class BinderTests
             }
         });
     }
+
+    [TestMethod]
+    public void TestValidNamespace()
+    {
+        string code =
+            """
+            setting Namespace: "MyStory .    StoryLogic";
+
+            scene main { }
+            """;
+
+        Binder binder = PrepareBinder(code);
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        BindingResult result = binder.Bind();
+
+        Assert.IsNotNull(result.Settings);
+        Assert.AreEqual("MyStory.StoryLogic", result.Settings.Namespace);
+    }
+
+    [TestMethod]
+    public void TestInvalidNamespace()
+    {
+        string code =
+            """
+            setting Namespace: "Let's just write some nonsense :)";
+
+            scene main { }
+            """;
+
+        Binder binder = PrepareBinder(code);
+
+        List<Error> errors = new();
+        binder.ErrorFound += errors.Add;
+
+        _ = binder.Bind();
+
+        Assert.AreEqual(1, errors.Count);
+
+        Error expectedError = Errors.InvalidNamespaceFormat("Let's just write some nonsense :)", code.IndexOf("\"Let's"));
+        Assert.AreEqual(expectedError, errors[0]);
+    }
+
+    [TestMethod]
+    public void TestNamespaceNotString()
+    {
+        string code =
+            """
+            setting Namespace: 2;
+
+            scene main { }
+            """;
+
+        Binder binder = PrepareBinder(code);
+
+        List<Error> errors = new();
+        binder.ErrorFound += errors.Add;
+
+        BindingResult result = binder.Bind();
+
+        Assert.AreEqual(1, errors.Count);
+
+        Error expectedError = Errors.IncompatibleType((TypeSymbol)result.SymbolTable!["Int"], (TypeSymbol)result.SymbolTable!["String"], "setting", code.IndexOf("2"));
+        Assert.AreEqual(expectedError, errors[0]);
+    }
+
+    [TestMethod]
+    public void TestForbiddenNamespaces()
+    {
+        void Test(string forbiddenNamespace)
+        {
+            string code =
+                $$"""
+                setting Namespace: "{{forbiddenNamespace}}.Story";
+
+                scene main { }
+                """;
+
+            Binder binder = PrepareBinder(code);
+
+            List<Error> errors = new();
+            binder.ErrorFound += errors.Add;
+
+            _ = binder.Bind();
+
+            Assert.AreEqual(1, errors.Count);
+
+            Error expectedError = Errors.ForbiddenNamespace($"{forbiddenNamespace}.Story", code.IndexOf($"\"{forbiddenNamespace}"));
+            Assert.AreEqual(expectedError, errors[0]);
+        }
+
+        Test(nameof(System));
+        Test(nameof(Microsoft));
+        Test(nameof(Phantonia));
+    }
+
+    [TestMethod]
+    public void TestStoryName()
+    {
+        string code =
+            """
+            setting StoryName: "MyStory";
+
+            scene main { }
+            """;
+
+        Binder binder = PrepareBinder(code);
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        BindingResult result = binder.Bind();
+
+        Assert.IsNotNull(result.Settings);
+        Assert.AreEqual("MyStory", result.Settings.StoryName);
+    }
+
+    [TestMethod]
+    public void TestNonIdentifierStoryName()
+    {
+        string code =
+            """
+            setting StoryName: "Let's just write some nonsense :)";
+
+            scene main { }
+            """;
+
+        Binder binder = PrepareBinder(code);
+
+        List<Error> errors = new();
+        binder.ErrorFound += errors.Add;
+
+        _ = binder.Bind();
+
+        Assert.AreEqual(1, errors.Count);
+
+        Error expectedError = Errors.InvalidStoryName("Let's just write some nonsense :)", code.IndexOf("\"Let's"));
+        Assert.AreEqual(expectedError, errors[0]);
+    }
+
+    [TestMethod]
+    public void TestNonStringStoryName()
+    {
+        string code =
+            """
+            setting StoryName: 4;
+
+            scene main { }
+            """;
+
+        Binder binder = PrepareBinder(code);
+
+        List<Error> errors = new();
+        binder.ErrorFound += errors.Add;
+
+        BindingResult result = binder.Bind();
+
+        Assert.AreEqual(1, errors.Count);
+
+        Error expectedError = Errors.IncompatibleType((TypeSymbol)result.SymbolTable!["Int"], (TypeSymbol)result.SymbolTable!["String"], "setting", code.IndexOf("4"));
+        Assert.AreEqual(expectedError, errors[0]);
+    }
+
+    [TestMethod]
+    public void TestConflictingStoryName()
+    {
+        string code =
+            """
+            setting StoryName: "X";
+
+            record X { Text: String; }
+
+            scene main { }
+            """;
+
+        Binder binder = PrepareBinder(code);
+
+        List<Error> errors = new();
+        binder.ErrorFound += errors.Add;
+
+        _ = binder.Bind();
+
+        Assert.AreEqual(1, errors.Count);
+
+        Error expectedError = Errors.ConflictingStoryName("X", code.IndexOf("\"X\""));
+        Assert.AreEqual(expectedError, errors[0]);
+    }
 }

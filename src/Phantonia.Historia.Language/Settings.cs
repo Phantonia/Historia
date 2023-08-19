@@ -25,13 +25,19 @@ public sealed record Settings
         nameof(OptionType),
     }.ToImmutableHashSet();
 
-    public static ImmutableHashSet<string> ExpressionSettings { get; } = ImmutableHashSet<string>.Empty;
+    public static ImmutableHashSet<string> ExpressionSettings { get; } = new[]
+    {
+        nameof(Namespace),
+        nameof(StoryName),
+    }.ToImmutableHashSet();
 
     public Settings() { }
 
-    public string ClassName { get; init; } = "HistoriaStory";
+    public string StoryName { get; init; } = "HistoriaStory";
 
     public TypeSymbol OutputType { get; init; } = IntType;
 
     public TypeSymbol OptionType { get; init; } = IntType;
+
+    public string Namespace { get; init; } = ""; // global namespace
 }

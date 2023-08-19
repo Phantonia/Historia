@@ -35,8 +35,34 @@ public sealed partial class Emitter
     public void GenerateOutputCode()
     {
         writer.WriteLine("#nullable enable");
+
+        if (settings.Namespace != "")
+        {
+            writer.Write("namespace ");
+            writer.WriteLine(settings.Namespace);
+            writer.Write('{');
+            writer.Indent++;
+        }
+
+        GenerateStoryClass();
+
+        writer.WriteLine();
+
+        GenerateTypeDeclarations();
+
+        if (settings.Namespace != "")
+        {
+            writer.Indent--;
+            writer.WriteLine('}');
+        }
+
+        Debug.Assert(writer.Indent == 0);
+    }
+
+    private void GenerateStoryClass()
+    {
         writer.Write("public sealed class @");
-        writer.Write(settings.ClassName);
+        writer.Write(settings.StoryName);
         writer.Write(" : global::Phantonia.Historia.IStory<");
         GenerateType(settings.OutputType);
         writer.Write(", ");
@@ -47,7 +73,7 @@ public sealed partial class Emitter
         writer.Indent++;
 
         writer.Write("public @");
-        writer.Write(settings.ClassName);
+        writer.Write(settings.StoryName);
         writer.WriteLine("()");
         writer.WriteLine('{');
 
@@ -153,10 +179,6 @@ public sealed partial class Emitter
         GenerateGetOptionsMethod();
 
         writer.WriteLine();
-
-        GenerateTypeDeclarations();
-
-        writer.WriteLine();
         writer.Write("global::System.Collections.Generic.IReadOnlyList<");
         GenerateType(settings.OptionType);
         writer.Write("> global::Phantonia.Historia.IStory<");
@@ -175,10 +197,7 @@ public sealed partial class Emitter
             """);
 
         writer.Indent--;
-
-        writer.WriteLine("}");
-
-        Debug.Assert(writer.Indent == 0);
+        writer.WriteLine('}');
     }
 
     private void GenerateExpression(ExpressionNode expression)
@@ -238,8 +257,6 @@ public sealed partial class Emitter
                 return;
             default:
                 writer.Write('@');
-                writer.Write(settings.ClassName);
-                writer.Write(".@");
                 writer.Write(type.Name);
                 return;
         }

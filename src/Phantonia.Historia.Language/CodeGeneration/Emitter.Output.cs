@@ -1,7 +1,7 @@
 ﻿using Phantonia.Historia.Language.FlowAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
-using System.CodeDom.Compiler;
+using System.Linq;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
@@ -53,20 +53,21 @@ public sealed partial class Emitter
             writer.Indent--;
         }
 
-        writer.Indent -= 2;
-
         writer.Write("case ");
         writer.Write(EndState);
         writer.WriteLine(":");
+        writer.Indent++;
 
-        writer.WriteManyLines(
-            """
-                        return default;
-                }
+        writer.WriteLine("return default;");
+        writer.Indent -= 2;
 
-                throw new global::System.InvalidOperationException("Invalid state");
-            }
-            """);
+        writer.WriteLine('}');
+        writer.WriteLine();
+
+        writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid state\");");
+
+        writer.Indent--;
+        writer.WriteLine('}');
     }
 
     private void GenerateGetOptionsMethod()
@@ -77,37 +78,41 @@ public sealed partial class Emitter
         writer.WriteLine('{');
 
         writer.Indent++;
-        writer.WriteLine("switch (state)");
-        writer.WriteLine('{');
 
-        writer.Indent++;
-
-        foreach ((int index, FlowVertex vertex) in flowGraph.Vertices)
+        if (flowGraph.Vertices.Values.Any(v => v.AssociatedStatement is SwitchStatementNode))
         {
-            if (vertex.AssociatedStatement is SwitchStatementNode switchStatement)
+            writer.WriteLine("switch (state)");
+            writer.WriteLine('{');
+
+            writer.Indent++;
+
+            foreach ((int index, FlowVertex vertex) in flowGraph.Vertices)
             {
-                writer.Write("case ");
-                writer.Write(index);
-                writer.WriteLine(':');
-
-                writer.Indent++;
-                writer.Write("return global::System.Collections.Immutable.ImmutableArray.ToImmutableArray(new[] { ");
-
-                foreach (SwitchOptionNode option in switchStatement.Options)
+                if (vertex.AssociatedStatement is SwitchStatementNode switchStatement)
                 {
-                    GenerateExpression(option.Expression);
-                    writer.Write(", ");
+                    writer.Write("case ");
+                    writer.Write(index);
+                    writer.WriteLine(':');
+
+                    writer.Indent++;
+                    writer.Write("return global::System.Collections.Immutable.ImmutableArray.ToImmutableArray(new[] { ");
+
+                    foreach (SwitchOptionNode option in switchStatement.Options)
+                    {
+                        GenerateExpression(option.Expression);
+                        writer.Write(", ");
+                    }
+
+                    writer.WriteLine("});");
+                    writer.Indent--;
                 }
-
-                writer.WriteLine("});");
-                writer.Indent--;
             }
+
+            writer.Indent--;
+
+            writer.WriteLine('}');
+            writer.WriteLine();
         }
-
-        writer.Indent--;
-
-        writer.WriteLine('}');
-        writer.WriteLine();
 
         writer.Write("return global::System.Collections.Immutable.ImmutableArray<");
         GenerateType(settings.OptionType);

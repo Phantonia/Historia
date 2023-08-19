@@ -367,6 +367,42 @@ public static class Errors
         };
     }
 
+    public static Error InvalidNamespaceFormat(string namespaceString, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"The string '{namespaceString}' is not a valid dotnet namespace (i.e. identifiers seperated by dots)",
+            Index = index,
+        };
+    }
+
+    public static Error ForbiddenNamespace(string namespaceString, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"The namespace '{namespaceString}' is either a System, Microsoft or Phantonia namespace. Those are forbidden due to possible conflicts",
+            Index = index,
+        };
+    }
+
+    public static Error InvalidStoryName(string storyName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Story name '{storyName}' is not a valid identifier",
+            Index = index,
+        };
+    }
+
+    public static Error ConflictingStoryName(string storyName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Story name '{storyName}' conflicts with a symbol in your story which will also be generated as a type",
+            Index = index,
+        };
+    }
+
     public static string GenerateFullMessage(string text, Error error)
     {
         (string wholeLine, int column) = FindLine(text, error.Index);

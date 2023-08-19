@@ -100,7 +100,7 @@ public sealed class EmitterTests
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
 
-        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString());
+        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString(), "HistoriaStory");
 
         Assert.IsTrue(story.NotStartedStory);
         Assert.IsFalse(story.FinishedStory);
@@ -219,7 +219,7 @@ public sealed class EmitterTests
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
 
-        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString());
+        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString(), "HistoriaStory");
 
         Assert.IsTrue(story.NotStartedStory);
         Assert.IsFalse(story.FinishedStory);
@@ -331,7 +331,7 @@ public sealed class EmitterTests
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
 
-        _ = DynamicCompiler.CompileToStory<string, string>(sw.ToString());
+        _ = DynamicCompiler.CompileToStory<string, string>(sw.ToString(), "HistoriaStory");
     }
 
     [TestMethod]
@@ -356,7 +356,9 @@ public sealed class EmitterTests
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
 
-        IStory story = DynamicCompiler.CompileToStory(sw.ToString());
+        string outputCode = sw.ToString();
+
+        IStory story = DynamicCompiler.CompileToStory(sw.ToString(), "HistoriaStory");
 
         Assert.IsTrue(story.NotStartedStory);
         Assert.IsFalse(story.FinishedStory);
@@ -393,7 +395,7 @@ public sealed class EmitterTests
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
 
-        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString());
+        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString(), "HistoriaStory");
 
         Assert.IsTrue(story.NotStartedStory);
         Assert.IsFalse(story.FinishedStory);
@@ -449,7 +451,7 @@ public sealed class EmitterTests
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
 
-        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString());
+        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString(), "HistoriaStory");
 
         Assert.IsTrue(story.NotStartedStory);
         Assert.AreEqual(0, story.Output);
@@ -506,7 +508,7 @@ public sealed class EmitterTests
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
 
-        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString());
+        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString(), "HistoriaStory");
 
         Assert.IsTrue(story.NotStartedStory);
         Assert.IsFalse(story.FinishedStory);
@@ -563,7 +565,7 @@ public sealed class EmitterTests
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
 
-        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString());
+        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString(), "HistoriaStory");
 
         Assert.IsTrue(story.NotStartedStory);
         Assert.IsFalse(story.FinishedStory);
@@ -573,5 +575,28 @@ public sealed class EmitterTests
 
         Assert.IsTrue(story.TryContinue());
         Assert.IsTrue(story.FinishedStory);
+    }
+
+    [TestMethod]
+    public void TestNamespace()
+    {
+        string code =
+            """
+            setting Namespace: "MyStory.Plot";
+            setting StoryName: "StateMachine";
+
+            scene main
+            {
+                output 2;
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        _ = DynamicCompiler.CompileToStory<int, int>(sw.ToString(), "MyStory.Plot.StateMachine");
     }
 }
