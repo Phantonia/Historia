@@ -57,10 +57,28 @@ public sealed partial class Binder
 
         ImmutableArray<PropertyDeclarationNode>.Builder boundPropertyDeclarations = ImmutableArray.CreateBuilder<PropertyDeclarationNode>(recordDeclaration.Properties.Length);
 
+        string[] defaultMembers = new[]
+        {
+            recordDeclaration.Name,
+            nameof(Equals),
+            nameof(GetHashCode),
+            nameof(GetType),
+            nameof(MemberwiseClone), // if anyone ever names a record property 'MemberwiseClone', i'll be very impressed, but better be prepared for everything
+            nameof(ReferenceEquals),
+            nameof(ToString),
+            "op_Equality",
+            "op_Inequality",
+        };
+
         foreach ((PropertyDeclarationNode propertyDeclaration, PropertySymbol propertySymbol) in recordDeclaration.Properties.Zip(recordSymbol.Properties))
         {
             Debug.Assert(propertyDeclaration.Name == propertySymbol.Name);
             Debug.Assert(propertyDeclaration.Index == propertySymbol.Index);
+
+            if (defaultMembers.Contains(propertyDeclaration.Name))
+            {
+                ErrorFound?.Invoke(Errors.ConflictingRecordProperty(recordDeclaration.Name, propertyDeclaration.Name, propertyDeclaration.Index));
+            }
 
             boundPropertyDeclarations.Add(new BoundPropertyDeclarationNode
             {
@@ -90,6 +108,35 @@ public sealed partial class Binder
         Debug.Assert(table.IsDeclared(unionDeclaration.Name) && table[unionDeclaration.Name] is UnionTypeSymbol);
 
         UnionTypeSymbol unionSymbol = (UnionTypeSymbol)table[unionDeclaration.Name];
+
+        string[] defaultMembers = new[]
+        {
+            "Discrimininator",
+            "Run",
+            "Evaluate",
+            "AsObject",
+            nameof(Equals),
+            nameof(GetHashCode),
+            nameof(GetType),
+            nameof(MemberwiseClone),
+            nameof(ReferenceEquals),
+            nameof(ToString),
+            "op_Equality",
+            "op_Inequality",
+            $"{unionDeclaration.Name}Discriminator",
+        };
+
+        foreach (TypeNode type in unionDeclaration.Subtypes)
+        {
+            Debug.Assert(type is BoundTypeNode);
+
+            string identifier = ((IdentifierTypeNode)((BoundTypeNode)type).Node).Identifier;
+
+            if (defaultMembers.Contains(identifier))
+            {
+                ErrorFound?.Invoke(Errors.ConflictingUnionSubtype(unionDeclaration.Name, identifier, type.Index));
+            }
+        }
 
         BoundSymbolDeclarationNode boundUnionDeclaration = new()
         {

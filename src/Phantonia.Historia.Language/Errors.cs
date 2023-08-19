@@ -403,6 +403,24 @@ public static class Errors
         };
     }
 
+    public static Error ConflictingUnionSubtype(string unionName, string subtypeName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Union '{unionName}' contains a subtype called '{subtypeName}'. That name is reserved for a method/property on the generated union type",
+            Index = index,
+        };
+    }
+
+    public static Error ConflictingRecordProperty(string recordName, string propertyName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Record '{recordName}' contains a property called '{propertyName}'. That name is reserved for a method/property on the generated record type",
+            Index = index,
+        };
+    }
+
     public static string GenerateFullMessage(string text, Error error)
     {
         (string wholeLine, int column) = FindLine(text, error.Index);

@@ -1615,4 +1615,55 @@ public sealed class BinderTests
         Error expectedError = Errors.ConflictingStoryName("X", code.IndexOf("\"X\""));
         Assert.AreEqual(expectedError, errors[0]);
     }
+
+    [TestMethod]
+    public void TestConflictingNames()
+    {
+        // very normal code to write, i know
+        string code =
+            """
+            record op_Equality { Value: Int; }
+            record XDiscriminator { Value: Int; }
+            record AsObject { Value: Int; }
+
+            // looks so weird getting the indices
+            union X : op_Equality //
+            , XDiscriminator //
+            , AsObject //
+            ;
+
+            record Y
+            {
+                MemberwiseClone: Int;
+                Y: Int;
+            }
+
+            scene main { }
+            """;
+
+        Binder binder = PrepareBinder(code);
+
+        List<Error> errors = new();
+        binder.ErrorFound += errors.Add;
+
+        _ = binder.Bind();
+
+        void AssertWrongSubtype(int i, string subtypeName)
+        {
+            Error expectedError = Errors.ConflictingUnionSubtype("X", subtypeName, code.IndexOf($"{subtypeName} //"));
+            Assert.AreEqual(errors[i], expectedError);
+        }
+
+        void AssertWrongProperty(int i, string propertyName)
+        {
+            Error expectedError = Errors.ConflictingRecordProperty("Y", propertyName, code.IndexOf(propertyName + ':'));
+            Assert.AreEqual(errors[i], expectedError);
+        }
+
+        AssertWrongSubtype(0, "op_Equality");
+        AssertWrongSubtype(1, "XDiscriminator");
+        AssertWrongSubtype(2, "AsObject");
+        AssertWrongProperty(3, "MemberwiseClone");
+        AssertWrongProperty(4, "Y");
+    }
 }
