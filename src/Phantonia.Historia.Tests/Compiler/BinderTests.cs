@@ -1666,4 +1666,69 @@ public sealed class BinderTests
         AssertWrongProperty(3, "MemberwiseClone");
         AssertWrongProperty(4, "Y");
     }
+
+    [TestMethod]
+    public void TestBindingMultipleTrees()
+    {
+        string codeA =
+            """
+            scene main
+            {
+                output Line("abc", 2);
+                call A;
+            }
+            """;
+
+        string codeB =
+            """
+            record Line
+            {
+                Text: String;
+                Character: Int;
+            }
+
+            setting OutputType: Line;
+            """;
+
+        string codeC =
+            """
+            scene A
+            {
+                output Line("xyz", 3);
+            }
+            """;
+
+        int offsetB = codeA.Length;
+        int offsetC = codeB.Length + offsetB;
+
+        StoryNode Parse(string code, int offset)
+        {
+            Lexer lexer = new(code, offset);
+            Parser parser = new(lexer.Lex());
+            parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+            return parser.Parse();
+        }
+
+        StoryNode[] stories = new[]
+        {
+            Parse(codeA, 0),
+            Parse(codeB, offsetB),
+            Parse(codeC, offsetC),
+        };
+
+        int storyAMaxIndex = stories[0].FlattenHierarchie().Max(n => n.Index);
+        int storyBMinIndex = stories[1].FlattenHierarchie().Min(n => n.Index);
+        int storyBMaxIndex = stories[1].FlattenHierarchie().Max(n => n.Index);
+        int storyCMinIndex = stories[2].FlattenHierarchie().Min(n => n.Index);
+
+        Assert.IsTrue(storyAMaxIndex < storyBMinIndex);
+        Assert.IsTrue(storyBMaxIndex < storyCMinIndex);
+
+        Binder binder = new(stories);
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(codeA + codeB + codeC, e));
+
+        // Assert this runs without errors or exceptions
+        _ = binder.Bind();
+    }
 }

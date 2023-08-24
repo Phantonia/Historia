@@ -38,7 +38,7 @@ public sealed partial class Parser
         return new StoryNode
         {
             TopLevelNodes = symbolBuilder.ToImmutable(),
-            Index = 0,
+            Index = tokens.Length > 0 ? tokens[0].Index : 0,
         };
     }
 

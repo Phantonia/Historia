@@ -10,18 +10,20 @@ public sealed class Lexer
 {
     private const int TheEnd = -1;
 
-    public Lexer(string code)
+    public Lexer(string code, int indexOffset = 0)
     {
         inputReader = new StringReader(code);
+        currentIndex = indexOffset;
     }
 
-    public Lexer(TextReader inputReader)
+    public Lexer(TextReader inputReader, int indexOffset = 0)
     {
         this.inputReader = inputReader;
+        currentIndex = indexOffset;
     }
 
     private readonly TextReader inputReader;
-    private int currentIndex = 0;
+    private int currentIndex;
 
     // reLex, take it easy
     public ImmutableArray<Token> Lex()

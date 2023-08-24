@@ -28,6 +28,15 @@ public sealed partial class Binder
         this.story = story;
     }
 
+    public Binder(IEnumerable<StoryNode> stories)
+    {
+        story = new StoryNode
+        {
+            Index = 0,
+            TopLevelNodes = stories.SelectMany(s => s.TopLevelNodes).ToImmutableArray(),
+        };
+    }
+
     private readonly StoryNode story;
 
     public event Action<Error>? ErrorFound;
