@@ -19,12 +19,14 @@ public enum TokenKind
     LessThan, // <
     LessThanOrEquals, // <=
     Slash, // /
+    Dot, // .
 
     // keywords
     SceneKeyword,
     SettingKeyword,
     RecordKeyword,
     UnionKeyword,
+    EnumKeyword,
     OutputKeyword,
     SwitchKeyword,
     OptionKeyword,

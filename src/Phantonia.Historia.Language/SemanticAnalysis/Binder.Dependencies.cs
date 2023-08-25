@@ -12,23 +12,6 @@ namespace Phantonia.Historia.Language.SemanticAnalysis;
 
 public sealed partial class Binder
 {
-    private SymbolTable FixPseudoSymbols(DependencyGraph dependencyGraph, SymbolTable table)
-    {
-        IEnumerable<int>? topologicalOrdering = dependencyGraph.GetDependencyRespectingOrder();
-
-        foreach (Symbol symbol in topologicalOrdering.Select(i => dependencyGraph.Symbols[i]))
-        {
-            TypeSymbol? typeSymbol = symbol as TypeSymbol;
-            Debug.Assert(typeSymbol is not null);
-
-            TypeSymbol trueTypeSymbol = TurnIntoTrueTypeSymbol(typeSymbol, table);
-
-            table = table.Replace(trueTypeSymbol.Name, trueTypeSymbol);
-        }
-
-        return table;
-    }
-
     private DependencyGraph? BuildTypeDependencyGraph(StoryNode story, SymbolTable table)
     {
         Dictionary<int, Symbol> symbols = new();
@@ -36,8 +19,6 @@ public sealed partial class Binder
 
         foreach (TopLevelNode declaration in story.TopLevelNodes)
         {
-            //Debug.Assert(declaration is SettingSymbolDeclarationNode or BoundSymbolDeclarationNode);
-
             if (declaration is not BoundSymbolDeclarationNode { Declaration: TypeSymbolDeclarationNode typeDeclaration, Symbol: Symbol symbol })
             {
                 continue;
@@ -90,7 +71,7 @@ public sealed partial class Binder
                     }
                 }
                 break;
-            case UnionTypeSymbolDeclarationNode unionDeclaration:
+            case UnionSymbolDeclarationNode unionDeclaration:
                 foreach (TypeNode subtype in unionDeclaration.Subtypes)
                 {
                     if (((BoundTypeNode)subtype).Node is IdentifierTypeNode { Identifier: string identifier })
@@ -106,12 +87,32 @@ public sealed partial class Binder
                     }
                 }
                 break;
+            case EnumSymbolDeclarationNode:
+                // no dependencies at all
+                break;
             default:
                 Debug.Assert(false);
                 break;
         }
 
         return dependencies;
+    }
+
+    private SymbolTable FixPseudoSymbols(DependencyGraph dependencyGraph, SymbolTable table)
+    {
+        IEnumerable<int> order = dependencyGraph.GetDependencyRespectingOrder();
+
+        foreach (Symbol symbol in order.Select(i => dependencyGraph.Symbols[i]))
+        {
+            TypeSymbol? typeSymbol = symbol as TypeSymbol;
+            Debug.Assert(typeSymbol is not null);
+
+            TypeSymbol trueTypeSymbol = TurnIntoTrueTypeSymbol(typeSymbol, table);
+
+            table = table.Replace(trueTypeSymbol.Name, trueTypeSymbol);
+        }
+
+        return table;
     }
 
     private TypeSymbol TurnIntoTrueTypeSymbol(TypeSymbol typeSymbol, SymbolTable table)
@@ -122,6 +123,8 @@ public sealed partial class Binder
                 return TurnIntoTrueRecordSymbol(recordSymbol, table);
             case PseudoUnionTypeSymbol unionSymbol:
                 return TurnIntoTrueUnionSymbol(unionSymbol, table);
+            case EnumTypeSymbol enumSymbol:
+                return enumSymbol;
             default:
                 Debug.Assert(false);
                 return null;

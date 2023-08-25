@@ -240,6 +240,11 @@ public sealed partial class Emitter
                 GenerateExpression(recordCreation.BoundArguments[^1].Expression);
                 writer.Write(')');
                 return;
+            case BoundEnumOptionExpressionNode enumOptionExpression:
+                writer.Write(enumOptionExpression.EnumName);
+                writer.Write('.');
+                writer.Write(enumOptionExpression.OptionName);
+                return;
         }
 
         Debug.Assert(false);

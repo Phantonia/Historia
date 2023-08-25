@@ -123,6 +123,9 @@ public sealed class Lexer
                 case '=':
                     _ = inputReader.Read();
                     return new Token { Kind = TokenKind.Equals, Text = "=", Index = currentIndex++, };
+                case '.':
+                    _ = inputReader.Read();
+                    return new Token { Kind = TokenKind.Dot, Text = ".", Index = currentIndex++, };
                 case '"' or '\'':
                     return LexStringLiteral();
                 case '<':
@@ -278,6 +281,7 @@ public sealed class Lexer
             "setting" => TokenKind.SettingKeyword,
             "record" => TokenKind.RecordKeyword,
             "union" => TokenKind.UnionKeyword,
+            "enum" => TokenKind.EnumKeyword,
             "output" => TokenKind.OutputKeyword,
             "switch" => TokenKind.SwitchKeyword,
             "option" => TokenKind.OptionKeyword,

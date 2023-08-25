@@ -3,6 +3,7 @@ using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using Phantonia.Historia.Language.SyntaxAnalysis.Types;
+using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 
@@ -24,6 +25,8 @@ public sealed partial class Parser
                 return ParseRecordSymbolDeclaration(ref index);
             case { Kind: TokenKind.UnionKeyword }:
                 return ParseUnionSymbolDeclaration(ref index);
+            case { Kind: TokenKind.EnumKeyword }:
+                return ParseEnumSymbolDeclaration(ref index);
             case { Kind: TokenKind.SettingKeyword }:
                 return ParseSettingDirective(ref index);
             case { Kind: TokenKind.OutcomeKeyword }:
@@ -84,7 +87,7 @@ public sealed partial class Parser
         };
     }
 
-    private UnionTypeSymbolDeclarationNode? ParseUnionSymbolDeclaration(ref int index)
+    private UnionSymbolDeclarationNode? ParseUnionSymbolDeclaration(ref int index)
     {
         Debug.Assert(tokens[index] is { Kind: TokenKind.UnionKeyword });
 
@@ -123,7 +126,7 @@ public sealed partial class Parser
             }
         }
 
-        return new UnionTypeSymbolDeclarationNode
+        return new UnionSymbolDeclarationNode
         {
             Name = name,
             Subtypes = subtypeBuilder.ToImmutable(),
@@ -168,6 +171,46 @@ public sealed partial class Parser
         {
             Name = identifierToken.Text,
             Properties = propertyDeclarations.ToImmutable(),
+            Index = nodeIndex,
+        };
+    }
+
+    private EnumSymbolDeclarationNode? ParseEnumSymbolDeclaration(ref int index)
+    {
+        Debug.Assert(tokens[index] is { Kind: TokenKind.EnumKeyword });
+
+        int nodeIndex = tokens[index].Index;
+        index++;
+
+        string name = Expect(TokenKind.Identifier, ref index).Text;
+
+        _ = Expect(TokenKind.OpenParenthesis, ref index);
+
+        ImmutableArray<string>.Builder optionsBuilder = ImmutableArray.CreateBuilder<string>();
+
+        while (tokens[index] is { Kind: TokenKind.Identifier, Text: string option })
+        {
+            optionsBuilder.Add(option);
+
+            index++;
+
+            if (tokens[index] is not { Kind: TokenKind.Comma })
+            {
+                break;
+            }
+            else
+            {
+                index++;
+            }
+        }
+
+        _ = Expect(TokenKind.ClosedParenthesis, ref index);
+        _ = Expect(TokenKind.Semicolon, ref index);
+
+        return new EnumSymbolDeclarationNode
+        {
+            Name = name,
+            Options = optionsBuilder.ToImmutable(),
             Index = nodeIndex,
         };
     }

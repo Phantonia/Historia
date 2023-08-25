@@ -70,7 +70,7 @@ public sealed partial class Binder
         // 5. bind settings
         (table, Settings settings, halfboundStory) = BindSettingDirectives(halfboundStory, table);
 
-        // 5. bind whole tree
+        // 6. bind whole tree
         (table, StoryNode boundStory) = BindTree(halfboundStory, settings, table);
 
         return new BindingResult(boundStory, settings, table);
@@ -120,8 +120,10 @@ public sealed partial class Binder
                 return new SceneSymbol { Name = name, Index = index };
             case RecordSymbolDeclarationNode recordDeclaration:
                 return CreateRecordSymbolFromDeclaration(recordDeclaration);
-            case UnionTypeSymbolDeclarationNode unionDeclaration:
+            case UnionSymbolDeclarationNode unionDeclaration:
                 return CreateUnionSymbolFromDeclaration(unionDeclaration);
+            case EnumSymbolDeclarationNode enumDeclaration:
+                return CreateEnumSymbolFromDeclaration(enumDeclaration);
             case OutcomeSymbolDeclarationNode outcomeDeclaration:
                 return CreateOutcomeSymbolFromDeclaration(outcomeDeclaration);
             case SpectrumSymbolDeclarationNode spectrumDeclaration:
@@ -156,13 +158,23 @@ public sealed partial class Binder
         };
     }
 
-    private static PseudoUnionTypeSymbol CreateUnionSymbolFromDeclaration(UnionTypeSymbolDeclarationNode unionDeclaration)
+    private static PseudoUnionTypeSymbol CreateUnionSymbolFromDeclaration(UnionSymbolDeclarationNode unionDeclaration)
     {
         return new PseudoUnionTypeSymbol
         {
             Name = unionDeclaration.Name,
             Subtypes = unionDeclaration.Subtypes,
             Index = unionDeclaration.Index,
+        };
+    }
+
+    private PseudoEnumTypeSymbol CreateEnumSymbolFromDeclaration(EnumSymbolDeclarationNode enumDeclaration)
+    {
+        return new PseudoEnumTypeSymbol
+        {
+            Name = enumDeclaration.Name,
+            Options = enumDeclaration.Options,
+            Index = enumDeclaration.Index,
         };
     }
 

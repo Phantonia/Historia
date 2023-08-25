@@ -46,6 +46,8 @@ public sealed partial class Binder
                 }
             case RecordCreationExpressionNode recordCreationExpression:
                 return BindAndTypeRecordCreationExpression(recordCreationExpression, table);
+            case EnumOptionExpressionNode enumOptionExpression:
+                return BindAndTypeEnumOptionExpression(enumOptionExpression, table);
             case IdentifierExpressionNode { Identifier: string identifier, Index: int index }:
                 if (!table.IsDeclared(identifier))
                 {
@@ -163,5 +165,45 @@ public sealed partial class Binder
 
             return (table, typedRecordCreation);
         }
+    }
+
+    private (SymbolTable, ExpressionNode) BindAndTypeEnumOptionExpression(EnumOptionExpressionNode enumOptionExpression, SymbolTable table)
+    {
+        if (!table.IsDeclared(enumOptionExpression.EnumName))
+        {
+            ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(enumOptionExpression.EnumName, enumOptionExpression.Index));
+            return (table, enumOptionExpression);
+        }
+
+        Symbol symbol = table[enumOptionExpression.EnumName];
+
+        if (symbol is not EnumTypeSymbol enumSymbol)
+        {
+            ErrorFound?.Invoke(Errors.SymbolIsNotEnum(enumOptionExpression.EnumName, enumOptionExpression.Index));
+            return (table, enumOptionExpression);
+        }
+
+        if (!enumSymbol.Options.Contains(enumOptionExpression.OptionName))
+        {
+            ErrorFound?.Invoke(Errors.OptionDoesNotExistInEnum(enumOptionExpression.EnumName, enumOptionExpression.OptionName, enumOptionExpression.Index));
+            return (table, enumOptionExpression);
+        }
+
+        BoundEnumOptionExpressionNode boundExpression = new()
+        {
+            EnumName = enumOptionExpression.EnumName,
+            OptionName = enumOptionExpression.OptionName,
+            Index = enumOptionExpression.Index,
+            EnumSymbol = enumSymbol,
+        };
+
+        TypedExpressionNode typedExpression = new()
+        {
+            Expression = boundExpression,
+            SourceType = enumSymbol,
+            Index = boundExpression.Index,
+        };
+
+        return (table, typedExpression);
     }
 }

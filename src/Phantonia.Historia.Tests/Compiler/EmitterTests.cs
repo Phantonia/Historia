@@ -599,4 +599,59 @@ public sealed class EmitterTests
 
         _ = DynamicCompiler.CompileToStory<int, int>(sw.ToString(), "MyStory.Plot.StateMachine");
     }
+
+    private enum Character
+    {
+        Alice,
+        Beverly,
+        Charlotte,
+    }
+
+    private enum Stuff
+    {
+        Toaster,
+        Love,
+        Potsdam,
+    }
+
+    [TestMethod]
+    public void TestEnum()
+    {
+        string code =
+            """
+            enum Character (Alice, Beverly, Charlotte);
+            setting OutputType: Character;
+
+            scene main
+            {
+                output Character.Alice;
+                output Character.Beverly;
+                output Character.Charlotte;
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        IStory story = DynamicCompiler.CompileToStory(sw.ToString(), "HistoriaStory");
+
+        Assert.IsTrue(story.TryContinue());
+
+        // a boxed enum value in .NET can be unboxed as a different enum type of same underlying primite type (i.e. int in this case)
+        Character character = (Character)story.Output!;
+        Assert.AreEqual(Character.Alice, character);
+
+        Assert.IsTrue(story.TryContinue());
+
+        character = (Character)story.Output!;
+        Assert.AreEqual(Character.Beverly, character);
+
+        Assert.IsTrue(story.TryContinue());
+
+        character = (Character)story.Output!;
+        Assert.AreEqual(Character.Charlotte, character);
+    }
 }

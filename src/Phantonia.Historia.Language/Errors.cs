@@ -108,6 +108,15 @@ public static class Errors
         };
     }
 
+    public static Error SymbolIsNotEnum(string symbolName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Symbol named '{symbolName}' is not an enum",
+            Index = index
+        };
+    }
+
     public static Error WrongAmountOfArguments(string recordName, int givenAmount, int expectedAmount, int index)
     {
         return new Error
@@ -417,6 +426,24 @@ public static class Errors
         return new Error
         {
             ErrorMessage = $"Record '{recordName}' contains a property called '{propertyName}'. That name is reserved for a method/property on the generated record type",
+            Index = index,
+        };
+    }
+
+    public static Error DuplicatedOptionInEnum(string enumName, string optionName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Option '{optionName}' in enum '{enumName}' is duplicated",
+            Index = index,
+        };
+    }
+
+    public static Error OptionDoesNotExistInEnum(string enumName, string optionName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Enum '{enumName}' does not have an option '{optionName}'",
             Index = index,
         };
     }

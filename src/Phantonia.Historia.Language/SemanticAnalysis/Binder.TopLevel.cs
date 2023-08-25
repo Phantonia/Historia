@@ -1,9 +1,10 @@
 ﻿using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
-using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using Phantonia.Historia.Language.SyntaxAnalysis.Types;
+using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
@@ -25,8 +26,10 @@ public sealed partial class Binder
                 return BindSceneDeclaration(sceneDeclaration, settings, table);
             case RecordSymbolDeclarationNode recordDeclaration:
                 return BindRecordDeclaration(recordDeclaration, table);
-            case UnionTypeSymbolDeclarationNode unionDeclaration:
+            case UnionSymbolDeclarationNode unionDeclaration:
                 return BindUnionDeclaration(unionDeclaration, table);
+            case EnumSymbolDeclarationNode enumDeclaration:
+                return BindEnumDeclaration(enumDeclaration, table);
             case OutcomeSymbolDeclarationNode outcomeDeclaration:
                 return (table, new BoundSymbolDeclarationNode
                 {
@@ -103,7 +106,7 @@ public sealed partial class Binder
         return (table, boundRecordDeclaration);
     }
 
-    private (SymbolTable, TopLevelNode) BindUnionDeclaration(UnionTypeSymbolDeclarationNode unionDeclaration, SymbolTable table)
+    private (SymbolTable, TopLevelNode) BindUnionDeclaration(UnionSymbolDeclarationNode unionDeclaration, SymbolTable table)
     {
         Debug.Assert(table.IsDeclared(unionDeclaration.Name) && table[unionDeclaration.Name] is UnionTypeSymbol);
 
@@ -147,6 +150,31 @@ public sealed partial class Binder
         };
 
         return (table, boundUnionDeclaration);
+    }
+
+    private (SymbolTable, TopLevelNode) BindEnumDeclaration(EnumSymbolDeclarationNode enumDeclaration, SymbolTable table)
+    {
+        HashSet<string> options = new();
+
+        foreach (string option in enumDeclaration.Options)
+        {
+            if (!options.Add(option))
+            {
+                ErrorFound?.Invoke(Errors.DuplicatedOptionInEnum(enumDeclaration.Name, option, enumDeclaration.Index));
+            }
+        }
+
+        EnumTypeSymbol symbol = (EnumTypeSymbol)table[enumDeclaration.Name];
+
+        BoundSymbolDeclarationNode boundEnumDeclaration = new()
+        {
+            Name = enumDeclaration.Name,
+            Declaration = enumDeclaration,
+            Symbol = symbol,
+            Index = enumDeclaration.Index,
+        };
+
+        return (table, boundEnumDeclaration);
     }
 
     private (SymbolTable, BoundSymbolDeclarationNode) BindSceneDeclaration(SceneSymbolDeclarationNode sceneDeclaration, Settings settings, SymbolTable table)

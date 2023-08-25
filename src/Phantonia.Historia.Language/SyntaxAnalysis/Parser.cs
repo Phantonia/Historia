@@ -74,7 +74,6 @@ public sealed partial class Parser
         }
     }
 
-    // can be reused for top level declarations
     private (string name, ImmutableArray<string> options, string? defaultOption, int nodeIndex) ParseOutcomeDeclaration(ref int index)
     {
         Debug.Assert(tokens[index] is { Kind: TokenKind.OutcomeKeyword });
@@ -246,6 +245,21 @@ public sealed partial class Parser
 
         if (tokens[index] is not { Kind: TokenKind.OpenParenthesis })
         {
+            if (tokens[index] is { Kind: TokenKind.Dot })
+            {
+                string enumName = name;
+
+                index++;
+                string optionName = Expect(TokenKind.Identifier, ref index).Text;
+
+                return new EnumOptionExpressionNode
+                {
+                    EnumName = enumName,
+                    OptionName = optionName,
+                    Index = nodeIndex,
+                };
+            }
+
             return new IdentifierExpressionNode
             {
                 Identifier = name,

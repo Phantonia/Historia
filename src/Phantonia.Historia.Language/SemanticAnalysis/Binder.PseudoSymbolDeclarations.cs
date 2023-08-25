@@ -2,6 +2,7 @@
 using Phantonia.Historia.Language.SyntaxAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using Phantonia.Historia.Language.SyntaxAnalysis.Types;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -38,8 +39,10 @@ public sealed partial class Binder
         {
             case RecordSymbolDeclarationNode recordDeclaration:
                 return BindPseudoRecordDeclaration(recordDeclaration, table);
-            case UnionTypeSymbolDeclarationNode unionDeclaration:
+            case UnionSymbolDeclarationNode unionDeclaration:
                 return BindPseudoUnionDeclaration(unionDeclaration, table);
+            case EnumSymbolDeclarationNode enumDeclaration:
+                return BindPseudoEnumDeclaration(enumDeclaration, table);
             default:
                 Debug.Assert(false);
                 return default;
@@ -73,7 +76,7 @@ public sealed partial class Binder
         return (table, boundDeclaration);
     }
 
-    private (SymbolTable, TopLevelNode) BindPseudoUnionDeclaration(UnionTypeSymbolDeclarationNode unionDeclaration, SymbolTable table)
+    private (SymbolTable, TopLevelNode) BindPseudoUnionDeclaration(UnionSymbolDeclarationNode unionDeclaration, SymbolTable table)
     {
         List<TypeNode> subtypes = unionDeclaration.Subtypes.ToList();
 
@@ -92,6 +95,19 @@ public sealed partial class Binder
             },
             Symbol = table[unionDeclaration.Name],
             Index = unionDeclaration.Index,
+        };
+
+        return (table, boundDeclaration);
+    }
+
+    private (SymbolTable, TopLevelNode) BindPseudoEnumDeclaration(EnumSymbolDeclarationNode enumDeclaration, SymbolTable table)
+    {
+        BoundSymbolDeclarationNode boundDeclaration = new()
+        {
+            Name = enumDeclaration.Name,
+            Declaration = enumDeclaration,
+            Symbol = table[enumDeclaration.Name],
+            Index = enumDeclaration.Index,
         };
 
         return (table, boundDeclaration);

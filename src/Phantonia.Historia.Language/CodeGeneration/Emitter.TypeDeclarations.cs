@@ -1,6 +1,7 @@
 ﻿using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
+using System;
 using System.CodeDom.Compiler;
 using System.Diagnostics;
 using System.Linq;
@@ -29,6 +30,9 @@ public sealed partial class Emitter
                     continue;
                 case UnionTypeSymbol unionSymbol:
                     GenerateUnionDeclaration(unionSymbol);
+                    continue;
+                case EnumTypeSymbol enumSymbol:
+                    GenerateEnumDeclaration(enumSymbol);
                     continue;
                 default:
                     Debug.Assert(false);
@@ -580,5 +584,24 @@ public sealed partial class Emitter
         }
 
         writer.Write(subtype.Name);
+    }
+
+    private void GenerateEnumDeclaration(PseudoEnumTypeSymbol enumSymbol)
+    {
+        writer.Write("public enum ");
+        writer.WriteLine(enumSymbol.Name);
+        writer.WriteLine('{');
+
+        writer.Indent++;
+
+        foreach (string option in enumSymbol.Options)
+        {
+            writer.Write(option);
+            writer.WriteLine(',');
+        }
+
+        writer.Indent--;
+
+        writer.WriteLine('}');
     }
 }

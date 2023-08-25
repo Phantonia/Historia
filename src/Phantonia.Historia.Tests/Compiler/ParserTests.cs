@@ -716,7 +716,7 @@ public sealed class ParserTests
 
         Assert.AreEqual(1, story.TopLevelNodes.Length);
 
-        UnionTypeSymbolDeclarationNode? unionDeclaration = story.TopLevelNodes[0] as UnionTypeSymbolDeclarationNode;
+        UnionSymbolDeclarationNode? unionDeclaration = story.TopLevelNodes[0] as UnionSymbolDeclarationNode;
 
         Assert.IsNotNull(unionDeclaration);
 
@@ -943,5 +943,72 @@ public sealed class ParserTests
         {
             Body.Statements: [CallStatementNode { SceneName: "A" }],
         });
+    }
+
+    [TestMethod]
+    public void TestEnumDeclaration()
+    {
+        string code =
+            """
+            enum Character (Alice, Beverly, Charlotte);
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = parser.Parse();
+
+        Assert.AreEqual(1, story.TopLevelNodes.Length);
+
+        EnumSymbolDeclarationNode? enumDeclaration = story.TopLevelNodes[0] as EnumSymbolDeclarationNode;
+
+        Assert.IsNotNull(enumDeclaration);
+        Assert.AreEqual("Character", enumDeclaration.Name);
+        Assert.AreEqual(3, enumDeclaration.Options.Length);
+        Assert.AreEqual("Alice", enumDeclaration.Options[0]);
+        Assert.AreEqual("Beverly", enumDeclaration.Options[1]);
+        Assert.AreEqual("Charlotte", enumDeclaration.Options[2]);
+        Assert.AreEqual(code.IndexOf("enum"), enumDeclaration.Index);
+    }
+
+    [TestMethod]
+    public void TestEnumOptionExpression()
+    {
+        string code =
+            """
+            enum Character (Alice, Beverly, Charlotte);
+            setting OutputType: Character;
+
+            scene main
+            {
+                output Character.Alice;
+                output Character.Beverly;
+                output Character.Charlotte;
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = parser.Parse();
+
+        SceneSymbolDeclarationNode? mainScene = story.TopLevelNodes[^1] as SceneSymbolDeclarationNode;
+        Assert.IsNotNull(mainScene);
+
+        string[] optionNames = new[] { "Alice", "Beverly", "Charlotte" };
+
+        for (int i = 0; i < 3; i++)
+        {
+            OutputStatementNode? outputStatement = mainScene.Body.Statements[i] as OutputStatementNode;
+            Assert.IsNotNull(outputStatement);
+
+            EnumOptionExpressionNode? enumExpression = outputStatement.OutputExpression as EnumOptionExpressionNode;
+            Assert.IsNotNull(enumExpression);
+
+            Assert.AreEqual("Character", enumExpression.EnumName);
+            Assert.AreEqual(optionNames[i], enumExpression.OptionName);
+        }
     }
 }

@@ -957,7 +957,7 @@ public sealed class BinderTests
         Assert.IsNotNull(boundUnionDeclaration);
         Assert.IsTrue(boundUnionDeclaration is
         {
-            Declaration: UnionTypeSymbolDeclarationNode { Name: "Stuff", Subtypes.Length: 2 },
+            Declaration: UnionSymbolDeclarationNode { Name: "Stuff", Subtypes.Length: 2 },
             Symbol: UnionTypeSymbol { Name: "Stuff", Subtypes: [BuiltinTypeSymbol { Type: BuiltinType.Int }, BuiltinTypeSymbol { Type: BuiltinType.String }] },
         });
 
@@ -1730,5 +1730,57 @@ public sealed class BinderTests
 
         // Assert this runs without errors or exceptions
         _ = binder.Bind();
+    }
+
+    [TestMethod]
+    public void TestEnum()
+    {
+        string code =
+            """
+            enum Character (Alice, Beverly, Charlotte);
+            setting OutputType: Character;
+
+            scene main
+            {
+                output Character.Alice;
+                output Character.Beverly;
+                output Character.Charlotte;
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        BindingResult result = binder.Bind();
+
+        Assert.IsTrue(result.IsValid);
+
+        EnumTypeSymbol characterType = (EnumTypeSymbol)result.SymbolTable["Character"];
+        string[] optionNames = new[] { "Alice", "Beverly", "Charlotte" };
+
+        BoundSymbolDeclarationNode boundEnumDeclaration = (BoundSymbolDeclarationNode)result.BoundStory.TopLevelNodes[0];
+        EnumSymbolDeclarationNode enumDeclaration = (EnumSymbolDeclarationNode)boundEnumDeclaration.Declaration;
+
+        Assert.AreEqual("Character", enumDeclaration.Name);
+        Assert.IsTrue(optionNames.SequenceEqual(enumDeclaration.Options));
+        Assert.AreEqual(characterType, boundEnumDeclaration.Symbol);
+
+        BoundSymbolDeclarationNode boundMainScene = (BoundSymbolDeclarationNode)result.BoundStory.TopLevelNodes[^1];
+        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)boundMainScene.Declaration;
+
+        for (int i = 0; i < 3; i++)
+        {
+            OutputStatementNode outputStatement = (OutputStatementNode)mainScene.Body.Statements[i];
+            TypedExpressionNode typedExpression = (TypedExpressionNode)outputStatement.OutputExpression;
+
+            Assert.AreEqual(characterType, typedExpression.SourceType);
+            Assert.AreEqual(characterType, typedExpression.TargetType);
+
+            BoundEnumOptionExpressionNode enumOptionExpression = (BoundEnumOptionExpressionNode)typedExpression.Expression;
+
+            Assert.AreEqual("Character", enumOptionExpression.EnumName);
+            Assert.AreEqual(optionNames[i], enumOptionExpression.OptionName);
+            Assert.AreEqual(characterType, enumOptionExpression.EnumSymbol);
+        }
     }
 }

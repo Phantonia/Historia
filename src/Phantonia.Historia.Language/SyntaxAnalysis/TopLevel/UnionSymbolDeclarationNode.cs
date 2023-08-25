@@ -5,9 +5,9 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 
-public sealed record UnionTypeSymbolDeclarationNode : TypeSymbolDeclarationNode
+public sealed record UnionSymbolDeclarationNode : TypeSymbolDeclarationNode
 {
-    public UnionTypeSymbolDeclarationNode() { }
+    public UnionSymbolDeclarationNode() { }
 
     public required ImmutableArray<TypeNode> Subtypes { get; init; }
 
