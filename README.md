@@ -7,12 +7,13 @@ Historia is a special kind of language to express branching stories for games in
 - [x] Branching states (`switch`)
 - [x] Record types
 - [x] Saving previous choices (`outcome`, named `switch`)
+- [x] `spectrum` outcomes
 - [x] Branching on previous choices (`branchon`)
-- [ ] `union` types
-- [ ] `enum` types
-- [ ] Scenes other than `main` scene
-- [ ] Global `outcome`s and `switch`es carrying out global `outcome`s
-- [ ] Roslyn code generator
+- [x] `union` types
+- [x] `enum` types
+- [x] Scenes other than `main` scene
+- [x] Global `outcome`s
+- [ ] Build
 - [ ] Splitting Historia code across multiple files
 
 ### Framework features
@@ -22,6 +23,10 @@ Historia is a special kind of language to express branching stories for games in
 - [ ] Dynamic compilation
 - [ ] Analysis features
 
-### More 
-- [ ] Cumulative outcomes/variables
+### Quality of Life
+- [ ] `union`s with shared property getting that property
+- [ ] `switch`es carrying out global `outcome`s
+- [ ] `branchon` with more than one outcome and more than one option per case
+
+### More
 - [ ] Inputs
