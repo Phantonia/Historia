@@ -1,7 +1,7 @@
 ﻿#nullable enable
 using System;
 
-public sealed class @HistoriaStory : global::Phantonia.Historia.IStory<@HistoriaStory.@Union, string?>
+public sealed class @HistoriaStory //: global::Phantonia.Historia.IStory<@HistoriaStory.@Union, string?>
 {
     public @HistoriaStory()
     {
@@ -714,12 +714,12 @@ public sealed class @HistoriaStory : global::Phantonia.Historia.IStory<@Historia
         }
     }
 
-    global::System.Collections.Generic.IReadOnlyList<string?> global::Phantonia.Historia.IStory<@HistoriaStory.@Union, string?>.Options
-    {
-        get
-        {
-            return Options;
-        }
-    }
+    //global::System.Collections.Generic.IReadOnlyList<string?> global::Phantonia.Historia.IStory<@HistoriaStory.@Union, string?>.Options
+    //{
+    //    get
+    //    {
+    //        return Options;
+    //    }
+    //}
 }
 

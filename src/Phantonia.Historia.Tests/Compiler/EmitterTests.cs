@@ -327,7 +327,7 @@ public sealed class EmitterTests
 
         StringWriter sw = new();
         CompilationResult result = new Language.Compiler(code, sw).Compile();
-
+        
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
 

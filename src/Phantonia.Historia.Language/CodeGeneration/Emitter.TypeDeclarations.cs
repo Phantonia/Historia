@@ -27,17 +27,19 @@ public sealed partial class Emitter
             {
                 case RecordTypeSymbol recordSymbol:
                     GenerateRecordDeclaration(recordSymbol);
-                    continue;
+                    break;
                 case UnionTypeSymbol unionSymbol:
                     GenerateUnionDeclaration(unionSymbol);
-                    continue;
+                    break;
                 case EnumTypeSymbol enumSymbol:
                     GenerateEnumDeclaration(enumSymbol);
-                    continue;
+                    break;
                 default:
                     Debug.Assert(false);
                     return;
             }
+
+            writer.WriteLine();
         }
     }
 
@@ -96,6 +98,7 @@ public sealed partial class Emitter
             writer.Write(';');
         }
 
+        writer.WriteLine();
         writer.Indent--;
         writer.WriteLine('}');
     }

@@ -5,6 +5,8 @@ using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
+using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
+using System;
 using System.CodeDom.Compiler;
 using System.Diagnostics;
 using System.IO;
@@ -83,12 +85,34 @@ public sealed partial class Emitter
         writer.Write(StartState);
         writer.WriteLine(';');
 
+        int maxOptionCount = GetMaximumOptionCount();
+
+        if (maxOptionCount != 0)
+        {
+            writer.Write("options = new ");
+            GenerateType(settings.OptionType);
+            writer.Write('[');
+            writer.Write(maxOptionCount);
+            writer.WriteLine("];");
+        }
+        else
+        {
+            writer.Write("options = global::System.Array.Empty<");
+            GenerateType(settings.OptionType);
+            writer.WriteLine(">();");
+        }
+
         writer.Indent--;
 
         writer.WriteLine('}');
         writer.WriteLine();
 
         writer.WriteLine("private int state;");
+        writer.WriteLine("private int optionsCount;");
+
+        writer.Write("private ");
+        GenerateType(settings.OptionType);
+        writer.WriteLine("[] options;");
 
         GenerateOutcomeFields();
 
@@ -102,11 +126,24 @@ public sealed partial class Emitter
 
         writer.WriteLine();
 
-        writer.Write("public global::System.Collections.Immutable.ImmutableArray<");
+        writer.Write("public global::Phantonia.Historia.ReadOnlyList<");
         GenerateType(settings.OptionType);
-        writer.Write("> Options { get; private set; } = global::System.Collections.Immutable.ImmutableArray<");
+        writer.WriteLine("> Options");
+        writer.WriteLine('{');
+        writer.Indent++;
+        writer.WriteLine("get");
+        writer.WriteLine('{');
+        writer.Indent++;
+
+        writer.Write("return new global::Phantonia.Historia.ReadOnlyList<");
         GenerateType(settings.OptionType);
-        writer.WriteLine(">.Empty;");
+        writer.WriteLine(">(options, 0, optionsCount);");
+
+        writer.Indent--;
+        writer.WriteLine('}');
+        writer.Indent--;
+        writer.WriteLine('}');
+        
 
         writer.WriteLine();
 
@@ -119,14 +156,14 @@ public sealed partial class Emitter
             $$"""
             public bool TryContinue()
             {
-                if (FinishedStory || Options.Length != 0)
+                if (FinishedStory || Options.Count != 0)
                 {
                     return false;
                 }
 
                 StateTransition(0);
                 Output = GetOutput();
-                Options = GetOptions();
+                GetOptions();
             
                 if (state != {{StartState}})
                 {
@@ -143,14 +180,14 @@ public sealed partial class Emitter
 
             public bool TryContinueWithOption(int option)
             {
-                if (FinishedStory || option < 0 || option >= Options.Length)
+                if (FinishedStory || option < 0 || option >= Options.Count)
                 {
                     return false;
                 }
 
                 StateTransition(option);
                 Output = GetOutput();
-                Options = GetOptions();
+                GetOptions();
 
                 if (state != {{StartState}})
                 {
@@ -179,6 +216,19 @@ public sealed partial class Emitter
         GenerateGetOptionsMethod();
 
         writer.WriteLine();
+
+        writer.WriteManyLines(
+            """
+            object global::Phantonia.Historia.IStory.Output
+            {
+                get
+                {
+                    return Output;
+                }
+            }
+            """);
+        writer.WriteLine();
+
         writer.Write("global::System.Collections.Generic.IReadOnlyList<");
         GenerateType(settings.OptionType);
         writer.Write("> global::Phantonia.Historia.IStory<");
@@ -196,8 +246,33 @@ public sealed partial class Emitter
             }
             """);
 
+        writer.WriteLine();
+
+        writer.WriteLine("global::System.Collections.Generic.IReadOnlyList<object?> global::Phantonia.Historia.IStory.Options");
+        writer.WriteLine('{');
+        writer.Indent++;
+        writer.WriteLine("get");
+        writer.WriteLine('{');
+        writer.Indent++;
+        writer.Write("return new global::Phantonia.Historia.ObjectReadOnlyList<");
+        GenerateType(settings.OptionType);
+        writer.WriteLine(">(Options);");
         writer.Indent--;
         writer.WriteLine('}');
+        writer.Indent--;
+        writer.WriteLine('}');
+
+        writer.Indent--;
+        writer.WriteLine('}');
+    }
+
+    private int GetMaximumOptionCount()
+    {
+        return boundStory.FlattenHierarchie()
+                         .OfType<SwitchStatementNode>()
+                         .Select(s => s.Options.Length)
+                         .Append(0) // if sequence is empty, at least have one number
+                         .Max();
     }
 
     private void GenerateExpression(ExpressionNode expression)

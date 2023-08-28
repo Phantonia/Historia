@@ -165,6 +165,7 @@ public sealed partial class Emitter
 
         writer.Indent--;
         writer.WriteLine('}');
+        writer.WriteLine();
         writer.WriteLine("break;"); // C# is so weird - you cannot fall from a case label so they require you to slap a 'break' at the end instead of just not doing that smh
     }
 

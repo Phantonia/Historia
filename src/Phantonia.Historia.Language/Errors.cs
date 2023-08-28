@@ -412,6 +412,15 @@ public static class Errors
         };
     }
 
+    public static Error ExpectedTrueFalseString(string settingName, string actualString, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"The setting '{settingName}' requires either the string 'true' or 'false', instead got: '{actualString}'",
+            Index = index,
+        };
+    }
+
     public static Error ConflictingUnionSubtype(string unionName, string subtypeName, int index)
     {
         return new Error

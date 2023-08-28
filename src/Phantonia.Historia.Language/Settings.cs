@@ -33,11 +33,11 @@ public sealed record Settings
 
     public Settings() { }
 
+    public string Namespace { get; init; } = ""; // global namespace
+
     public string StoryName { get; init; } = "HistoriaStory";
 
     public TypeSymbol OutputType { get; init; } = IntType;
 
     public TypeSymbol OptionType { get; init; } = IntType;
-
-    public string Namespace { get; init; } = ""; // global namespace
 }

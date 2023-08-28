@@ -72,12 +72,14 @@ public sealed partial class Emitter
 
     private void GenerateGetOptionsMethod()
     {
-        writer.Write("private global::System.Collections.Immutable.ImmutableArray<");
-        GenerateType(settings.OptionType);
-        writer.WriteLine("> GetOptions()");
+        writer.WriteLine("private void GetOptions()");
+        
         writer.WriteLine('{');
 
         writer.Indent++;
+
+        writer.WriteLine("global::System.Array.Clear(options);");
+        writer.WriteLine();
 
         if (flowGraph.Vertices.Values.Any(v => v.AssociatedStatement is SwitchStatementNode))
         {
@@ -95,15 +97,24 @@ public sealed partial class Emitter
                     writer.WriteLine(':');
 
                     writer.Indent++;
-                    writer.Write("return global::System.Collections.Immutable.ImmutableArray.ToImmutableArray(new[] { ");
 
-                    foreach (SwitchOptionNode option in switchStatement.Options)
+                    writer.WriteLine("global::System.Array.Clear(options);");
+
+                    for (int i = 0; i < switchStatement.Options.Length; i++)
                     {
-                        GenerateExpression(option.Expression);
-                        writer.Write(", ");
+                        writer.Write("options[");
+                        writer.Write(i);
+                        writer.Write("] = ");
+                        GenerateExpression(switchStatement.Options[i].Expression);
+                        writer.WriteLine(';');
                     }
 
-                    writer.WriteLine("});");
+                    writer.Write("optionsCount = ");
+                    writer.Write(switchStatement.Options.Length);
+                    writer.WriteLine(';');
+
+                    writer.WriteLine("return;");
+
                     writer.Indent--;
                 }
             }
@@ -114,9 +125,7 @@ public sealed partial class Emitter
             writer.WriteLine();
         }
 
-        writer.Write("return global::System.Collections.Immutable.ImmutableArray<");
-        GenerateType(settings.OptionType);
-        writer.WriteLine(">.Empty;");
+        writer.WriteLine("optionsCount = 0;");
 
         writer.Indent--;
         writer.WriteLine('}');
