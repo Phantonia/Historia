@@ -166,8 +166,8 @@ public sealed class LexerTests
         Assert.AreEqual(TokenKind.BrokenStringLiteral, tokens[1].Kind);
         Assert.AreEqual(TokenKind.EndOfFile, tokens[2].Kind);
 
-        Assert.AreEqual("\"a", tokens[0].Text);
-        Assert.AreEqual("\"b", tokens[1].Text);
+        Assert.AreEqual("", tokens[0].Text);
+        Assert.AreEqual("", tokens[1].Text);
     }
 
     [TestMethod]
@@ -189,6 +189,23 @@ public sealed class LexerTests
 
         Assert.AreEqual(TokenKind.StringLiteral, tokens[1].Kind);
         Assert.AreEqual("Hey, I'm cool", tokens[1].Text);
+    }
+
+    [TestMethod]
+    public void TestEscapeSequences()
+    {
+        string code =
+            """
+            "A\tB\uDEAD\nC"
+            """;
+
+        Lexer lexer = new(code);
+        ImmutableArray<Token> tokens = lexer.Lex();
+
+        Assert.AreEqual(2, tokens.Length);
+
+        Assert.AreEqual(TokenKind.StringLiteral, tokens[0].Kind);
+        Assert.AreEqual("A\tB\uDEAD\nC", tokens[0].Text);
     }
 
     [TestMethod]

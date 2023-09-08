@@ -40,9 +40,11 @@ The resulting literal is parsed base 10 and has to in the interval $[-2^{31}, 2^
 The expression's minimal type is the builtin type `Int`.
 
 ### 1.5.2.2 String Literals
-A string literal is a sequence of UTF-16 characters. The Historia language completely copies the way C# handles classic string literals (see that specification), with one exception:
+A string literal is a sequence of UTF-16 characters. The Historia language completely copies the way C# handles classic string literals (see that specification), with a few exceptions:
 
 A string literal may start with one of `'"'+` or `'\''+` and must end with the identical lexeme. That is, it may start with `"`, `'`, `"""`, `''` or any number of quotation marks, and must be terminated exactly like it is started. Inside of the literal, the quotation mark that is used may be used together in a quantity less than used to delimit the string.
+
+Also, Historia does not support `\x` escape sequences.
 
 ### 1.5.2.3 Record Creations
 Record creations specify a value for each of a record's properties, and in return produce a value of this record type.

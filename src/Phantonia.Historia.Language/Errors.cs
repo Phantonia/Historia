@@ -2,7 +2,6 @@
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 
@@ -10,6 +9,33 @@ namespace Phantonia.Historia.Language;
 
 public static class Errors
 {
+    public static Error UnterminatedStringLiteral(int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"String literal is not terminated before line break or end of file",
+            Index = index,
+        };
+    }
+
+    public static Error InvalidEscapeSequence(int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"String literal contains invalid escape sequence",
+            Index = index,
+        };
+    }
+
+    public static Error InvalidCharacter(int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"String literal contains in invalid character (use \\uXXXX) notation instead",
+            Index = index,
+        };
+    }
+
     public static Error BrokenStringLiteral(Token brokenToken)
     {
         Debug.Assert(brokenToken is { Kind: TokenKind.BrokenStringLiteral });

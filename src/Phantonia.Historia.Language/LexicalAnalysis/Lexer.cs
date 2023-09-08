@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Reflection.PortableExecutable;
 
 namespace Phantonia.Historia.Language.LexicalAnalysis;
 
@@ -24,6 +26,8 @@ public sealed class Lexer
 
     private readonly TextReader inputReader;
     private int currentIndex;
+
+    public event Action<Error>? ErrorFound;
 
     // reLex, take it easy
     public ImmutableArray<Token> Lex()
@@ -204,60 +208,230 @@ public sealed class Lexer
         int startIndex = currentIndex;
         Debug.Assert(inputReader.Peek() is '"' or '\'');
 
+        // delimiter is " or '
         char delimiter = (char)inputReader.Read();
         currentIndex++;
+
+        // how many instances of the delimiter character are used to delimit the string?
         int delimiterCount = 1;
 
-        List<char> characters = new() { delimiter };
+        while (inputReader.Peek() == delimiter)
+        {
+            delimiterCount++;
+            _ = inputReader.Read();
+            currentIndex++;
+        }
+
+        // whenever the delimiter is seen again (unless escaped), we reduce this countdown to see if it reaches 0 (i.e. the string is terminated)
+        // else we reset it for possible later termination
+        int delimiterCountdown = delimiterCount;
+        List<char> characters = new();
+
+        bool TryParseNextChar(out char result)
+        {
+            int nextChar = inputReader.Read();
+            currentIndex++;
+
+            if (nextChar == TheEnd)
+            {
+                result = default;
+                ErrorFound?.Invoke(Errors.UnterminatedStringLiteral(startIndex));
+                return false;
+            }
+
+            if (nextChar == '\\')
+            {
+                nextChar = inputReader.Read();
+                currentIndex++;
+
+                if (nextChar == TheEnd)
+                {
+                    result = default;
+                    ErrorFound?.Invoke(Errors.UnterminatedStringLiteral(startIndex));
+                    return false;
+                }
+
+                switch (nextChar)
+                {
+                    case '\'':
+                    case '"':
+                    case '\\':
+                        result = (char)nextChar;
+                        return true;
+                    case '0':
+                        result = '\0';
+                        return true;
+                    case 'a':
+                        result = '\a';
+                        return true;
+                    case 'b':
+                        result = '\b';
+                        return true;
+                    case 'f':
+                        result = '\f';
+                        return true;
+                    case 'n':
+                        result = '\n';
+                        return true;
+                    case 'r':
+                        result = '\r';
+                        return true;
+                    case 't':
+                        result = '\t';
+                        return true;
+                    case 'v':
+                        result = '\v';
+                        return true;
+                    case 'u':
+                    case 'U':
+                        {
+                            Span<char> hexDigits = stackalloc char[4];
+
+                            for (int i = 0; i < 4; i++)
+                            {
+                                nextChar = inputReader.Read();
+                                currentIndex++;
+
+                                if (nextChar == TheEnd)
+                                {
+                                    result = default;
+                                    ErrorFound?.Invoke(Errors.UnterminatedStringLiteral(startIndex));
+                                    return false;
+                                }
+
+                                if (nextChar is not ((>= '0' and <= '9') or (>= 'a' and <= 'f') or (>= 'A' and <= 'F')))
+                                {
+                                    result = default;
+                                    ErrorFound?.Invoke(Errors.InvalidEscapeSequence(startIndex));
+                                    return false;
+                                }
+
+                                hexDigits[i] = (char)nextChar;
+                            }
+
+                            static int GetValue(char hexDigit)
+                            {
+                                if (hexDigit is >= '0' and <= '9')
+                                {
+                                    return hexDigit - '0';
+                                }
+
+                                if (hexDigit is >= 'a' and <= 'f')
+                                {
+                                    return hexDigit - 'a' + 10;
+                                }
+
+                                // if (hexDigit is >= 'A' and <= 'F')
+                                {
+                                    return hexDigit - 'A' + 10;
+                                }
+                            }
+
+                            // each digit (0-9-f) has a value in [0,15]
+                            // let the digits be a, b, c, d
+                            // the value of the character is then d * 16^0 + c * 16^1 + b * 16^2 + a * 16^3
+                            // 1 << 4n = 2^4n = 16^n
+                            int value = GetValue(hexDigits[3]) * (1 << 0)
+                                      + GetValue(hexDigits[2]) * (1 << 4)
+                                      + GetValue(hexDigits[1]) * (1 << 8)
+                                      + GetValue(hexDigits[0]) * (1 << 12)
+                                      ;
+
+                            result = (char)value;
+                            return true;
+                        }
+                    default:
+                        result = default;
+                        ErrorFound?.Invoke(Errors.InvalidEscapeSequence(startIndex));
+                        return false;
+                }
+            }
+
+            if (nextChar is '\n' or '\r')
+            {
+                result = default;
+                ErrorFound?.Invoke(Errors.UnterminatedStringLiteral(startIndex));
+                return false;
+            }
+
+            // invalid characters according to the C# spec
+            if (nextChar is '\u0085' or '\u2028' or '\u2029')
+            {
+                result = default;
+                ErrorFound?.Invoke(Errors.InvalidCharacter(startIndex));
+                return false;
+            }
+
+            result = (char)nextChar;
+            return true;
+        }
+
+        // stays false if the loop exits normally (i.e. the string is not terminated)
+        // becomes true if the loop is exited by a break (i.e. the string terminated)
+        bool terminated = false;
 
         while (inputReader.Peek() != TheEnd)
         {
             if (inputReader.Peek() == delimiter)
             {
+                delimiterCountdown--;
                 _ = inputReader.Read();
                 currentIndex++;
-                delimiterCount++;
-                characters.Add(delimiter);
-            }
-            else
-            {
-                break;
-            }
-        }
 
-        int delimiterCountdown = delimiterCount;
-
-        while (inputReader.Peek() != TheEnd && delimiterCountdown > 0)
-        {
-            if (inputReader.Peek() is '\r' or '\n')
-            {
-                return new Token
+                if (delimiterCountdown == 0)
                 {
-                    Kind = TokenKind.BrokenStringLiteral,
-                    Text = new string(characters.ToArray()),
-                    Index = startIndex,
-                };
-            }
-            else if (inputReader.Peek() == delimiter)
-            {
-                delimiterCountdown--;
+                    terminated = true;
+                    break;
+                }
             }
             else
             {
-                delimiterCountdown = delimiterCount;
-            }
+                if (delimiterCountdown != delimiterCount)
+                {
+                    // the string is not terminated here, reset the countdown
 
-            characters.Add((char)inputReader.Read());
-            currentIndex++;
+                    // delimiterCount - delimiterCountDown is the amount of characters we missed
+                    for (int i = 0; i < delimiterCount - delimiterCountdown; i++)
+                    {
+                        characters.Add(delimiter);
+                    }
+
+                    delimiterCountdown = delimiterCount;
+                }
+
+                if (!TryParseNextChar(out char next))
+                {
+                    return new Token
+                    {
+                        Kind = TokenKind.BrokenStringLiteral,
+                        Index = startIndex,
+                        Text = "",
+                    };
+                }
+
+                characters.Add(next);
+            }
         }
 
-        string realString = StringParser.Parse(characters.ToArray().AsSpan()[delimiterCount..^delimiterCount]);
+        if (!terminated)
+        {
+            ErrorFound?.Invoke(Errors.UnterminatedStringLiteral(startIndex));
+
+            return new Token
+            {
+                Kind = TokenKind.BrokenStringLiteral,
+                Index = startIndex,
+                Text = "",
+            };
+        }
+
+        string literal = string.Join("", characters);
 
         return new Token
         {
-            Kind = delimiterCountdown == 0 ? TokenKind.StringLiteral : TokenKind.BrokenStringLiteral,
-            Text = delimiterCountdown == 0 ? realString : new string(characters.ToArray()),
+            Kind = TokenKind.StringLiteral,
             Index = startIndex,
+            Text = literal,
         };
     }
 
