@@ -78,6 +78,7 @@ public sealed partial class Binder
 
     private static SymbolTable GetBuiltinSymbolTable()
     {
+        // spec 1.2.1.1
         SymbolTable symbolTable = new();
         symbolTable = symbolTable.OpenScope()
                                  .Declare(new BuiltinTypeSymbol { Name = "Int", Type = BuiltinType.Int, Index = -1 })
@@ -199,6 +200,7 @@ public sealed partial class Binder
 
         foreach (string option in outcomeDeclaration.Options)
         {
+            // spec 1.2.3.1: "A classic outcome is an outcome which may take on one of finitely many (including zero) named options. All these options have be different."
             if (!optionNames.Add(option))
             {
                 ErrorFound?.Invoke(Errors.DuplicatedOptionInOutcomeDeclaration(option, outcomeDeclaration.Index));
@@ -231,6 +233,8 @@ public sealed partial class Binder
     {
         bool error = false;
 
+        // spec 1.2.3.2.: "These intervals partition [0, 1], i.e. are all pairwise disjoint, non-empty and their union is exactly the interval [0, 1]."
+        // a partition cannot be empty, as the empty union is the empty set and not the interval [0, 1]
         if (spectrumDeclaration.Options.Length == 0)
         {
             ErrorFound?.Invoke(Errors.OutcomeWithZeroOptions(spectrumDeclaration.Name, spectrumDeclaration.Index));
@@ -241,6 +245,7 @@ public sealed partial class Binder
 
         foreach (SpectrumOptionNode option in spectrumDeclaration.Options)
         {
+            // spec 1.2.3.2: "[A] spectrum [...] defines named options where all of these names have to be different."
             if (!optionNames.Add(option.Name))
             {
                 ErrorFound?.Invoke(Errors.DuplicatedOptionInOutcomeDeclaration(option.Name, spectrumDeclaration.Index));
@@ -252,17 +257,23 @@ public sealed partial class Binder
                 ErrorFound?.Invoke(Errors.SpectrumBoundDivisionByZero(spectrumDeclaration.Name, option.Name, option.Index));
                 error = true;
             }
+            // spec 1.2.3.2: "These options are assigned intervals I ⊆ [0, 1] [...]."
+            // that is, the numerator may not be greater than the denominator
             else if (option.Numerator > option.Denominator)
             {
                 ErrorFound?.Invoke(Errors.SpectrumBoundNotInRange(spectrumDeclaration.Name, option.Name, option.Index));
                 error = true;
             }
+            // spec 1.2.3.2: "These options are assigned intervals I ⊆ [0, 1] [...]."
+            // that is, the numerator and denominator must both be positive
             else if (option.Numerator < 0 || option.Denominator < 0)
             {
-                Debug.Assert(false);
+                ErrorFound?.Invoke(Errors.SpectrumBoundNotInRange(spectrumDeclaration.Name, option.Name, option.Index));
+                error = true;
             }
         }
 
+        // spec 1.2.3.2: "A spectrum may or may not have a default option, which in that case has to be one of the listed options."
         if (spectrumDeclaration.DefaultOption is not null && !optionNames.Contains(spectrumDeclaration.DefaultOption))
         {
             ErrorFound?.Invoke(Errors.OutcomeDefaultOptionNotAnOption(spectrumDeclaration.Name, spectrumDeclaration.Index));

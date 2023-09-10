@@ -12,27 +12,56 @@ The Historia language predefines the following type symbols:
 ### 1.2.1.2 Records
 Records are types that bundle properties that each has its own type. The properties of a record are ordered, named and may have any type. All the property names must be different.
 
+Due to technical reasons, no property of a record may have any of the following names:
+
+* The name of the record itself
+* `Equals`
+* `GetHashCode`
+* `GetType`
+* `MemberwiseClone`
+* `ReferenceEquals`
+* `ToString`
+* `op_Equality`
+* `op_Inequality`
+
 ### 1.2.1.3 Enums
-Enums (short for enumerations) are types that are a set of any number of named discrete options. Each option must have a different name.
+Enums (short for enumerations) are types that are a set of any number (including zero) of named discrete options. Each option must have a different name.
 
 ### 1.2.1.4 Unions
 Unions are the set union of any number of types. Let $U$ be the union of types $A, B$, that is $U = A \cup B$ [note: this need not be the set theoretical notion of a union]. $A$ and $B$ are called the <u>subtypes</u> of $U$. Unions <u>flatten</u> their subtypes. If $B$ in the previous example is the union of $C$ and $D$, then $U = A \cup B = A \cup (C \cup D) = A \cup B \cup D$, in other words, $U$ is the union of $A, B, D$.
 
-### 1.2.1.5 Type references
-A type $A$ is <u>directly references</u> another type $B$, iff $A$ is a record and $B$ is the type of any of its properties, or $A$ is a union and $B$ is a subtype of this union. A type $A$ is <u>indirectly references</u> another type $C$, iff there exist types $B_0, B_1, \dots, B_n$ such that $A$ directly references $B_0$, $B_0$ directly references $B_1$, ..., and $B_n$ directly references $C$.
+Due to technical reasons, no subtype of a union may have any of the following names:
 
-No type may ever directly or indirectly reference itself.
+* The name of the union itself
+* `Discriminator`
+* `Run`
+* `Evaluate`
+* `AsObject`
+* `Equals`
+* `GetHashCode`
+* `GetType`
+* `MemberwiseClone`
+* `ReferenceEquals`
+* `ToString`
+* `op_Equality`
+* `op_Inequality`
+* The union name + `Discriminator`
+
+### 1.2.1.5 Type references
+A type $A$ <u>directly depends on</u> another type $B$, iff $A$ is a record and $B$ is the type of any of its properties, or $A$ is a union and $B$ is a subtype of this union. A type $A$ is <u>indirectly depends on</u> another type $C$, iff there exist types $B_0, B_1, \dots, B_n$ such that $A$ directly depends on $B_0$, $B_0$ directly depends on $B_1$, ..., and $B_n$ directly depends $C$.
+
+No type may ever directly or indirectly depend on itself.
 
 ## 1.2.2 Scene Symbols
-A scene specifies a flow graph with the possibility to have states that call other scenes. A scene $A$ <u>directly references</u> another scene $B$ iff there exist a call to $B$ in $A$. Analogously to type references, a scene $A$ <u>indirectly references</u> another scene $C$, iff there exist scenes $B_0, B_1, \dots, B_n$ such that $A$ directly references $B_0$, $B_0$ directly references $B_1$, ..., $B_n$ directly references $C$.
+A scene specifies a flow graph with the possibility to have states that call other scenes. A scene $A$ <u>directly depends on</u> another scene $B$ iff there exist a call to $B$ in $A$. Analogously to type references, a scene $A$ <u>indirectly depends on</u> another scene $C$, iff there exist scenes $B_0, B_1, \dots, B_n$ such that $A$ directly depends on $B_0$, $B_0$ directly depends on $B_1$, ..., $B_n$ directly depends on $C$.
 
-No scene may ever directly or indirectly reference itself.
+No scene may ever directly or indirectly depend on itself.
 
 ## 1.2.3 Outcome Symbols
 Outcomes are ways to save and later reference previously made choices.
 
 ### 1.2.3.1 Classic Outcomes
-A classic outcome is an outcome which may take on one of finitely many named options. All these options have be different. An outcome may optionally have a default value.
+A classic outcome is an outcome which may take on one of finitely many (including zero) named options. All these options have be different. An outcome may optionally have a default value.
 
 <u>Assignment</u> refers to selecting an option for this outcome.
 
@@ -43,7 +72,7 @@ Analogously to Definite Assignment, <u>Possible Assignment</u> bans assigning to
 ### 1.2.3.2 Spectrums
 A spectrum is a special kind of outcome that continuously changes according to specific operations and rules.
 
-Generally, a spectrum also defines options. These options are assigned intervals $I \subseteq [0, 1]$ [where the numbers are restricted to rational numbers with 32-bit integers as numerators and denominators]. These intervals partition $[0, 1]$. A spectrum may or may not have a default option.
+Generally, a spectrum also defines named options where all of these names have to be different. These options are assigned intervals $I \subseteq [0, 1]$ [where the numbers are restricted to rational numbers with 32-bit integers as numerators and denominators]. These intervals partition $[0, 1]$, i.e. are all pairwise disjoint, non-empty and their union is exactly the interval $[0, 1]$. A spectrum may or may not have a default option, which in that case has to be one of the listed options.
 
 At first, the spectrum is undefined, as it is the ratio $\frac{0}{0}$. There exist two operations: <u>strengthen</u> and <u>weaken</u>. When the spectrum is strengthened, the ratio $\frac{p}{t}$ [where $p$ stands for positive and $t$ stands for total] is transformed into $\frac{p + n}{t + n}$ for some positive given number $n$. This increases the ratio, as $\frac{p}{t} \leq \frac{p + n}{t + n} \leq 1$. In fact, if $p < t$, then $\frac{p}{t} < \frac{p + n}{t + n} < 1$. Conversely, weakening the spectrum means only increasing the total, i.e. transforming $\frac{p}{t}$ into $\frac{p}{t + n}$. This decreases the ratio, as $\frac{p}{t} > \frac{p}{t + n} > 0$, if $p < t$.
 

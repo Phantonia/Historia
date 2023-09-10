@@ -35,6 +35,7 @@ public sealed partial class FlowAnalyzer
 
         Dictionary<SceneSymbol, int> finalReferenceCounts = referenceCounts.ToDictionary(p => (SceneSymbol)dependencyGraph.Symbols[p.Key], p => p.Value);
 
+        // spec 1.2.2 "No scene may ever directly or indirectly depend on itself."
         if (dependencyGraph.IsCyclic(out IEnumerable<int>? cycle))
         {
             ErrorFound?.Invoke(Errors.CyclicSceneDefinition(cycle.Select(i => dependencyGraph.Symbols[i].Name), dependencyGraph.Symbols[cycle.First()].Index));

@@ -21,8 +21,6 @@ public sealed partial class Parser
 
     public StoryNode Parse()
     {
-        ScanForBrokenTokens();
-
         int index = 0;
         ImmutableArray<TopLevelNode>.Builder symbolBuilder = ImmutableArray.CreateBuilder<TopLevelNode>();
 
@@ -40,25 +38,6 @@ public sealed partial class Parser
             TopLevelNodes = symbolBuilder.ToImmutable(),
             Index = tokens.Length > 0 ? tokens[0].Index : 0,
         };
-    }
-
-    private void ScanForBrokenTokens()
-    {
-        foreach (Token token in tokens)
-        {
-            switch (token.Kind)
-            {
-                case TokenKind.BrokenStringLiteral:
-                    ErrorFound?.Invoke(Errors.BrokenStringLiteral(token));
-                    continue;
-                default:
-                    if (token.Kind == TokenKind.Empty || !Enum.IsDefined(token.Kind))
-                    {
-                        throw new UnreachableException();
-                    }
-                    continue;
-            }
-        }
     }
 
     private Token Expect(TokenKind kind, ref int index)

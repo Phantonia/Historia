@@ -3,7 +3,6 @@ using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using Phantonia.Historia.Language.SyntaxAnalysis.Types;
-using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 
@@ -136,6 +135,12 @@ public sealed partial class Parser
 
     private RecordSymbolDeclarationNode? ParseRecordSymbolDeclaration(ref int index)
     {
+        // spec 1.3.1.1:
+        /*
+            RecordDeclaration : 'record' identifier '(' PropertyDeclaration (',' PropertyDeclaration)* ','? ')' ';';
+            PropertyDeclaration: identifier ':' Type;
+         */
+
         Debug.Assert(tokens[index] is { Kind: TokenKind.RecordKeyword });
 
         int nodeIndex = tokens[index].Index;
@@ -144,11 +149,11 @@ public sealed partial class Parser
 
         Token identifierToken = Expect(TokenKind.Identifier, ref index);
 
-        _ = Expect(TokenKind.OpenBrace, ref index);
+        _ = Expect(TokenKind.OpenParenthesis, ref index);
 
         ImmutableArray<PropertyDeclarationNode>.Builder propertyDeclarations = ImmutableArray.CreateBuilder<PropertyDeclarationNode>();
 
-        while (tokens[index] is not { Kind: TokenKind.ClosedBrace })
+        while (tokens[index] is not { Kind: TokenKind.ClosedParenthesis })
         {
             Token propertyIdentifierToken = Expect(TokenKind.Identifier, ref index);
             _ = Expect(TokenKind.Colon, ref index);
@@ -159,13 +164,23 @@ public sealed partial class Parser
                 return null;
             }
 
-            _ = Expect(TokenKind.Semicolon, ref index);
+            propertyDeclarations.Add(new PropertyDeclarationNode
+            {
+                Name = propertyIdentifierToken.Text,
+                Type = type,
+                Index = propertyIdentifierToken.Index,
+            });
 
-            propertyDeclarations.Add(new PropertyDeclarationNode { Name = propertyIdentifierToken.Text, Type = type, Index = propertyIdentifierToken.Index });
+            if (tokens[index] is not { Kind: TokenKind.Comma })
+            {
+                break;
+            }
+
+            index++;
         }
 
-        // this is a closed brace
-        index++;
+        _ = Expect(TokenKind.ClosedParenthesis, ref index);
+        _ = Expect(TokenKind.Semicolon, ref index);
 
         return new RecordSymbolDeclarationNode
         {

@@ -456,6 +456,15 @@ public static class Errors
         };
     }
 
+    public static Error DuplicatedRecordPropertyName(string recordName, string propertyName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Property name '{propertyName}' exists more than once in record '{recordName}'",
+            Index = index,
+        };
+    }
+
     public static Error ConflictingRecordProperty(string recordName, string propertyName, int index)
     {
         return new Error

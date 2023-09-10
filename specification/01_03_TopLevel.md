@@ -21,7 +21,7 @@ The syntax for record declarations is the following:
 
 ```cs
 RecordDeclaration : 'record' identifier '(' PropertyDeclaration (',' PropertyDeclaration)* ','? ')' ';';
-PropertyDeclaration: identifier ':' Type;
+PropertyDeclaration : identifier ':' Type;
 ```
 
 Note the possible trailing comma in the list of properties.

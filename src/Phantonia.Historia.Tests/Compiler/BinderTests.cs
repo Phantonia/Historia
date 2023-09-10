@@ -167,11 +167,7 @@ public sealed class BinderTests
     {
         string code =
             """
-            record Line
-            {
-                Text: String;
-                Character: Int;
-            }
+            record Line(Text: String, Character: Int);
 
             scene main { }
             """;
@@ -235,20 +231,11 @@ public sealed class BinderTests
             """
             scene main { }
 
-            record A
-            {
-                B: B;
-            }
+            record A(B: B);
 
-            record B
-            {
-                C: C;
-            }
+            record B(C: C);
 
-            record C
-            {
-                A: A;
-            }
+            record C(A: A);
             """;
 
         Binder binder = PrepareBinder(code);
@@ -273,10 +260,7 @@ public sealed class BinderTests
             """
             scene main { }
 
-            record A
-            {
-                Self: A;
-            }
+            record A(Self: A);
             """;
 
         Binder binder = PrepareBinder(code);
@@ -301,23 +285,11 @@ public sealed class BinderTests
             """
             scene main { }
 
-            record Line
-            {
-                Text: String;
-                Character: Int;
-            }
+            record Line(Text: String, Character: Int);
 
-            record StageDirection
-            {
-                Direction: String;
-                Character: Int;
-            }
+            record StageDirection(Direction: String, Character: Int);
 
-            record Moment
-            {
-                Line: Line;
-                StageDirection: StageDirection;
-            }
+            record Moment(Line: Line, StageDirection: StageDirection);
             """;
 
         Binder binder = PrepareBinder(code);
@@ -394,12 +366,12 @@ public sealed class BinderTests
     {
         string code =
             """
-            record F { V: D; W: E; }
-            record A { V: Int; }
-            record C { V: A; }
-            record B { V: Int; }
-            record D { V: C; }
-            record E { V: B; }
+            record F(V: D, W: E);
+            record A(V: Int);
+            record C(V: A);
+            record B(V: Int);
+            record D(V: C);
+            record E(V: B);
 
             scene main { }
             """;
@@ -432,11 +404,7 @@ public sealed class BinderTests
             """
             setting OutputType: Line;
 
-            record Line
-            {
-                Text: String;
-                Character: Int;
-            }
+            record Line(Text: String, Character: Int);
 
             scene main
             {
@@ -546,11 +514,7 @@ public sealed class BinderTests
             """
             setting OutputType: Line;
 
-            record Line
-            {
-                Text: String;
-                Character: Int;
-            }
+            record Line(Text: String, Character: Int);
 
             scene main
             {
@@ -720,10 +684,7 @@ public sealed class BinderTests
 
         string code1 =
             """
-            record NotOutcome
-            {
-                Stuff: Int;
-            }
+            record NotOutcome(Stuff: Int);
 
             scene main
             {
@@ -997,11 +958,7 @@ public sealed class BinderTests
     {
         string code =
             """
-            record X
-            {
-                A: Int;
-                B: String;
-            }
+            record X(A: Int, B: String);
 
             union Y: X, Int;
             union Z: Y, String;
@@ -1028,10 +985,7 @@ public sealed class BinderTests
         string code =
             """
             record X
-            {
-                A: Int;
-                B: String;
-            }
+            (A: Int, B: String);
 
             union Y: X, Int;
 
@@ -1064,15 +1018,9 @@ public sealed class BinderTests
             """
             union A: B, C;
 
-            record B
-            {
-                C: C;
-            }
+            record B(C: C);
 
-            record C
-            {
-                A: A;
-            }
+            record C(A: A);
 
             scene main { }
             """;
@@ -1098,7 +1046,7 @@ public sealed class BinderTests
             """
             union W: Int, String;
             union X: Int, W;
-            record Y { A: Int; }
+            record Y(A: Int);
             union Z: X, Y;
             scene main { }
             """;
@@ -1598,7 +1546,7 @@ public sealed class BinderTests
             """
             setting StoryName: "X";
 
-            record X { Text: String; }
+            record X(Text: String);
 
             scene main { }
             """;
@@ -1622,9 +1570,9 @@ public sealed class BinderTests
         // very normal code to write, i know
         string code =
             """
-            record op_Equality { Value: Int; }
-            record XDiscriminator { Value: Int; }
-            record AsObject { Value: Int; }
+            record op_Equality(Value: Int);
+            record XDiscriminator(Value: Int);
+            record AsObject(Value: Int);
 
             // looks so weird getting the indices
             union X : op_Equality //
@@ -1632,11 +1580,7 @@ public sealed class BinderTests
             , AsObject //
             ;
 
-            record Y
-            {
-                MemberwiseClone: Int;
-                Y: Int;
-            }
+            record Y(MemberwiseClone: Int, Y: Int);
 
             scene main { }
             """;
@@ -1681,11 +1625,7 @@ public sealed class BinderTests
 
         string codeB =
             """
-            record Line
-            {
-                Text: String;
-                Character: Int;
-            }
+            record Line(Text: String, Character: Int);
 
             setting OutputType: Line;
             """;

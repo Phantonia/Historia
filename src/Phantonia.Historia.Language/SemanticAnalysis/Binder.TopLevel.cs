@@ -60,7 +60,7 @@ public sealed partial class Binder
 
         ImmutableArray<PropertyDeclarationNode>.Builder boundPropertyDeclarations = ImmutableArray.CreateBuilder<PropertyDeclarationNode>(recordDeclaration.Properties.Length);
 
-        string[] defaultMembers = new[]
+        string[] bannedMemberNames = new[]
         {
             recordDeclaration.Name,
             nameof(Equals),
@@ -73,14 +73,23 @@ public sealed partial class Binder
             "op_Inequality",
         };
 
+        HashSet<string> propertyNames = new();
+
         foreach ((PropertyDeclarationNode propertyDeclaration, PropertySymbol propertySymbol) in recordDeclaration.Properties.Zip(recordSymbol.Properties))
         {
             Debug.Assert(propertyDeclaration.Name == propertySymbol.Name);
             Debug.Assert(propertyDeclaration.Index == propertySymbol.Index);
 
-            if (defaultMembers.Contains(propertyDeclaration.Name))
+            // spec 1.2.1.2: "Due to technical reasons, no property of a record may have any of the following names: [...]"
+            if (bannedMemberNames.Contains(propertyDeclaration.Name))
             {
                 ErrorFound?.Invoke(Errors.ConflictingRecordProperty(recordDeclaration.Name, propertyDeclaration.Name, propertyDeclaration.Index));
+            }
+
+            // spec 1.2.1.2: "All the property names [in a record] must be different."
+            if (!propertyNames.Add(propertyDeclaration.Name))
+            {
+                ErrorFound?.Invoke(Errors.DuplicatedRecordPropertyName(recordSymbol.Name, propertyDeclaration.Name, propertyDeclaration.Index));
             }
 
             boundPropertyDeclarations.Add(new BoundPropertyDeclarationNode
@@ -112,9 +121,10 @@ public sealed partial class Binder
 
         UnionTypeSymbol unionSymbol = (UnionTypeSymbol)table[unionDeclaration.Name];
 
-        string[] defaultMembers = new[]
+        string[] bannedMemberNames = new[]
         {
-            "Discrimininator",
+            unionDeclaration.Name,
+            "Discriminator",
             "Run",
             "Evaluate",
             "AsObject",
@@ -135,7 +145,8 @@ public sealed partial class Binder
 
             string identifier = ((IdentifierTypeNode)((BoundTypeNode)type).Node).Identifier;
 
-            if (defaultMembers.Contains(identifier))
+            // spec 1.2.1.4: "Due to technical reasons, no subtype of a union may have any of the following names: [...]"
+            if (bannedMemberNames.Contains(identifier))
             {
                 ErrorFound?.Invoke(Errors.ConflictingUnionSubtype(unionDeclaration.Name, identifier, type.Index));
             }
@@ -158,6 +169,7 @@ public sealed partial class Binder
 
         foreach (string option in enumDeclaration.Options)
         {
+            // spec 1.2.1.3: "Each option [in an enum] must have a different name."
             if (!options.Add(option))
             {
                 ErrorFound?.Invoke(Errors.DuplicatedOptionInEnum(enumDeclaration.Name, option, enumDeclaration.Index));

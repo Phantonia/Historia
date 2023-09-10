@@ -37,7 +37,9 @@ public sealed class Compiler
         }
 
         Lexer lexer = new(inputReader);
+        lexer.ErrorFound += HandleError;
         ImmutableArray<Token> tokens = lexer.Lex();
+        lexer.ErrorFound -= HandleError;
 
         Parser parser = new(tokens);
         parser.ErrorFound += HandleError;

@@ -6,6 +6,7 @@ using Phantonia.Historia.Language.SyntaxAnalysis.Types;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
@@ -34,6 +35,7 @@ public sealed partial class Binder
             Dependencies = dependencies,
         };
 
+        // spec 1.2.1.5: "No type may ever directly or indirectly depend on itself."
         if (dependencyGraph.IsCyclic(out IEnumerable<int>? cycle))
         {
             ErrorFound?.Invoke(Errors.CyclicTypeDefinition(cycle.Select(i => dependencyGraph.Symbols[i].Name), dependencyGraph.Symbols[cycle.First()].Index));
@@ -51,6 +53,7 @@ public sealed partial class Binder
         switch (declaration)
         {
             case RecordSymbolDeclarationNode recordDeclaration:
+                // spec 1.2.1.5: "A type A is directly depends on another type B, if A is a record and B is the type of any of its properties [...]"
                 foreach (PropertyDeclarationNode propertyDeclaration in recordDeclaration.Properties)
                 {
                     Debug.Assert(propertyDeclaration.Type is BoundTypeNode);
@@ -58,9 +61,9 @@ public sealed partial class Binder
                     switch (((BoundTypeNode)propertyDeclaration.Type).Node)
                     {
                         case IdentifierTypeNode { Identifier: string identifier }:
+                            // we don't need dependencies on built in type symbols as they can never reference user defined type symbols
                             if (table[identifier] is not BuiltinTypeSymbol)
                             {
-                                // we don't need dependencies on built in type symbols as they can never reference user defined type symbols
                                 dependencies.Add(table[identifier].Index);
                             }
 
@@ -72,6 +75,7 @@ public sealed partial class Binder
                 }
                 break;
             case UnionSymbolDeclarationNode unionDeclaration:
+                // spec 1.2.1.5: "A type A is directly depends on another type B, [if] [...] A is a union and B is a subtype of this union"
                 foreach (TypeNode subtype in unionDeclaration.Subtypes)
                 {
                     if (((BoundTypeNode)subtype).Node is IdentifierTypeNode { Identifier: string identifier })
@@ -172,6 +176,9 @@ public sealed partial class Binder
             }
         }
 
+        // spec 1.2.1.4: "Unions flatten their subtypes."
+        // let U be the union of A and B, where B is the union of C and D
+        // then U really is the union of A, C and D
         Queue<TypeSymbol> subtypeQueue = new(listedSubtypes);
         HashSet<TypeSymbol> trueSubtypes = new();
 

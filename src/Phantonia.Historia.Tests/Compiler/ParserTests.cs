@@ -426,11 +426,7 @@ public sealed class ParserTests
     {
         string code =
             """
-            record Line
-            {
-                Text: String;
-                Character: Int;
-            }
+            record Line(Text: String, Character: Int,);
 
             scene main { }
             """;
