@@ -339,7 +339,7 @@ public sealed class EmitterTests
     {
         string code =
             """
-            union X: String, Int;
+            union X (String, Int);
 
             setting OutputType: X;
 

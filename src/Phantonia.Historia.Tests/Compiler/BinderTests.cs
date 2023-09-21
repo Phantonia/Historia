@@ -892,7 +892,7 @@ public sealed class BinderTests
     {
         string code =
             """
-            union Stuff: Int, String;
+            union Stuff (Int, String);
             setting OutputType: Stuff;
 
             scene main
@@ -960,8 +960,8 @@ public sealed class BinderTests
             """
             record X(A: Int, B: String);
 
-            union Y: X, Int;
-            union Z: Y, String;
+            union Y (X, Int);
+            union Z (Y, String);
 
             setting OutputType: Z;
 
@@ -987,7 +987,7 @@ public sealed class BinderTests
             record X
             (A: Int, B: String);
 
-            union Y: X, Int;
+            union Y (X, Int);
 
             setting OutputType: Y;
 
@@ -1016,7 +1016,7 @@ public sealed class BinderTests
     {
         string code =
             """
-            union A: B, C;
+            union A(B, C);
 
             record B(C: C);
 
@@ -1044,10 +1044,10 @@ public sealed class BinderTests
     {
         string code =
             """
-            union W: Int, String;
-            union X: Int, W;
+            union W (Int, String);
+            union X (Int, W);
             record Y(A: Int);
-            union Z: X, Y;
+            union Z (X, Y);
             scene main { }
             """;
 
@@ -1074,7 +1074,7 @@ public sealed class BinderTests
     {
         string code =
             """
-            union X: Int, Int, String;
+            union X (Int, Int, String);
             scene main { }
             """;
 
@@ -1575,10 +1575,10 @@ public sealed class BinderTests
             record AsObject(Value: Int);
 
             // looks so weird getting the indices
-            union X : op_Equality //
+            union X(op_Equality //
             , XDiscriminator //
             , AsObject //
-            ;
+            );
 
             record Y(MemberwiseClone: Int, Y: Int);
 

@@ -20,7 +20,7 @@ For more information on records, see [Records](01_02_Symbols.md#1212-records).
 The syntax for record declarations is the following:
 
 ```cs
-RecordDeclaration : 'record' identifier '(' PropertyDeclaration (',' PropertyDeclaration)* ','? ')' ';';
+RecordDeclaration : 'record' identifier '(' (PropertyDeclaration (',' PropertyDeclaration)* ','?)? ')' ';';
 PropertyDeclaration : identifier ':' Type;
 ```
 
@@ -34,7 +34,7 @@ For more information on enums, see [Enums](01_02_Symbols.md#1213-enums).
 The syntax for enum declarations is the following:
 
 ```cs
-EnumDeclaration : 'enum' identifier '(' identifier (',' identifier)* ','? ')' ';';
+EnumDeclaration : 'enum' identifier '(' (identifier (',' identifier)* ','?)? ')' ';';
 ```
 
 The identifier at the beginning, after the `enum` keyword is the name of the enum type, and the other identifiers are the names of the options of the enum. All the option names have be different.

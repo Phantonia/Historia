@@ -95,11 +95,11 @@ public sealed partial class Parser
 
         string name = Expect(TokenKind.Identifier, ref index).Text;
 
-        _ = Expect(TokenKind.Colon, ref index);
+        _ = Expect(TokenKind.OpenParenthesis, ref index);
 
         ImmutableArray<TypeNode>.Builder subtypeBuilder = ImmutableArray.CreateBuilder<TypeNode>();
 
-        while (true)
+        while (tokens[index] is not { Kind: TokenKind.ClosedParenthesis })
         {
             TypeNode? subtype = ParseType(ref index);
 
@@ -110,20 +110,19 @@ public sealed partial class Parser
 
             subtypeBuilder.Add(subtype);
 
-            if (tokens[index] is { Kind: TokenKind.Comma })
+            if (tokens[index] is not { Kind: TokenKind.Comma })
             {
-                index++;
-            }
-            else if (tokens[index] is { Kind: TokenKind.Semicolon })
-            {
-                index++;
                 break;
             }
-            else
-            {
-                ErrorFound?.Invoke(Errors.ExpectedToken(tokens[index], TokenKind.Semicolon));
-            }
+
+            index++;
         }
+
+        // in case of no trailing comma, just expect a closed parenthesis
+        // else this is redundant and just does index++
+        _ = Expect(TokenKind.ClosedParenthesis, ref index);
+
+        _ = Expect(TokenKind.Semicolon, ref index);
 
         return new UnionSymbolDeclarationNode
         {
@@ -137,7 +136,7 @@ public sealed partial class Parser
     {
         // spec 1.3.1.1:
         /*
-            RecordDeclaration : 'record' identifier '(' PropertyDeclaration (',' PropertyDeclaration)* ','? ')' ';';
+            RecordDeclaration : 'record' identifier '(' (PropertyDeclaration (',' PropertyDeclaration)* ','?)? ')' ';';
             PropertyDeclaration: identifier ':' Type;
          */
 
@@ -179,7 +178,10 @@ public sealed partial class Parser
             index++;
         }
 
+        // in case of no trailing comma, just expect a closed parenthesis
+        // else this is redundant and just does index++
         _ = Expect(TokenKind.ClosedParenthesis, ref index);
+
         _ = Expect(TokenKind.Semicolon, ref index);
 
         return new RecordSymbolDeclarationNode
@@ -192,6 +194,8 @@ public sealed partial class Parser
 
     private EnumSymbolDeclarationNode? ParseEnumSymbolDeclaration(ref int index)
     {
+        // spec 1.3.1.2:
+        // EnumDeclaration : 'enum' identifier '(' (identifier (',' identifier)* ','?)? ')' ';';
         Debug.Assert(tokens[index] is { Kind: TokenKind.EnumKeyword });
 
         int nodeIndex = tokens[index].Index;
