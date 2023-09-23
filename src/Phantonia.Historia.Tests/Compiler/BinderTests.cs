@@ -1723,4 +1723,69 @@ public sealed class BinderTests
             Assert.AreEqual(characterType, enumOptionExpression.EnumSymbol);
         }
     }
+
+    [TestMethod]
+    public void TestLoopSwitch()
+    {
+        string code =
+            """
+            setting OutputType: String;
+            setting OptionType: String;
+
+            scene main
+            {
+                loop switch ("loop switch")
+                {
+                    option ("normal option")
+                    {
+                        output "output in normal option";
+                    }
+
+                    loop option ("loop option")
+                    {
+                        output "output in loop option";
+                    }
+
+                    final option ("final option")
+                    {
+                        output "output in final option";
+                    }
+                }
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        _ = binder.Bind();
+    }
+
+    [TestMethod]
+    public void TestInvalidLoopSwitch()
+    {
+        string code =
+            """
+            scene main
+            {
+                // will loop indefinitely
+                loop switch (0)
+                {
+                    option (1) { }
+                    loop option (2) { }
+                }
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+
+        List<Error> errors = new();
+        binder.ErrorFound += errors.Add;
+
+        _ = binder.Bind();
+
+        Assert.AreEqual(1, errors.Count);
+
+        Error expectedError = Errors.LoopSwitchHasToTerminate(code.IndexOf("loop switch"));
+        Assert.AreEqual(expectedError, errors[0]);
+    }
 }

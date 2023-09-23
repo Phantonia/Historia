@@ -987,4 +987,51 @@ public sealed class ParserTests
             Assert.AreEqual(optionNames[i], enumExpression.OptionName);
         }
     }
+
+    [TestMethod]
+    public void TestLoopSwitch()
+    {
+        string code =
+            """
+            scene main
+            {
+                loop switch (0)
+                {
+                    option (1)
+                    {
+                        output 1;
+                    }
+
+                    loop option (2)
+                    {
+                        output 2;
+                    }
+
+                    final option (3)
+                    {
+                        output 3;
+                    }
+                }
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = parser.Parse();
+
+        SceneSymbolDeclarationNode? mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[^1];
+
+        Assert.AreEqual(1, mainScene.Body.Statements.Length);
+
+        LoopSwitchStatementNode? loopSwitch = mainScene.Body.Statements[0] as LoopSwitchStatementNode;
+        Assert.IsNotNull(loopSwitch);
+
+        Assert.AreEqual(3, loopSwitch.Options.Length);
+
+        Assert.AreEqual(LoopSwitchOptionKind.None, loopSwitch.Options[0].Kind);
+        Assert.AreEqual(LoopSwitchOptionKind.Loop, loopSwitch.Options[1].Kind);
+        Assert.AreEqual(LoopSwitchOptionKind.Final, loopSwitch.Options[2].Kind);
+    }
 }

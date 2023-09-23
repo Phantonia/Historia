@@ -65,6 +65,8 @@ public sealed partial class Binder
                 }
             case SwitchStatementNode switchStatement:
                 return BindSwitchStatement(switchStatement, settings, table);
+            case LoopSwitchStatementNode loopSwitchStatement:
+                return BindLoopSwitchStatement(loopSwitchStatement, settings, table);
             case OutcomeDeclarationStatementNode outcomeDeclaration:
                 return BindOutcomeDeclarationStatement(outcomeDeclaration, table);
             case SpectrumDeclarationStatementNode spectrumDeclaration:
@@ -93,14 +95,14 @@ public sealed partial class Binder
                 if (!TypesAreCompatible(sourceType, settings.OutputType))
                 {
                     ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, settings.OutputType, "output", outputExpression.Index));
-
-                    return (table, switchStatement);
                 }
-
-                outputExpression = typedExpression with
+                else
                 {
-                    TargetType = settings.OutputType,
-                };
+                    outputExpression = typedExpression with
+                    {
+                        TargetType = settings.OutputType,
+                    };
+                }
             }
         }
 
@@ -156,14 +158,14 @@ public sealed partial class Binder
                 if (!TypesAreCompatible(sourceType, settings.OptionType))
                 {
                     ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, settings.OptionType, "option", optionExpression.Index));
-
-                    return (table, switchStatement);
                 }
-
-                optionExpression = typedExpression with
+                else
                 {
-                    TargetType = settings.OptionType,
-                };
+                    optionExpression = typedExpression with
+                    {
+                        TargetType = settings.OptionType,
+                    };
+                }
             }
 
             (table, StatementBodyNode optionBody) = BindStatementBody(boundOptions[i].Body, settings, table);
@@ -198,6 +200,80 @@ public sealed partial class Binder
                 Options = boundOptions.ToImmutableArray(),
             };
         }
+
+        return (table, boundStatement);
+    }
+
+    private (SymbolTable, StatementNode) BindLoopSwitchStatement(LoopSwitchStatementNode loopSwitchStatement, Settings settings, SymbolTable table)
+    {
+        (table, ExpressionNode outputExpression) = BindAndTypeExpression(loopSwitchStatement.OutputExpression, table);
+
+        {
+            if (outputExpression is TypedExpressionNode { SourceType: TypeSymbol sourceType } typedExpression)
+            {
+                if (!TypesAreCompatible(sourceType, settings.OutputType))
+                {
+                    ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, settings.OutputType, "output", outputExpression.Index));
+                }
+                else
+                {
+                    outputExpression = typedExpression with
+                    {
+                        TargetType = settings.OutputType,
+                    };
+                }
+            }
+        }
+
+        List<LoopSwitchOptionNode> boundOptions = loopSwitchStatement.Options.ToList();
+
+        for (int i = 0; i < boundOptions.Count; i++)
+        {
+            (table, ExpressionNode optionExpression) = BindAndTypeExpression(boundOptions[i].Expression, table);
+
+            if (optionExpression is TypedExpressionNode { SourceType: TypeSymbol sourceType } typedExpression)
+            {
+                if (!TypesAreCompatible(sourceType, settings.OptionType))
+                {
+                    ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, settings.OptionType, "option", optionExpression.Index));
+                }
+                else
+                {
+                    optionExpression = typedExpression with
+                    {
+                        TargetType = settings.OptionType,
+                    };
+                }
+            }
+
+            (table, StatementBodyNode optionBody) = BindStatementBody(boundOptions[i].Body, settings, table);
+
+            boundOptions[i] = boundOptions[i] with
+            {
+                Expression = optionExpression,
+                Body = optionBody,
+            };
+        }
+
+        // [not yet in spec]: A looped switch terminates if one of two conditions is met:
+        // - a final option has been selected
+        // - there are no options left, as all normal options have already been selected
+        // A looped switches has to be able to terminate, that is, if it contains a looped option,
+        // it also has to have a final option.
+
+        // !(hasLoopedOption => hasFinalOption) === hasLoopedOption && !hasFinalOption
+        if (boundOptions.Any(o => o.Kind == LoopSwitchOptionKind.Loop) && boundOptions.All(o => o.Kind != LoopSwitchOptionKind.Final))
+        {
+            ErrorFound?.Invoke(Errors.LoopSwitchHasToTerminate(loopSwitchStatement.Index));
+        }
+
+        LoopSwitchStatementNode boundStatement;
+
+        boundStatement = loopSwitchStatement with
+        {
+            OutputExpression = outputExpression,
+            Options = boundOptions.ToImmutableArray(),
+        };
 
         return (table, boundStatement);
     }

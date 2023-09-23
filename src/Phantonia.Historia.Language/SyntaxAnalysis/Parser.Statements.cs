@@ -46,6 +46,8 @@ public sealed partial class Parser
                 return ParseOutputStatement(ref index);
             case { Kind: TokenKind.SwitchKeyword }:
                 return ParseSwitchStatement(ref index);
+            case { Kind: TokenKind.LoopKeyword }:
+                return ParseLoopSwitchStatement(ref index);
             case { Kind: TokenKind.BranchOnKeyword }:
                 return ParseBranchOnStatement(ref index);
             case { Kind: TokenKind.CallKeyword }:
@@ -197,6 +199,105 @@ public sealed partial class Parser
             SwitchOptionNode optionNode = new()
             {
                 Name = name,
+                Expression = expression,
+                Body = body,
+                Index = nodeIndex,
+            };
+
+            optionBuilder.Add(optionNode);
+        }
+
+        return optionBuilder.ToImmutable();
+    }
+
+    private LoopSwitchStatementNode? ParseLoopSwitchStatement(ref int index)
+    {
+        int nodeIndex = tokens[index].Index;
+
+        Debug.Assert(tokens[index] is { Kind: TokenKind.LoopKeyword });
+
+        index++;
+
+        _ = Expect(TokenKind.SwitchKeyword, ref index);
+        _ = Expect(TokenKind.OpenParenthesis, ref index);
+
+        ExpressionNode? expression = ParseExpression(ref index);
+        if (expression is null)
+        {
+            return null;
+        }
+
+        _ = Expect(TokenKind.ClosedParenthesis, ref index);
+
+        _ = Expect(TokenKind.OpenBrace, ref index);
+
+        ImmutableArray<LoopSwitchOptionNode>? optionNodes = ParseLoopSwitchOptions(ref index);
+        if (optionNodes is null)
+        {
+            return null;
+        }
+
+        _ = Expect(TokenKind.ClosedBrace, ref index);
+
+        return new LoopSwitchStatementNode
+        {
+            OutputExpression = expression,
+            Options = (ImmutableArray<LoopSwitchOptionNode>)optionNodes,
+            Index = nodeIndex,
+        };
+    }
+
+    private ImmutableArray<LoopSwitchOptionNode>? ParseLoopSwitchOptions(ref int index)
+    {
+        ImmutableArray<LoopSwitchOptionNode>.Builder optionBuilder = ImmutableArray.CreateBuilder<LoopSwitchOptionNode>();
+
+        while (tokens[index] is not { Kind: TokenKind.ClosedBrace })
+        {
+            int nodeIndex = tokens[index].Index;
+            LoopSwitchOptionKind kind;
+
+            switch (tokens[index])
+            {
+                case { Kind: TokenKind.OptionKeyword }:
+                    kind = LoopSwitchOptionKind.None;
+                    index++;
+                    break;
+                case { Kind: TokenKind.LoopKeyword }:
+                    kind = LoopSwitchOptionKind.Loop;
+                    index++;
+                    _ = Expect(TokenKind.OptionKeyword, ref index);
+                    break;
+                case { Kind: TokenKind.FinalKeyword }:
+                    kind = LoopSwitchOptionKind.Final;
+                    index++;
+                    _ = Expect(TokenKind.OptionKeyword, ref index);
+                    break;
+                default:
+                    ErrorFound?.Invoke(Errors.ExpectedToken(tokens[index], TokenKind.ClosedBrace));
+                    return optionBuilder.ToImmutable();
+            }
+
+            _ = Expect(TokenKind.OpenParenthesis, ref index);
+
+            ExpressionNode? expression = ParseExpression(ref index);
+
+            if (expression is null)
+            {
+                return null;
+            }
+
+            _ = Expect(TokenKind.ClosedParenthesis, ref index);
+
+            StatementBodyNode? body = ParseStatementBody(ref index);
+
+            if (body is null)
+            {
+                return null;
+            }
+
+            LoopSwitchOptionNode optionNode = new()
+            {
+                Kind = kind,
                 Expression = expression,
                 Body = body,
                 Index = nodeIndex,

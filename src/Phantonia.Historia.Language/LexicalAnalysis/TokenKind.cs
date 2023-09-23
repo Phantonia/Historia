@@ -30,6 +30,8 @@ public enum TokenKind
     OutputKeyword,
     SwitchKeyword,
     OptionKeyword,
+    FinalKeyword,
+    LoopKeyword,
     BranchOnKeyword,
     OtherKeyword,
     OutcomeKeyword,

@@ -459,6 +459,8 @@ public sealed class Lexer
             "output" => TokenKind.OutputKeyword,
             "switch" => TokenKind.SwitchKeyword,
             "option" => TokenKind.OptionKeyword,
+            "final" => TokenKind.FinalKeyword,
+            "loop" => TokenKind.LoopKeyword,
             "branchon" => TokenKind.BranchOnKeyword,
             "other" => TokenKind.OtherKeyword,
             "outcome" => TokenKind.OutcomeKeyword,

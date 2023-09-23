@@ -267,6 +267,15 @@ public static class Errors
         };
     }
 
+    public static Error LoopSwitchHasToTerminate(int index)
+    {
+        return new Error
+        {
+            ErrorMessage = "A looped switch has to be able to terminate, in other words: If there is at least one looped option, there also has to be at least one final option",
+            Index = index,
+        };
+    }
+
     public static Error DuplicatedOptionInOutcomeDeclaration(string optionName, int index)
     {
         return new Error
