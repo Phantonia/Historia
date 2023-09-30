@@ -16,7 +16,7 @@ namespace Phantonia.Historia.Language.CodeGeneration;
 
 public sealed partial class Emitter
 {
-    private const int EndState = FlowGraph.EmptyVertex;
+    private const int EndState = FlowGraph.FinalVertex;
     private const int StartState = -2;
 
     public Emitter(StoryNode boundStory, Settings settings, FlowGraph flowGraph, SymbolTable symbolTable, TextWriter outputWriter)

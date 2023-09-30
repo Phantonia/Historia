@@ -56,15 +56,15 @@ public sealed class FlowAnalyzerTests
 
         Assert.AreEqual(vertices[0], graph.StartVertex);
 
-        foreach ((_, ImmutableList<int> pointedVertices) in graph.OutgoingEdges)
+        foreach ((_, ImmutableList<FlowEdge> pointedVertices) in graph.OutgoingEdges)
         {
             Assert.AreEqual(1, pointedVertices.Count);
         }
 
-        Assert.AreEqual(vertices[1], graph.OutgoingEdges[vertices[0]][0]);
-        Assert.AreEqual(vertices[2], graph.OutgoingEdges[vertices[1]][0]);
-        Assert.AreEqual(vertices[3], graph.OutgoingEdges[vertices[2]][0]);
-        Assert.AreEqual(FlowGraph.EmptyVertex, graph.OutgoingEdges[vertices[3]][0]);
+        Assert.AreEqual(vertices[1], graph.OutgoingEdges[vertices[0]][0].ToVertex);
+        Assert.AreEqual(vertices[2], graph.OutgoingEdges[vertices[1]][0].ToVertex);
+        Assert.AreEqual(vertices[3], graph.OutgoingEdges[vertices[2]][0].ToVertex);
+        Assert.AreEqual(FlowGraph.FinalVertex, graph.OutgoingEdges[vertices[3]][0].ToVertex);
     }
 
     [TestMethod]
@@ -134,24 +134,24 @@ public sealed class FlowAnalyzerTests
         Assert.AreEqual(2, flowGraph.OutgoingEdges[flowGraph.StartVertex].Count);
 
         // output 6
-        int output6Vertex = flowGraph.OutgoingEdges[startVertex][0];
+        int output6Vertex = flowGraph.OutgoingEdges[startVertex][0].ToVertex;
         AssertHasOutputValue(output6Vertex, 6);
 
         // output 8
-        int output8Vertex = flowGraph.OutgoingEdges[startVertex][1];
+        int output8Vertex = flowGraph.OutgoingEdges[startVertex][1].ToVertex;
         AssertHasOutputValue(output8Vertex, 8);
         Assert.AreEqual(1, flowGraph.OutgoingEdges[output8Vertex].Count);
 
         // output 9
-        int output9Vertex = flowGraph.OutgoingEdges[output8Vertex][0];
+        int output9Vertex = flowGraph.OutgoingEdges[output8Vertex][0].ToVertex;
         AssertHasOutputValue(output9Vertex, 9);
 
         // output 10
-        Assert.AreEqual(flowGraph.OutgoingEdges[output6Vertex][0], flowGraph.OutgoingEdges[output9Vertex][0]);
-        int output10Vertex = flowGraph.OutgoingEdges[output6Vertex][0];
+        Assert.AreEqual(flowGraph.OutgoingEdges[output6Vertex][0].ToVertex, flowGraph.OutgoingEdges[output9Vertex][0].ToVertex);
+        int output10Vertex = flowGraph.OutgoingEdges[output6Vertex][0].ToVertex;
 
         Assert.AreEqual(1, flowGraph.OutgoingEdges[output10Vertex].Count);
-        Assert.AreEqual(FlowGraph.EmptyVertex, flowGraph.OutgoingEdges[output10Vertex][0]);
+        Assert.AreEqual(FlowGraph.FinalVertex, flowGraph.OutgoingEdges[output10Vertex][0].ToVertex);
     }
 
     [TestMethod]
@@ -192,14 +192,14 @@ public sealed class FlowAnalyzerTests
 
         int branchOnIndex = code.IndexOf("branchon");
 
-        Assert.AreEqual(branchOnIndex, graph.OutgoingEdges[output0Index][0]);
+        Assert.AreEqual(branchOnIndex, graph.OutgoingEdges[output0Index][0].ToVertex);
 
         Assert.IsTrue(graph.OutgoingEdges.ContainsKey(branchOnIndex));
         Assert.AreEqual(3, graph.OutgoingEdges[branchOnIndex].Count);
 
-        Assert.AreEqual(code.IndexOf("output (9)"), graph.OutgoingEdges[branchOnIndex][0]);
-        Assert.AreEqual(code.IndexOf("output (16)"), graph.OutgoingEdges[branchOnIndex][1]);
-        Assert.AreEqual(code.IndexOf("output (25)"), graph.OutgoingEdges[branchOnIndex][2]);
+        Assert.AreEqual(code.IndexOf("output (9)"), graph.OutgoingEdges[branchOnIndex][0].ToVertex);
+        Assert.AreEqual(code.IndexOf("output (16)"), graph.OutgoingEdges[branchOnIndex][1].ToVertex);
+        Assert.AreEqual(code.IndexOf("output (25)"), graph.OutgoingEdges[branchOnIndex][2].ToVertex);
     }
 
     [TestMethod]
@@ -600,29 +600,29 @@ public sealed class FlowAnalyzerTests
         Assert.AreEqual(s2, mainFlowGraph.StartVertex);
 
         // s2 -> s1
-        Assert.AreEqual(s1, mainFlowGraph.OutgoingEdges[s2].Single());
+        Assert.AreEqual(s1, mainFlowGraph.OutgoingEdges[s2].Single().ToVertex);
 
         // s1 -> s3
         //   \-> s5
         Assert.AreEqual(2, mainFlowGraph.OutgoingEdges[s1].Count);
-        Assert.IsTrue(new[] { s3, s5 }.SequenceEqual(mainFlowGraph.OutgoingEdges[s1].Order()));
+        Assert.IsTrue(new[] { s3, s5 }.SequenceEqual(mainFlowGraph.OutgoingEdges[s1].Select(e => e.ToVertex).Order()));
 
         // s3 -> s4
-        Assert.AreEqual(s4, mainFlowGraph.OutgoingEdges[s3].Single());
+        Assert.AreEqual(s4, mainFlowGraph.OutgoingEdges[s3].Single().ToVertex);
 
         // s4 ->
-        Assert.AreEqual(FlowGraph.EmptyVertex, mainFlowGraph.OutgoingEdges[s4].Single());
+        Assert.AreEqual(FlowGraph.FinalVertex, mainFlowGraph.OutgoingEdges[s4].Single().ToVertex);
 
         // s5 -> s6
         //   \-> s7
         Assert.AreEqual(2, mainFlowGraph.OutgoingEdges[s5].Count);
-        Assert.IsTrue(new[] { s6, s7 }.SequenceEqual(mainFlowGraph.OutgoingEdges[s5].Order()));
+        Assert.IsTrue(new[] { s6, s7 }.SequenceEqual(mainFlowGraph.OutgoingEdges[s5].Select(e => e.ToVertex).Order()));
 
         // s6 ->
-        Assert.AreEqual(FlowGraph.EmptyVertex, mainFlowGraph.OutgoingEdges[s6].Single());
+        Assert.AreEqual(FlowGraph.FinalVertex, mainFlowGraph.OutgoingEdges[s6].Single().ToVertex);
 
         // s7 ->
-        Assert.AreEqual(FlowGraph.EmptyVertex, mainFlowGraph.OutgoingEdges[s7].Single());
+        Assert.AreEqual(FlowGraph.FinalVertex, mainFlowGraph.OutgoingEdges[s7].Single().ToVertex);
     }
 
     [TestMethod]
@@ -675,30 +675,30 @@ public sealed class FlowAnalyzerTests
         Assert.AreEqual(o0, graph.StartVertex);
 
         // o0 -> t0
-        Assert.AreEqual(t0, graph.OutgoingEdges[o0].Single());
+        Assert.AreEqual(t0, graph.OutgoingEdges[o0].Single().ToVertex);
 
         // t0 -> o10
-        Assert.AreEqual(o10, graph.OutgoingEdges[t0].Single());
+        Assert.AreEqual(o10, graph.OutgoingEdges[t0].Single().ToVertex);
 
         // o10 -> rA
-        Assert.AreEqual(rA, graph.OutgoingEdges[o10].Single());
+        Assert.AreEqual(rA, graph.OutgoingEdges[o10].Single().ToVertex);
 
         // rA -> o1
         //   \-> o2
         Assert.AreEqual(2, graph.OutgoingEdges[rA].Count);
-        Assert.IsTrue(new[] { o1, o2 }.SequenceEqual(graph.OutgoingEdges[rA].Order()));
+        Assert.IsTrue(new[] { o1, o2 }.SequenceEqual(graph.OutgoingEdges[rA].Select(e => e.ToVertex).Order()));
 
         // o1 -> o20
-        Assert.AreEqual(o20, graph.OutgoingEdges[o1].Single());
+        Assert.AreEqual(o20, graph.OutgoingEdges[o1].Single().ToVertex);
 
         // o20 -> t1
-        Assert.AreEqual(t1, graph.OutgoingEdges[o20].Single());
+        Assert.AreEqual(t1, graph.OutgoingEdges[o20].Single().ToVertex);
 
         // t1 -> o10
-        Assert.AreEqual(o10, graph.OutgoingEdges[t1].Single());
+        Assert.AreEqual(o10, graph.OutgoingEdges[t1].Single().ToVertex);
 
         // o2 ->
-        Assert.AreEqual(FlowGraph.EmptyVertex, graph.OutgoingEdges[o2].Single());
+        Assert.AreEqual(FlowGraph.FinalVertex, graph.OutgoingEdges[o2].Single().ToVertex);
     }
 
     [TestMethod]

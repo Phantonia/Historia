@@ -78,7 +78,7 @@ public sealed partial class FlowAnalyzer
             callVertex = vertex.Index;
 
             Debug.Assert(mainFlowGraph.OutgoingEdges[vertex.Index].Count == 1); // assert vertex is infact linear
-            nextVertex = mainFlowGraph.OutgoingEdges[vertex.Index][0];
+            nextVertex = mainFlowGraph.OutgoingEdges[vertex.Index][0].ToVertex;
             break;
         }
 
@@ -96,7 +96,7 @@ public sealed partial class FlowAnalyzer
 
         foreach (FlowVertex vertex in mainFlowGraph.Vertices.Values)
         {
-            if (mainFlowGraph.OutgoingEdges[vertex.Index].Contains(callVertex))
+            if (mainFlowGraph.OutgoingEdges[vertex.Index].Any(e => e.ToVertex == callVertex))
             {
                 mainFlowGraph = mainFlowGraph with
                 {
@@ -104,8 +104,8 @@ public sealed partial class FlowAnalyzer
                         mainFlowGraph.OutgoingEdges.SetItem(
                             vertex.Index,
                             mainFlowGraph.OutgoingEdges[vertex.Index]
-                                         .Remove(callVertex)
-                                         .Add(sceneFlowGraph.StartVertex)),
+                                         .Remove(FlowEdge.CreateTo(callVertex)) // there are no weak edges to call vertices (only weak edges back to loop switches)
+                                         .Add(FlowEdge.CreateTo(sceneFlowGraph.StartVertex))),
                 };
             }
         }
@@ -113,7 +113,7 @@ public sealed partial class FlowAnalyzer
         // 4. for all vertices V s.t. V is in sceneFlowGraph and V points to the empty vertex, remove edge to empty vertex and instead let (V -> N)
         foreach (FlowVertex vertex in sceneFlowGraph.Vertices.Values)
         {
-            if (sceneFlowGraph.OutgoingEdges[vertex.Index].Contains(FlowGraph.EmptyVertex))
+            if (sceneFlowGraph.OutgoingEdges[vertex.Index].Contains(FlowGraph.FinalEdge))
             {
                 mainFlowGraph = mainFlowGraph with
                 {
@@ -121,8 +121,8 @@ public sealed partial class FlowAnalyzer
                         mainFlowGraph.OutgoingEdges.SetItem(
                             vertex.Index,
                             mainFlowGraph.OutgoingEdges[vertex.Index]
-                                         .Remove(FlowGraph.EmptyVertex)
-                                         .Add(nextVertex)),
+                                         .Remove(FlowGraph.FinalEdge)
+                                         .Add(FlowEdge.CreateTo(nextVertex))),
                 };
             }
         }
@@ -160,7 +160,7 @@ public sealed partial class FlowAnalyzer
             }
 
             Debug.Assert(mainFlowGraph.OutgoingEdges[vertex.Index].Count == 1); // assert vertex is infact linear
-            nextVertices[vertex.Index] = mainFlowGraph.OutgoingEdges[vertex.Index][0];
+            nextVertices[vertex.Index] = mainFlowGraph.OutgoingEdges[vertex.Index][0].ToVertex;
 
             FlowVertex trackerVertex = vertex with
             {
@@ -180,7 +180,7 @@ public sealed partial class FlowAnalyzer
                 Vertices = mainFlowGraph.Vertices.SetItem(vertex.Index, trackerVertex),
                 OutgoingEdges = mainFlowGraph.OutgoingEdges.SetItem(
                     vertex.Index,
-                    ImmutableList.Create(sceneFlowGraph.StartVertex)),
+                    ImmutableList.Create(FlowEdge.CreateTo(sceneFlowGraph.StartVertex))),
             };
         }
 
@@ -198,11 +198,11 @@ public sealed partial class FlowAnalyzer
             IsVisible = false,
         };
 
-        ImmutableList<int>.Builder edgesBuilder = ImmutableList.CreateBuilder<int>();
+        ImmutableList<FlowEdge>.Builder edgesBuilder = ImmutableList.CreateBuilder<FlowEdge>();
 
         foreach (int site in callSites)
         {
-            edgesBuilder.Add(nextVertices[site]);
+            edgesBuilder.Add(FlowEdge.CreateTo(nextVertices[site]));
         }
 
         mainFlowGraph = mainFlowGraph with
@@ -214,13 +214,13 @@ public sealed partial class FlowAnalyzer
         // 4. for all vertices V s.t. V is in scene flow graph and V -> empty vertex, make V instead point to resolutionVertex
         foreach (FlowVertex vertex in sceneFlowGraph.Vertices.Values)
         {
-            if (sceneFlowGraph.OutgoingEdges[vertex.Index].Contains(FlowGraph.EmptyVertex))
+            if (sceneFlowGraph.OutgoingEdges[vertex.Index].Contains(FlowGraph.FinalEdge))
             {
                 mainFlowGraph = mainFlowGraph with
                 {
                     OutgoingEdges = mainFlowGraph.OutgoingEdges.SetItem(
                         vertex.Index,
-                        mainFlowGraph.OutgoingEdges[vertex.Index].Remove(FlowGraph.EmptyVertex).Add(resolution.Index)),
+                        mainFlowGraph.OutgoingEdges[vertex.Index].Remove(FlowGraph.FinalEdge).Add(FlowEdge.CreateTo(resolution.Index))),
                 };
             }
         }

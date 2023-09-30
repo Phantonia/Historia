@@ -34,7 +34,7 @@ public sealed class FlowGraphTests
         Assert.AreEqual(1, simpleGraph.OutgoingEdges.Count);
         Assert.IsTrue(simpleGraph.OutgoingEdges.ContainsKey(42));
         Assert.AreEqual(1, simpleGraph.OutgoingEdges[42].Count);
-        Assert.AreEqual(FlowGraph.EmptyVertex, simpleGraph.OutgoingEdges[42][0]);
+        Assert.AreEqual(FlowGraph.FinalVertex, simpleGraph.OutgoingEdges[42][0].ToVertex);
     }
 
     [TestMethod]
@@ -49,10 +49,10 @@ public sealed class FlowGraphTests
         Assert.AreEqual(2, resultGraph.OutgoingEdges.Count);
 
         Assert.AreEqual(1, resultGraph.OutgoingEdges[42].Count);
-        Assert.AreEqual(64, resultGraph.OutgoingEdges[42][0]);
+        Assert.AreEqual(64, resultGraph.OutgoingEdges[42][0].ToVertex);
 
         Assert.AreEqual(1, resultGraph.OutgoingEdges[64].Count);
-        Assert.AreEqual(FlowGraph.EmptyVertex, resultGraph.OutgoingEdges[64][0]);
+        Assert.AreEqual(FlowGraph.FinalVertex, resultGraph.OutgoingEdges[64][0].ToVertex);
     }
 
     [TestMethod]
@@ -60,7 +60,7 @@ public sealed class FlowGraphTests
     {
         FlowGraph graph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 42, AssociatedStatement = new Stub(), IsVisible = true });
 
-        Assert.AreEqual(FlowGraph.EmptyVertex, FlowGraph.Empty.StartVertex);
+        Assert.AreEqual(FlowGraph.FinalVertex, FlowGraph.Empty.StartVertex);
 
         FlowGraph otherGraph = FlowGraph.Empty.Append(graph);
 
@@ -70,7 +70,7 @@ public sealed class FlowGraphTests
         Assert.AreEqual(1, otherGraph.OutgoingEdges.Count);
 
         Assert.AreEqual(1, otherGraph.OutgoingEdges[42].Count);
-        Assert.AreEqual(FlowGraph.EmptyVertex, otherGraph.OutgoingEdges[42][0]);
+        Assert.AreEqual(FlowGraph.FinalVertex, otherGraph.OutgoingEdges[42][0].ToVertex);
     }
 
     [TestMethod]
@@ -92,10 +92,10 @@ public sealed class FlowGraphTests
     [TestMethod]
     public void TestMoreComplexGraph()
     {
-        FlowGraph graph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 5, AssociatedStatement = new Stub(), IsVisible = true }, 6, 7)
-                                         .AddVertex(new FlowVertex { Index = 6, AssociatedStatement = new Stub(), IsVisible = true }, 7, FlowGraph.EmptyVertex)
-                                         .AddVertex(new FlowVertex { Index = 7, AssociatedStatement = new Stub(), IsVisible = true }, 8)
-                                         .AddVertex(new FlowVertex { Index = 8, AssociatedStatement = new Stub(), IsVisible = true }, 6, FlowGraph.EmptyVertex);
+        FlowGraph graph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 5, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateTo(6), FlowEdge.CreateTo(7))
+                                         .AddVertex(new FlowVertex { Index = 6, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateTo(7), FlowGraph.FinalEdge)
+                                         .AddVertex(new FlowVertex { Index = 7, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateTo(8))
+                                         .AddVertex(new FlowVertex { Index = 8, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateTo(6), FlowGraph.FinalEdge);
 
         Assert.AreEqual(5, graph.StartVertex);
 
@@ -113,26 +113,26 @@ public sealed class FlowGraphTests
         Assert.AreEqual(1, graph.OutgoingEdges[7].Count);
         Assert.AreEqual(2, graph.OutgoingEdges[8].Count);
 
-        Assert.AreEqual(6, graph.OutgoingEdges[5][0]);
-        Assert.AreEqual(7, graph.OutgoingEdges[5][1]);
-        Assert.AreEqual(7, graph.OutgoingEdges[6][0]);
-        Assert.AreEqual(FlowGraph.EmptyVertex, graph.OutgoingEdges[6][1]);
-        Assert.AreEqual(8, graph.OutgoingEdges[7][0]);
-        Assert.AreEqual(6, graph.OutgoingEdges[8][0]);
-        Assert.AreEqual(FlowGraph.EmptyVertex, graph.OutgoingEdges[8][1]);
+        Assert.AreEqual(6, graph.OutgoingEdges[5][0].ToVertex);
+        Assert.AreEqual(7, graph.OutgoingEdges[5][1].ToVertex);
+        Assert.AreEqual(7, graph.OutgoingEdges[6][0].ToVertex);
+        Assert.AreEqual(FlowGraph.FinalVertex, graph.OutgoingEdges[6][1].ToVertex);
+        Assert.AreEqual(8, graph.OutgoingEdges[7][0].ToVertex);
+        Assert.AreEqual(6, graph.OutgoingEdges[8][0].ToVertex);
+        Assert.AreEqual(FlowGraph.FinalVertex, graph.OutgoingEdges[8][1].ToVertex);
     }
 
     [TestMethod]
     public void TestReplace()
     {
-        FlowGraph graphA = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 5, AssociatedStatement = new Stub(), IsVisible = true }, 6, 7)
-                                          .AddVertex(new FlowVertex { Index = 6, AssociatedStatement = new Stub(), IsVisible = true }, 7, FlowGraph.EmptyVertex)
-                                          .AddVertex(new FlowVertex { Index = 7, AssociatedStatement = new Stub(), IsVisible = true }, 8)
-                                          .AddVertex(new FlowVertex { Index = 8, AssociatedStatement = new Stub(), IsVisible = true }, 6, FlowGraph.EmptyVertex);
+        FlowGraph graphA = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 5, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateTo(6), FlowEdge.CreateTo(7))
+                                          .AddVertex(new FlowVertex { Index = 6, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateTo(7), FlowGraph.FinalEdge)
+                                          .AddVertex(new FlowVertex { Index = 7, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateTo(8))
+                                          .AddVertex(new FlowVertex { Index = 8, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateTo(6), FlowGraph.FinalEdge);
 
-        FlowGraph graphB = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 9, AssociatedStatement = new Stub(), IsVisible = true }, 10, 11)
-                                          .AddVertex(new FlowVertex { Index = 10, AssociatedStatement = new Stub(), IsVisible = true }, FlowGraph.EmptyVertex)
-                                          .AddVertex(new FlowVertex { Index = 11, AssociatedStatement = new Stub(), IsVisible = true }, FlowGraph.EmptyVertex);
+        FlowGraph graphB = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 9, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateTo(10), FlowEdge.CreateTo(11))
+                                          .AddVertex(new FlowVertex { Index = 10, AssociatedStatement = new Stub(), IsVisible = true }, FlowGraph.FinalEdge)
+                                          .AddVertex(new FlowVertex { Index = 11, AssociatedStatement = new Stub(), IsVisible = true }, FlowGraph.FinalEdge);
 
         FlowGraph graphC = graphA.Replace(5, graphB);
 
@@ -149,26 +149,26 @@ public sealed class FlowGraphTests
 
         void AssertHasEdges(int vertex, params int[] edges)
         {
-            Assert.IsTrue(edges.SequenceEqual(graphC.OutgoingEdges[vertex].OrderBy(v => v)));
+            Assert.IsTrue(edges.SequenceEqual(graphC.OutgoingEdges[vertex].Select(e => e.ToVertex).OrderBy(v => v)));
         }
 
         AssertHasEdges(9, 10, 11);
         AssertHasEdges(10, 6, 7);
         AssertHasEdges(11, 6, 7);
-        AssertHasEdges(6, FlowGraph.EmptyVertex, 7);
+        AssertHasEdges(6, FlowGraph.FinalVertex, 7);
         AssertHasEdges(7, 8);
-        AssertHasEdges(8, FlowGraph.EmptyVertex, 6);
+        AssertHasEdges(8, FlowGraph.FinalVertex, 6);
     }
 
     [TestMethod]
     public void TestAppendToVertex()
     {
-        FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 0, AssociatedStatement = new Stub(), IsVisible = true }, 1)
-                                             .AddVertex(new FlowVertex { Index = 1, AssociatedStatement = new Stub(), IsVisible = true }, FlowGraph.EmptyVertex);
+        FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 0, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateTo(1))
+                                             .AddVertex(new FlowVertex { Index = 1, AssociatedStatement = new Stub(), IsVisible = true }, FlowGraph.FinalEdge);
 
-        FlowGraph nestedGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 2, AssociatedStatement = new Stub(), IsVisible = true }, 3, 4)
-                                               .AddVertex(new FlowVertex { Index = 3, AssociatedStatement = new Stub(), IsVisible = true }, 4)
-                                               .AddVertex(new FlowVertex { Index = 4, AssociatedStatement = new Stub(), IsVisible = true }, FlowGraph.EmptyVertex);
+        FlowGraph nestedGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 2, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateTo(3), FlowEdge.CreateTo(4))
+                                               .AddVertex(new FlowVertex { Index = 3, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateTo(4))
+                                               .AddVertex(new FlowVertex { Index = 4, AssociatedStatement = new Stub(), IsVisible = true }, FlowGraph.FinalEdge);
 
         FlowGraph resultGraph = flowGraph.AppendToVertex(0, nestedGraph);
 
@@ -176,11 +176,11 @@ public sealed class FlowGraphTests
 
         Assert.AreEqual(5, resultGraph.Vertices.Count);
         Assert.AreEqual(2, resultGraph.OutgoingEdges[0].Count);
-        Assert.AreEqual(1, resultGraph.OutgoingEdges[0][0]);
-        Assert.AreEqual(2, resultGraph.OutgoingEdges[0][1]);
+        Assert.AreEqual(1, resultGraph.OutgoingEdges[0][0].ToVertex);
+        Assert.AreEqual(2, resultGraph.OutgoingEdges[0][1].ToVertex);
 
         Assert.AreEqual(2, resultGraph.OutgoingEdges[2].Count);
-        Assert.AreEqual(3, resultGraph.OutgoingEdges[2][0]);
-        Assert.AreEqual(4, resultGraph.OutgoingEdges[2][1]);
+        Assert.AreEqual(3, resultGraph.OutgoingEdges[2][0].ToVertex);
+        Assert.AreEqual(4, resultGraph.OutgoingEdges[2][1].ToVertex);
     }
 }

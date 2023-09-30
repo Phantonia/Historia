@@ -2,7 +2,6 @@
 using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
-using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -35,7 +34,7 @@ public sealed partial class Emitter
 
         writer.Indent--;
 
-        foreach ((int index, ImmutableList<int> edges) in flowGraph.OutgoingEdges)
+        foreach ((int index, ImmutableList<FlowEdge> edges) in flowGraph.OutgoingEdges)
         {
             writer.Write("case ");
             writer.Write(index);
@@ -99,13 +98,13 @@ public sealed partial class Emitter
         }
     }
 
-    private void GenerateOutputTransition(int index, ImmutableList<int> edges)
+    private void GenerateOutputTransition(int index, ImmutableList<FlowEdge> edges)
     {
         Debug.Assert(flowGraph.OutgoingEdges[index].Count == 1);
 
-        writer.WriteLine($"state = {edges[0]};");
+        writer.WriteLine($"state = {edges[0].ToVertex};");
 
-        if (edges[0] == EndState || flowGraph.Vertices[edges[0]].IsVisible)
+        if (edges[0].ToVertex == EndState || flowGraph.Vertices[edges[0].ToVertex].IsVisible)
         {
             writer.WriteLine("return;");
         }
@@ -115,7 +114,7 @@ public sealed partial class Emitter
         }
     }
 
-    private void GenerateSwitchTransition(SwitchStatementNode switchStatement, ImmutableList<int> edges)
+    private void GenerateSwitchTransition(SwitchStatementNode switchStatement, ImmutableList<FlowEdge> edges)
     {
         Debug.Assert(switchStatement.Options.Length == edges.Count);
 
@@ -131,7 +130,7 @@ public sealed partial class Emitter
 
             // here we assert that the index of the vertex equals the index of the first statement of the option
             // however we ignore the case where the option's body is empty - there it would be impossible to get the next statement
-            Debug.Assert(switchStatement.Options[i].Body.Statements.Length == 0 || switchStatement.Options[i].Body.Statements[0].Index == edges[i]);
+            Debug.Assert(switchStatement.Options[i].Body.Statements.Length == 0 || switchStatement.Options[i].Body.Statements[0].Index == edges[i].ToVertex);
 
             writer.Write("case ");
             writer.Write(i);
@@ -140,7 +139,7 @@ public sealed partial class Emitter
             writer.Indent++;
 
             writer.Write("state = ");
-            writer.Write(edges[i]);
+            writer.Write(edges[i].ToVertex);
             writer.WriteLine(';');
 
             if (switchStatement is BoundNamedSwitchStatementNode { Outcome: OutcomeSymbol outcome })
@@ -151,7 +150,7 @@ public sealed partial class Emitter
                 writer.WriteLine(';');
             }
 
-            if (edges[i] == EndState || flowGraph.Vertices[edges[i]].IsVisible)
+            if (edges[i].ToVertex == EndState || flowGraph.Vertices[edges[i].ToVertex].IsVisible)
             {
                 writer.WriteLine("return;");
             }
@@ -169,7 +168,7 @@ public sealed partial class Emitter
         writer.WriteLine("break;"); // C# is so weird - you cannot fall from a case label so they require you to slap a 'break' at the end instead of just not doing that smh
     }
 
-    private void GenerateBranchOnTransition(BoundBranchOnStatementNode branchOnStatement, ImmutableList<int> edges)
+    private void GenerateBranchOnTransition(BoundBranchOnStatementNode branchOnStatement, ImmutableList<FlowEdge> edges)
     {
         if (branchOnStatement.Outcome is SpectrumSymbol)
         {
@@ -181,7 +180,7 @@ public sealed partial class Emitter
         }
     }
 
-    private void GenerateOutcomeBranchOnTransition(BoundBranchOnStatementNode branchOnStatement, ImmutableList<int> edges)
+    private void GenerateOutcomeBranchOnTransition(BoundBranchOnStatementNode branchOnStatement, ImmutableList<FlowEdge> edges)
     {
         writer.Write("switch (");
         WriteOutcomeFieldName(branchOnStatement.Outcome);
@@ -205,11 +204,11 @@ public sealed partial class Emitter
                 writer.Indent++;
 
                 writer.Write("state = ");
-                writer.Write(edges[i]);
+                writer.Write(edges[i].ToVertex);
                 writer.WriteLine(';');
 
-                FlowVertex followingVertex = flowGraph.Vertices[edges[i]];
-                if (edges[i] == EndState || followingVertex.IsVisible)
+                FlowVertex followingVertex = flowGraph.Vertices[edges[i].ToVertex];
+                if (edges[i].ToVertex == EndState || followingVertex.IsVisible)
                 {
                     writer.WriteLine("return;");
                 }
@@ -225,12 +224,12 @@ public sealed partial class Emitter
                 writer.WriteLine("default:");
                 writer.Indent++;
 
-                int nextState = flowGraph.OutgoingEdges[branchOnStatement.Index][i];
+                int nextState = flowGraph.OutgoingEdges[branchOnStatement.Index][i].ToVertex;
                 writer.Write("state = ");
                 writer.Write(nextState);
                 writer.WriteLine(';');
 
-                if (edges[i] == EndState || flowGraph.Vertices[edges[i]].IsVisible)
+                if (edges[i].ToVertex == EndState || flowGraph.Vertices[edges[i].ToVertex].IsVisible)
                 {
                     writer.WriteLine("return;");
                 }
@@ -247,7 +246,7 @@ public sealed partial class Emitter
         writer.WriteLine("throw new global::System.InvalidOperationException(\"Fatal internal error: Invalid outcome\");");
     }
 
-    private void GenerateSpectrumBranchOnTransition(BoundBranchOnStatementNode branchOnStatement, ImmutableList<int> edges)
+    private void GenerateSpectrumBranchOnTransition(BoundBranchOnStatementNode branchOnStatement, ImmutableList<FlowEdge> edges)
     {
         Debug.Assert(branchOnStatement.Outcome is SpectrumSymbol);
 
@@ -272,11 +271,11 @@ public sealed partial class Emitter
             {
                 if (branchOnStatement.Options[i] is NamedBranchOnOptionNode { OptionName: string optionName } && optionName == spectrum.DefaultOption)
                 {
-                    nextState = edges[i];
+                    nextState = edges[i].ToVertex;
                 }
             }
 
-            nextState ??= edges[^1]; // other option needs to be last
+            nextState ??= edges[^1].ToVertex; // other option needs to be last
 
             writer.Write("state = ");
             writer.Write((int)nextState);
@@ -341,10 +340,10 @@ public sealed partial class Emitter
             writer.Write("state = ");
 
             int index = branchOnStatement.Options.IndexOf(option);
-            writer.Write(edges[index]);
+            writer.Write(edges[index].ToVertex);
             writer.WriteLine(';');
 
-            if (edges[i] == EndState || flowGraph.Vertices[edges[i]].IsVisible)
+            if (edges[i].ToVertex == EndState || flowGraph.Vertices[edges[i].ToVertex].IsVisible)
             {
                 writer.WriteLine("return;");
             }
@@ -363,10 +362,10 @@ public sealed partial class Emitter
         writer.Indent++;
 
         writer.Write("state = ");
-        writer.Write(edges[branchOnStatement.Options.IndexOf(options[^1])]);
+        writer.Write(edges[branchOnStatement.Options.IndexOf(options[^1])].ToVertex);
         writer.WriteLine(';');
 
-        if (edges[^1] == EndState || flowGraph.Vertices[edges[^1]].IsVisible)
+        if (edges[^1].ToVertex == EndState || flowGraph.Vertices[edges[^1].ToVertex].IsVisible)
         {
             writer.WriteLine("return;");
         }
@@ -382,7 +381,7 @@ public sealed partial class Emitter
         writer.WriteLine('}');
     }
 
-    private void GenerateOutcomeAssignmentTransition(BoundOutcomeAssignmentStatementNode outcomeAssignment, ImmutableList<int> edges)
+    private void GenerateOutcomeAssignmentTransition(BoundOutcomeAssignmentStatementNode outcomeAssignment, ImmutableList<FlowEdge> edges)
     {
         WriteOutcomeFieldName(outcomeAssignment.Outcome);
         writer.Write(" = ");
@@ -392,10 +391,10 @@ public sealed partial class Emitter
         Debug.Assert(edges.Count == 1);
 
         writer.Write("state = ");
-        writer.Write(edges[0]);
+        writer.Write(edges[0].ToVertex);
         writer.WriteLine(';');
 
-        if (edges[0] == EndState || flowGraph.Vertices[edges[0]].IsVisible)
+        if (edges[0].ToVertex == EndState || flowGraph.Vertices[edges[0].ToVertex].IsVisible)
         {
             writer.WriteLine("return;");
         }
@@ -405,7 +404,7 @@ public sealed partial class Emitter
         }
     }
 
-    private void GenerateSpectrumAdjustmentTransition(BoundSpectrumAdjustmentStatementNode spectrumAdjustment, ImmutableList<int> edges)
+    private void GenerateSpectrumAdjustmentTransition(BoundSpectrumAdjustmentStatementNode spectrumAdjustment, ImmutableList<FlowEdge> edges)
     {
         WriteSpectrumTotalFieldName(spectrumAdjustment.Spectrum);
         writer.Write(" += ");
@@ -422,9 +421,9 @@ public sealed partial class Emitter
 
         Debug.WriteLine(edges.Count == 1);
 
-        writer.WriteLine($"state = {edges[0]};");
+        writer.WriteLine($"state = {edges[0].ToVertex};");
 
-        if (edges[0] == EndState || flowGraph.Vertices[edges[0]].IsVisible)
+        if (edges[0].ToVertex == EndState || flowGraph.Vertices[edges[0].ToVertex].IsVisible)
         {
             writer.WriteLine("return;");
         }
@@ -434,16 +433,16 @@ public sealed partial class Emitter
         }
     }
 
-    private void GenerateCallerTrackerTransition(CallerTrackerStatementNode trackerStatement, ImmutableList<int> edges)
+    private void GenerateCallerTrackerTransition(CallerTrackerStatementNode trackerStatement, ImmutableList<FlowEdge> edges)
     {
         WriteTrackerFieldName(trackerStatement.Tracker);
         writer.Write(" = ");
         writer.Write(trackerStatement.CallSiteIndex);
         writer.WriteLine(';');
 
-        writer.WriteLine($"state = {edges[0]};");
+        writer.WriteLine($"state = {edges[0].ToVertex};");
 
-        if (edges[0] == EndState || flowGraph.Vertices[edges[0]].IsVisible)
+        if (edges[0].ToVertex == EndState || flowGraph.Vertices[edges[0].ToVertex].IsVisible)
         {
             writer.WriteLine("return;");
         }
@@ -453,7 +452,7 @@ public sealed partial class Emitter
         }
     }
 
-    private void GenerateCallerResolutionTransition(CallerResolutionStatementNode resolutionStatement, ImmutableList<int> edges)
+    private void GenerateCallerResolutionTransition(CallerResolutionStatementNode resolutionStatement, ImmutableList<FlowEdge> edges)
     {
         writer.Write("switch (");
         WriteTrackerFieldName(resolutionStatement.Tracker);
@@ -470,11 +469,11 @@ public sealed partial class Emitter
             writer.Indent++;
 
             writer.Write("state = ");
-            writer.Write(edges[i]);
+            writer.Write(edges[i].ToVertex);
             writer.WriteLine(';');
 
-            FlowVertex followingVertex = flowGraph.Vertices[edges[i]];
-            if (edges[i] == EndState || followingVertex.IsVisible)
+            FlowVertex followingVertex = flowGraph.Vertices[edges[i].ToVertex];
+            if (edges[i].ToVertex == EndState || followingVertex.IsVisible)
             {
                 writer.WriteLine("return;");
             }

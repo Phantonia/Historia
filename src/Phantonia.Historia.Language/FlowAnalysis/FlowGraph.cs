@@ -3,22 +3,30 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Edges = System.Collections.Immutable.ImmutableDictionary<
-    int, System.Collections.Immutable.ImmutableList<int>>;
+    int, System.Collections.Immutable.ImmutableList<
+        Phantonia.Historia.Language.FlowAnalysis.FlowEdge>>;
 using MutEdges = System.Collections.Generic.Dictionary<
-    int, System.Collections.Generic.List<int>>;
+    int, System.Collections.Generic.List<
+        Phantonia.Historia.Language.FlowAnalysis.FlowEdge>>;
 
 namespace Phantonia.Historia.Language.FlowAnalysis;
 
 public sealed record FlowGraph
 {
-    public const int EmptyVertex = -1;
+    public const int FinalVertex = -1;
+
+    public static readonly FlowEdge FinalEdge = new()
+    {
+        ToVertex = FinalVertex,
+        Weak = false,
+    };
 
     public static FlowGraph Empty { get; } = new();
 
     public static FlowGraph CreateSimpleFlowGraph(FlowVertex vertex) => Empty with
     {
         StartVertex = vertex.Index,
-        OutgoingEdges = Empty.OutgoingEdges.Add(vertex.Index, ImmutableList.Create(EmptyVertex)),
+        OutgoingEdges = Empty.OutgoingEdges.Add(vertex.Index, ImmutableList.Create(FinalEdge)),
         Vertices = Empty.Vertices.Add(vertex.Index, vertex),
     };
 
@@ -26,11 +34,11 @@ public sealed record FlowGraph
 
     public Edges OutgoingEdges { get; init; } = Edges.Empty;
 
-    public int StartVertex { get; init; } = EmptyVertex;
+    public int StartVertex { get; init; } = FinalVertex;
 
     public ImmutableDictionary<int, FlowVertex> Vertices { get; init; } = ImmutableDictionary<int, FlowVertex>.Empty;
 
-    public FlowGraph AddVertex(FlowVertex vertex, params int[] pointedVertices)
+    public FlowGraph AddVertex(FlowVertex vertex, params FlowEdge[] edges)
     {
         if (Vertices.ContainsKey(vertex.Index))
         {
@@ -40,8 +48,8 @@ public sealed record FlowGraph
         return this with
         {
             Vertices = Vertices.Add(vertex.Index, vertex),
-            OutgoingEdges = OutgoingEdges.Add(vertex.Index, pointedVertices.ToImmutableList()),
-            StartVertex = StartVertex == EmptyVertex ? vertex.Index : StartVertex,
+            OutgoingEdges = OutgoingEdges.Add(vertex.Index, edges.ToImmutableList()),
+            StartVertex = StartVertex == FinalVertex ? vertex.Index : StartVertex,
         };
     }
 
@@ -52,33 +60,33 @@ public sealed record FlowGraph
         MutEdges tempEdges = OutgoingEdges.ToDictionary(p => p.Key, p => p.Value.ToList());
         Dictionary<int, FlowVertex> tempVertices = Vertices.ToDictionary(p => p.Key, p => p.Value);
 
-        foreach ((int currentVertex, List<int> pointedVertices) in tempEdges)
+        foreach ((int currentVertex, List<FlowEdge> edges) in tempEdges)
         {
-            for (int i = 0; i < pointedVertices.Count; i++)
+            for (int i = 0; i < edges.Count; i++)
             {
-                if (pointedVertices[i] == EmptyVertex)
+                if (edges[i].ToVertex == FinalVertex)
                 {
-                    pointedVertices[i] = graph.StartVertex;
+                    edges[i] = FlowEdge.CreateTo(graph.StartVertex);
                 }
             }
         }
 
-        foreach ((int key, ImmutableList<int> value) in graph.OutgoingEdges)
+        foreach ((int currentVertex, ImmutableList<FlowEdge> edges) in graph.OutgoingEdges)
         {
-            if (tempEdges.ContainsKey(key))
+            if (tempEdges.ContainsKey(currentVertex))
             {
                 throw new InvalidOperationException("Duplicated vertex key");
             }
 
-            tempEdges[key] = value.ToList();
-            tempVertices[key] = graph.Vertices[key];
+            tempEdges[currentVertex] = edges.ToList();
+            tempVertices[currentVertex] = graph.Vertices[currentVertex];
         }
 
         return this with
         {
             OutgoingEdges = tempEdges.ToImmutableDictionary(p => p.Key, p => p.Value.ToImmutableList()),
             Vertices = tempVertices.ToImmutableDictionary(),
-            StartVertex = StartVertex == EmptyVertex ? graph.StartVertex : StartVertex,
+            StartVertex = StartVertex == FinalVertex ? graph.StartVertex : StartVertex,
         };
     }
 
@@ -94,24 +102,24 @@ public sealed record FlowGraph
         MutEdges tempEdges = OutgoingEdges.ToDictionary(p => p.Key, p => p.Value.ToList());
         Dictionary<int, FlowVertex> tempVertices = Vertices.ToDictionary(p => p.Key, p => p.Value);
 
-        foreach ((int key, ImmutableList<int> value) in graph.OutgoingEdges)
+        foreach ((int currentVertex, ImmutableList<FlowEdge> edges) in graph.OutgoingEdges)
         {
-            if (tempEdges.ContainsKey(key))
+            if (tempEdges.ContainsKey(currentVertex))
             {
                 throw new InvalidOperationException("Duplicated vertex key");
             }
 
-            tempEdges[key] = value.ToList();
-            tempVertices[key] = graph.Vertices[key];
+            tempEdges[currentVertex] = edges.ToList();
+            tempVertices[currentVertex] = graph.Vertices[currentVertex];
         }
 
-        tempEdges[vertex].Add(graph.StartVertex);
+        tempEdges[vertex].Add(FlowEdge.CreateTo(graph.StartVertex));
 
         return this with
         {
             OutgoingEdges = tempEdges.ToImmutableDictionary(p => p.Key, p => p.Value.ToImmutableList()),
             Vertices = tempVertices.ToImmutableDictionary(),
-            StartVertex = StartVertex == EmptyVertex ? graph.StartVertex : StartVertex,
+            StartVertex = StartVertex == FinalVertex ? graph.StartVertex : StartVertex,
         };
     }
 
@@ -128,43 +136,43 @@ public sealed record FlowGraph
         Dictionary<int, FlowVertex> tempVertices = Vertices.ToDictionary(p => p.Key, p => p.Value);
 
         // add everything from 'graph' to our graph
-        foreach ((int currentVertex, ImmutableList<int> pointedVertices) in graph.OutgoingEdges)
+        foreach ((int currentVertex, ImmutableList<FlowEdge> edges) in graph.OutgoingEdges)
         {
             if (Vertices.ContainsKey(currentVertex))
             {
                 throw new InvalidOperationException("Duplicated vertex key");
             }
 
-            tempEdges[currentVertex] = pointedVertices.ToList();
+            tempEdges[currentVertex] = edges.ToList();
             tempVertices[currentVertex] = graph.Vertices[currentVertex];
         }
 
         // redirect all edges to 'vertex' to 'graph.StartVertex'
-        foreach ((int currentVertex, List<int> pointedVertices) in tempEdges)
+        foreach ((int currentVertex, List<FlowEdge> edges) in tempEdges)
         {
-            for (int i = 0; i < pointedVertices.Count; i++)
+            for (int i = 0; i < edges.Count; i++)
             {
-                if (pointedVertices[i] == replacedVertex)
+                if (edges[i].ToVertex == replacedVertex)
                 {
-                    pointedVertices[i] = graph.StartVertex;
+                    edges[i] = FlowEdge.CreateTo(graph.StartVertex);
                 }
             }
         }
 
         // redirect all edges to 'graph's EmptyVertex to every vertex that 'replacedVertex' points to
-        ImmutableList<int> replacedVertexPointedVertices = OutgoingEdges[replacedVertex];
+        ImmutableList<FlowEdge> replacedVertexEdges = OutgoingEdges[replacedVertex];
 
-        foreach ((int currentVertex, ImmutableList<int> pointedVertices) in graph.OutgoingEdges)
+        foreach ((int currentVertex, ImmutableList<FlowEdge> edges) in graph.OutgoingEdges)
         {
-            for (int i = 0; i < pointedVertices.Count; i++)
+            for (int i = 0; i < edges.Count; i++)
             {
-                if (pointedVertices[i] == EmptyVertex)
+                if (edges[i].ToVertex == FinalVertex)
                 {
                     tempEdges[currentVertex].RemoveAt(i);
 
-                    for (int j = 0; j < replacedVertexPointedVertices.Count; j++)
+                    for (int j = 0; j < replacedVertexEdges.Count; j++)
                     {
-                        tempEdges[currentVertex].Add(replacedVertexPointedVertices[j]);
+                        tempEdges[currentVertex].Add(replacedVertexEdges[j]);
                     }
                 }
             }
@@ -183,25 +191,25 @@ public sealed record FlowGraph
 
     public FlowGraph Reverse()
     {
-        MutEdges edges = new();
+        MutEdges tempEdges = new();
 
-        foreach ((int vertex, ImmutableList<int> pointedVertices) in OutgoingEdges)
+        foreach ((int vertex, ImmutableList<FlowEdge> edges) in OutgoingEdges)
         {
-            foreach (int pointedVertex in pointedVertices)
+            foreach (FlowEdge edge in edges)
             {
-                if (!edges.ContainsKey(pointedVertex))
+                if (!tempEdges.ContainsKey(edge.ToVertex))
                 {
-                    edges[pointedVertex] = new List<int>();
+                    tempEdges[edge.ToVertex] = new List<FlowEdge>();
                 }
 
-                edges[pointedVertex].Add(vertex);
+                tempEdges[edge.ToVertex].Add(FlowEdge.CreateTo(vertex));
             }
         }
 
         return new FlowGraph
         {
             Vertices = Vertices,
-            OutgoingEdges = edges.ToImmutableDictionary(p => p.Key, p => p.Value.ToImmutableList()),
+            OutgoingEdges = tempEdges.ToImmutableDictionary(p => p.Key, p => p.Value.ToImmutableList()),
             StartVertex = StartVertex,
         };
     }
@@ -231,11 +239,11 @@ public sealed record FlowGraph
         {
             marked[vertex] = true;
 
-            foreach (int adjacentVertex in OutgoingEdges[vertex])
+            foreach (FlowEdge edge in OutgoingEdges[vertex])
             {
-                if (adjacentVertex != EmptyVertex && !marked[adjacentVertex])
+                if (edge.ToVertex != FinalVertex && !marked[edge.ToVertex])
                 {
-                    DepthFirstSearch(adjacentVertex);
+                    DepthFirstSearch(edge.ToVertex);
                 }
             }
 

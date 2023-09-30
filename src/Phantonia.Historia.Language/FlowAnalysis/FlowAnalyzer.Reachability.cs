@@ -76,14 +76,14 @@ public sealed partial class FlowAnalyzer
 
         foreach (int vertex in order.Skip(1))
         {
-            data[vertex] = ProcessVertex(sceneFlowGraph, vertex, reversedFlowGraph.OutgoingEdges[vertex].Select(i => data[i]), defaultVertexData, sceneFlowGraphs, callStack);
+            data[vertex] = ProcessVertex(sceneFlowGraph, vertex, reversedFlowGraph.OutgoingEdges[vertex].Select(e => data[e.ToVertex]), defaultVertexData, sceneFlowGraphs, callStack);
         }
 
         IEnumerable<VertexData> finalVertexData =
-            data.Where(p => sceneFlowGraph.OutgoingEdges[p.Key].Contains(FlowGraph.EmptyVertex))
+            data.Where(p => sceneFlowGraph.OutgoingEdges[p.Key].Contains(FlowGraph.FinalEdge))
                 .Select(p => p.Value);
 
-        return ProcessVertex(sceneFlowGraph, FlowGraph.EmptyVertex, finalVertexData, defaultVertexData, sceneFlowGraphs, callStack);
+        return ProcessVertex(sceneFlowGraph, FlowGraph.FinalVertex, finalVertexData, defaultVertexData, sceneFlowGraphs, callStack);
     }
 
     private VertexData ProcessVertex(FlowGraph flowGraph,
@@ -95,7 +95,7 @@ public sealed partial class FlowAnalyzer
     {
         VertexData thisVertexData = defaultVertexData;
 
-        StatementNode? statement = vertex == FlowGraph.EmptyVertex ? null : flowGraph.Vertices[vertex].AssociatedStatement;
+        StatementNode? statement = vertex == FlowGraph.FinalVertex ? null : flowGraph.Vertices[vertex].AssociatedStatement;
 
         foreach ((OutcomeSymbol outcome, OutcomeData outcomeData) in defaultVertexData.Outcomes)
         {
