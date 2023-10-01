@@ -202,7 +202,7 @@ public sealed record FlowGraph
                     tempEdges[edge.ToVertex] = new List<FlowEdge>();
                 }
 
-                tempEdges[edge.ToVertex].Add(FlowEdge.CreateTo(vertex));
+                tempEdges[edge.ToVertex].Add(new FlowEdge { ToVertex = vertex, Weak = edge.Weak });
             }
         }
 
@@ -241,7 +241,7 @@ public sealed record FlowGraph
 
             foreach (FlowEdge edge in OutgoingEdges[vertex])
             {
-                if (edge.ToVertex != FinalVertex && !marked[edge.ToVertex])
+                if (!edge.Weak && edge.ToVertex != FinalVertex && !marked[edge.ToVertex])
                 {
                     DepthFirstSearch(edge.ToVertex);
                 }

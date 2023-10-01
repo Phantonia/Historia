@@ -14,7 +14,7 @@ public readonly struct ObjectReadOnlyList<T> : IReadOnlyList<object?>
 
     public object? this[int index] => list[index];
 
-    public int Count { get; }
+    public int Count => list.Count;
 
     public IEnumerator<object?> GetEnumerator()
     {

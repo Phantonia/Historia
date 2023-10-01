@@ -6,6 +6,8 @@ using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 
 namespace Phantonia.Historia.Language.FlowAnalysis;
 
@@ -90,6 +92,7 @@ public sealed partial class FlowAnalyzer
                 IsVisible = true,
             }),
             SwitchStatementNode switchStatement => GenerateSwitchFlowGraph(switchStatement),
+            LoopSwitchStatementNode loopSwitchStatement => GenerateLoopSwitchFlowGraph(loopSwitchStatement),
             BranchOnStatementNode branchOnStatement => GenerateBranchOnFlowGraph(branchOnStatement),
             OutcomeDeclarationStatementNode => FlowGraph.Empty,
             SpectrumDeclarationStatementNode => FlowGraph.Empty,
@@ -129,6 +132,42 @@ public sealed partial class FlowAnalyzer
             FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body);
 
             flowGraph = flowGraph.AppendToVertex(flowGraph.StartVertex, nestedFlowGraph);
+        }
+
+        return flowGraph;
+    }
+
+    private FlowGraph GenerateLoopSwitchFlowGraph(LoopSwitchStatementNode loopSwitchStatement)
+    {
+        FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex
+        {
+            Index = loopSwitchStatement.Index,
+            AssociatedStatement = loopSwitchStatement,
+            IsVisible = true,
+        });
+
+        foreach (LoopSwitchOptionNode option in loopSwitchStatement.Options)
+        {
+            FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body);
+
+            flowGraph = flowGraph.AppendToVertex(flowGraph.StartVertex, nestedFlowGraph);
+
+            if (option.Kind != LoopSwitchOptionKind.Final)
+            {
+                // redirect final edges as weak edges back up
+                foreach (int vertex in flowGraph.OutgoingEdges.Where(p => p.Value.Contains(FlowGraph.FinalEdge)).Select(p => p.Key))
+                {
+                    flowGraph = flowGraph with
+                    {
+                        OutgoingEdges =
+                            flowGraph.OutgoingEdges.SetItem(
+                                vertex,
+                                flowGraph.OutgoingEdges[vertex].Replace(
+                                    FlowGraph.FinalEdge,
+                                    FlowEdge.CreateWeakTo(loopSwitchStatement.Index))), // important: weak edge
+                    };
+                }
+            }
         }
 
         return flowGraph;

@@ -6,7 +6,6 @@ using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
-using System;
 using System.CodeDom.Compiler;
 using System.Diagnostics;
 using System.IO;
@@ -114,7 +113,7 @@ public sealed partial class Emitter
         GenerateType(settings.OptionType);
         writer.WriteLine("[] options;");
 
-        GenerateOutcomeFields();
+        GenerateFields();
 
         writer.WriteLine();
 
@@ -143,7 +142,7 @@ public sealed partial class Emitter
         writer.WriteLine('}');
         writer.Indent--;
         writer.WriteLine('}');
-        
+
 
         writer.WriteLine();
 
@@ -269,8 +268,7 @@ public sealed partial class Emitter
     private int GetMaximumOptionCount()
     {
         return boundStory.FlattenHierarchie()
-                         .OfType<SwitchStatementNode>()
-                         .Select(s => s.Options.Length)
+                         .Select(n => n switch { SwitchStatementNode s => s.Options.Length, LoopSwitchStatementNode l => l.Options.Length, _ => int.MinValue })
                          .Append(0) // if sequence is empty, at least have one number
                          .Max();
     }

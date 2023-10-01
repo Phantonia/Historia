@@ -815,4 +815,48 @@ public sealed class FlowAnalyzerTests
         Assert.AreEqual(1, errors.Count);
         Assert.AreEqual(expectedError, errors[0]);
     }
+
+    [TestMethod]
+    public void TestLoopSwitch()
+    {
+        string code =
+            """
+            scene main
+            {
+                loop switch (0)
+                {
+                    option (1)
+                    {
+                        output 1;
+                    }
+
+                    option (2)
+                    {
+                        output 2;
+                    }
+
+                    loop option (3)
+                    {
+                        output 3;
+                    }
+
+                    final option (4)
+                    {
+                        output 4;
+                    }
+
+                    final option (5)
+                    {
+                        output 5;
+                    }
+                }
+            }
+            """;
+
+        FlowAnalyzer analyzer = PrepareFlowAnalyzer(code);
+        analyzer.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        // assert this terminates
+        _ = analyzer.PerformFlowAnalysis();
+    }
 }

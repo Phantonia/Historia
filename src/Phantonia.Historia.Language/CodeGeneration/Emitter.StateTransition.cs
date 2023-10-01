@@ -2,6 +2,7 @@
 using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -48,6 +49,9 @@ public sealed partial class Emitter
                     break;
                 case SwitchStatementNode switchStatement:
                     GenerateSwitchTransition(switchStatement, edges);
+                    break;
+                case LoopSwitchStatementNode loopSwitchStatement:
+                    GenerateLoopSwitchTransition(loopSwitchStatement, edges);
                     break;
                 case BoundBranchOnStatementNode branchOnStatement:
                     GenerateBranchOnTransition(branchOnStatement, edges);
@@ -166,6 +170,85 @@ public sealed partial class Emitter
         writer.WriteLine('}');
         writer.WriteLine();
         writer.WriteLine("break;"); // C# is so weird - you cannot fall from a case label so they require you to slap a 'break' at the end instead of just not doing that smh
+    }
+
+    private void GenerateLoopSwitchTransition(LoopSwitchStatementNode loopSwitchStatement, ImmutableList<FlowEdge> edges)
+    {
+        writer.WriteLine('{');
+        writer.Indent++;
+
+        // we do some bitwise black magic
+        // ((ls & (1UL << i)) == 0) is true if the i'th bit is zero
+        writer.WriteManyLines(
+            $$"""
+            int tempOption = option;
+            int realOption = 0;
+
+            for (int i = 0; i < 64; i++)
+            {
+                if (({{GetLoopSwitchFieldName(loopSwitchStatement)}} & (1UL << i)) == 0)
+                {
+                    tempOption--;
+                }
+
+                if (tempOption < 0)
+                {
+                    break;
+                }
+
+                realOption++;
+            }
+
+            switch (realOption)
+            {
+            """);
+        writer.Indent++;
+
+        for (int i = 0; i < loopSwitchStatement.Options.Length; i++)
+        {
+            // for comment see switch version
+            Debug.Assert(loopSwitchStatement.Options[i].Body.Statements.Length == 0 || loopSwitchStatement.Options[i].Body.Statements[0].Index == edges[i].ToVertex);
+
+            writer.Write("case ");
+            writer.Write(i);
+            writer.WriteLine(':');
+
+            writer.Indent++;
+
+            writer.Write("state = ");
+            writer.Write(edges[i].ToVertex);
+            writer.WriteLine(';');
+
+            if (loopSwitchStatement.Options[i].Kind == LoopSwitchOptionKind.None)
+            {
+                // for example: ls |= 1 << 3;
+                // we record that this option has been taken, blocking it for the future
+                WriteLoopSwitchFieldName(loopSwitchStatement);
+                writer.Write(" |= 1 << ");
+                writer.Write(i);
+                writer.WriteLine(';');
+            }
+
+            if (edges[i].ToVertex == EndState || flowGraph.Vertices[edges[i].ToVertex].IsVisible)
+            {
+                writer.WriteLine("return;");
+            }
+            else
+            {
+                writer.WriteLine("continue;");
+            }
+
+            writer.Indent--;
+        }
+
+        writer.Indent--;
+        writer.WriteLine('}');
+
+        writer.WriteLine();
+        writer.WriteLine("break;"); // mandatory C# break
+
+        writer.Indent--;
+        writer.WriteLine('}');
     }
 
     private void GenerateBranchOnTransition(BoundBranchOnStatementNode branchOnStatement, ImmutableList<FlowEdge> edges)

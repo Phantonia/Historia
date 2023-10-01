@@ -654,4 +654,87 @@ public sealed class EmitterTests
         character = (Character)story.Output!;
         Assert.AreEqual(Character.Charlotte, character);
     }
+
+    [TestMethod]
+    public void TestLoopSwitches()
+    {
+        string code =
+            """
+            scene main
+            {
+                loop switch (0)
+                {
+                    option (11)
+                    {
+                        output 11;
+                    }
+
+                    option (12)
+                    {
+                        output 12;
+                    }
+
+                    loop option (13)
+                    {
+                        output 13;
+                    }
+
+                    final option (14)
+                    {
+                        output 14;
+                    }
+
+                    final option (15)
+                    {
+                        output 15;
+                    }
+                }
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStory");
+
+        Assert.IsTrue(story.TryContinue());
+        Assert.AreEqual(0, story.Output);
+        Assert.AreEqual(5, story.Options.Count);
+
+        Assert.IsTrue(story.TryContinueWithOption(0));
+        Assert.AreEqual(11, story.Output);
+        Assert.IsTrue(story.TryContinue());
+        Assert.AreEqual(0, story.Output);
+
+        Assert.IsTrue(story.TryContinueWithOption(1));
+        Assert.AreEqual(13, story.Output);
+        Assert.IsTrue(story.TryContinue());
+        Assert.AreEqual(0, story.Output);
+
+        Assert.IsTrue(story.TryContinueWithOption(0));
+        Assert.AreEqual(12, story.Output);
+        Assert.IsTrue(story.TryContinue());
+        Assert.AreEqual(0, story.Output);
+
+        Assert.IsTrue(story.TryContinueWithOption(0));
+        Assert.AreEqual(13, story.Output);
+        Assert.IsTrue(story.TryContinue());
+        Assert.AreEqual(0, story.Output);
+
+        Assert.IsTrue(story.TryContinueWithOption(0));
+        Assert.AreEqual(13, story.Output);
+        Assert.IsTrue(story.TryContinue());
+        Assert.AreEqual(0, story.Output);
+
+        Assert.IsTrue(story.TryContinueWithOption(2));
+        Assert.AreEqual(15, story.Output);
+        Assert.IsTrue(story.TryContinue());
+
+        Assert.IsTrue(story.FinishedStory);
+    }
 }

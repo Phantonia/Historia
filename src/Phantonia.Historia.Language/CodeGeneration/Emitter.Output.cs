@@ -33,11 +33,14 @@ public sealed partial class Emitter
                 case SwitchStatementNode switchStatement:
                     outputExpression = switchStatement.OutputExpression;
                     break;
+                case LoopSwitchStatementNode loopSwitchStatement:
+                    outputExpression = loopSwitchStatement.OutputExpression;
+                    break;
                 default:
                     continue;
             }
 
-            if (vertex.AssociatedStatement is not (OutputStatementNode or SwitchStatementNode))
+            if (vertex.AssociatedStatement is not (OutputStatementNode or SwitchStatementNode or LoopSwitchStatementNode))
             {
                 continue;
             }
@@ -81,7 +84,7 @@ public sealed partial class Emitter
         writer.WriteLine("global::System.Array.Clear(options);");
         writer.WriteLine();
 
-        if (flowGraph.Vertices.Values.Any(v => v.AssociatedStatement is SwitchStatementNode))
+        if (flowGraph.Vertices.Values.Any(v => v.AssociatedStatement is SwitchStatementNode or LoopSwitchStatementNode))
         {
             writer.WriteLine("switch (state)");
             writer.WriteLine('{');
@@ -114,6 +117,57 @@ public sealed partial class Emitter
                     writer.WriteLine(';');
 
                     writer.WriteLine("return;");
+
+                    writer.Indent--;
+                }
+                else if (vertex.AssociatedStatement is LoopSwitchStatementNode loopSwitchStatement)
+                {
+                    writer.Write("case ");
+                    writer.Write(index);
+                    writer.WriteLine(':');
+                    writer.Indent++;
+
+                    writer.WriteLine('{');
+                    writer.Indent++;
+
+                    writer.WriteLine("global::System.Array.Clear(options);");
+                    writer.WriteLine("int i = 0;");
+                    
+                    for (int i = 0; i < loopSwitchStatement.Options.Length; i++)
+                    {
+                        writer.WriteLine();
+
+                        // if the condition ((ls & (1 << i)) == 0) is true,
+                        // the corresponding option has not yet been selected,
+                        // so we put it into the array
+                        writer.Write("if ((");
+                        WriteLoopSwitchFieldName(loopSwitchStatement);
+                        writer.Write(" & (1UL << ");
+                        writer.Write(i);
+                        writer.WriteLine(")) == 0)");
+
+                        writer.WriteLine('{');
+                        writer.Indent++;
+
+                        writer.Write("options[i] = ");
+                        GenerateExpression(loopSwitchStatement.Options[i].Expression);
+                        writer.WriteLine(';');
+
+                        writer.WriteLine("i++;");
+
+                        writer.Indent--;
+                        writer.WriteLine('}');
+                    }
+
+                    writer.WriteLine();
+
+                    // i is the next index, but at the end, that is just the length
+                    writer.WriteLine("optionsCount = i;");
+
+                    writer.WriteLine("return;");
+
+                    writer.Indent--;
+                    writer.WriteLine('}');
 
                     writer.Indent--;
                 }

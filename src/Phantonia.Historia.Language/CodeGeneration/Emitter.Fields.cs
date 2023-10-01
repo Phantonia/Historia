@@ -1,11 +1,13 @@
 ﻿using Phantonia.Historia.Language.FlowAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
+using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
+using System.Linq;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
 public sealed partial class Emitter
 {
-    private void GenerateOutcomeFields()
+    private void GenerateFields()
     {
         foreach (Symbol symbol in symbolTable.AllSymbols)
         {
@@ -36,6 +38,13 @@ public sealed partial class Emitter
                     writer.WriteLine(";");
                     break;
             }
+        }
+
+        foreach (LoopSwitchStatementNode loopSwitch in boundStory.FlattenHierarchie().OfType<LoopSwitchStatementNode>())
+        {
+            writer.Write("private ulong ");
+            WriteLoopSwitchFieldName(loopSwitch);
+            writer.WriteLine(" = 0;");
         }
     }
 
@@ -97,5 +106,13 @@ public sealed partial class Emitter
             writer.Write('_');
             writer.Write(-tracker.Index);
         }
+    }
+
+    private string GetLoopSwitchFieldName(LoopSwitchStatementNode loopSwitch) => $"ls{loopSwitch.Index}";
+
+    private void WriteLoopSwitchFieldName(LoopSwitchStatementNode loopSwitch)
+    {
+        writer.Write("ls");
+        writer.Write(loopSwitch.Index);
     }
 }
