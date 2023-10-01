@@ -859,4 +859,55 @@ public sealed class FlowAnalyzerTests
         // assert this terminates
         _ = analyzer.PerformFlowAnalysis();
     }
+
+    [TestMethod]
+    public void TestLoopSwitchDefiniteAssignment()
+    {
+        string code =
+            """
+            scene main
+            {
+                outcome X(A, B);
+                outcome Y(A, B);
+
+                loop switch (0)
+                {
+                    option (1)
+                    {
+                        X = A;
+                    }
+
+                    final option (2)
+                    {
+                        Y = A;
+                    }
+                }
+
+                branchon X // error: X not definitely assigned
+                {
+                    option A { }
+                    option B { }
+                }
+
+                branchon Y // no error: final option definitely hit
+                {
+                    option A { }
+                    option B { }
+                }
+            }
+            """;
+
+        FlowAnalyzer analyzer = PrepareFlowAnalyzer(code);
+
+        List<Error> errors = new();
+        analyzer.ErrorFound += errors.Add;
+
+        _ = analyzer.PerformFlowAnalysis();
+
+        Assert.AreEqual(1, errors.Count);
+
+        Error expectedError = Errors.OutcomeNotDefinitelyAssigned("X", new[] { "main" }, code.IndexOf("branchon X"));
+
+        Assert.AreEqual(expectedError, errors[0]);
+    }
 }

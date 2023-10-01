@@ -170,6 +170,18 @@ public sealed partial class FlowAnalyzer
             }
         }
 
+        // loop switches without final options automatically continue after all normal options have been selected
+        if (loopSwitchStatement.Options.All(o => o.Kind != LoopSwitchOptionKind.Final))
+        {
+            flowGraph = flowGraph with
+            {
+                OutgoingEdges = flowGraph.OutgoingEdges.SetItem(
+                    loopSwitchStatement.Index,
+                    flowGraph.OutgoingEdges[loopSwitchStatement.Index].Add(
+                        FlowGraph.FinalEdge)),
+            };
+        }
+
         return flowGraph;
     }
 

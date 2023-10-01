@@ -105,17 +105,7 @@ public sealed partial class Emitter
     private void GenerateOutputTransition(int index, ImmutableList<FlowEdge> edges)
     {
         Debug.Assert(flowGraph.OutgoingEdges[index].Count == 1);
-
-        writer.WriteLine($"state = {edges[0].ToVertex};");
-
-        if (edges[0].ToVertex == EndState || flowGraph.Vertices[edges[0].ToVertex].IsVisible)
-        {
-            writer.WriteLine("return;");
-        }
-        else
-        {
-            writer.WriteLine("continue;");
-        }
+        GenerateTransitionTo(edges[0].ToVertex);
     }
 
     private void GenerateSwitchTransition(SwitchStatementNode switchStatement, ImmutableList<FlowEdge> edges)
@@ -142,10 +132,6 @@ public sealed partial class Emitter
 
             writer.Indent++;
 
-            writer.Write("state = ");
-            writer.Write(edges[i].ToVertex);
-            writer.WriteLine(';');
-
             if (switchStatement is BoundNamedSwitchStatementNode { Outcome: OutcomeSymbol outcome })
             {
                 WriteOutcomeFieldName(outcome);
@@ -154,14 +140,7 @@ public sealed partial class Emitter
                 writer.WriteLine(';');
             }
 
-            if (edges[i].ToVertex == EndState || flowGraph.Vertices[edges[i].ToVertex].IsVisible)
-            {
-                writer.WriteLine("return;");
-            }
-            else
-            {
-                writer.WriteLine("continue;");
-            }
+            GenerateTransitionTo(edges[i].ToVertex);
 
             writer.Indent--;
         }
@@ -215,10 +194,6 @@ public sealed partial class Emitter
 
             writer.Indent++;
 
-            writer.Write("state = ");
-            writer.Write(edges[i].ToVertex);
-            writer.WriteLine(';');
-
             if (loopSwitchStatement.Options[i].Kind == LoopSwitchOptionKind.None)
             {
                 // for example: ls |= 1 << 3;
@@ -229,14 +204,7 @@ public sealed partial class Emitter
                 writer.WriteLine(';');
             }
 
-            if (edges[i].ToVertex == EndState || flowGraph.Vertices[edges[i].ToVertex].IsVisible)
-            {
-                writer.WriteLine("return;");
-            }
-            else
-            {
-                writer.WriteLine("continue;");
-            }
+            GenerateTransitionTo(edges[i].ToVertex);
 
             writer.Indent--;
         }
@@ -286,19 +254,7 @@ public sealed partial class Emitter
 
                 writer.Indent++;
 
-                writer.Write("state = ");
-                writer.Write(edges[i].ToVertex);
-                writer.WriteLine(';');
-
-                FlowVertex followingVertex = flowGraph.Vertices[edges[i].ToVertex];
-                if (edges[i].ToVertex == EndState || followingVertex.IsVisible)
-                {
-                    writer.WriteLine("return;");
-                }
-                else
-                {
-                    writer.WriteLine("continue;");
-                }
+                GenerateTransitionTo(edges[i].ToVertex);
 
                 writer.Indent--;
             }
@@ -308,18 +264,7 @@ public sealed partial class Emitter
                 writer.Indent++;
 
                 int nextState = flowGraph.OutgoingEdges[branchOnStatement.Index][i].ToVertex;
-                writer.Write("state = ");
-                writer.Write(nextState);
-                writer.WriteLine(';');
-
-                if (edges[i].ToVertex == EndState || flowGraph.Vertices[edges[i].ToVertex].IsVisible)
-                {
-                    writer.WriteLine("return;");
-                }
-                else
-                {
-                    writer.WriteLine("continue;");
-                }
+                GenerateTransitionTo(nextState);
             }
         }
 
@@ -360,18 +305,7 @@ public sealed partial class Emitter
 
             nextState ??= edges[^1].ToVertex; // other option needs to be last
 
-            writer.Write("state = ");
-            writer.Write((int)nextState);
-            writer.WriteLine(';');
-
-            if (nextState == EndState || flowGraph.Vertices[(int)nextState].IsVisible)
-            {
-                writer.WriteLine("return;");
-            }
-            else
-            {
-                writer.WriteLine("continue;");
-            }
+            GenerateTransitionTo((int)nextState);
 
             writer.Indent--;
             writer.WriteLine('}');
@@ -420,20 +354,9 @@ public sealed partial class Emitter
             writer.WriteLine(')');
             writer.WriteLine('{');
             writer.Indent++;
-            writer.Write("state = ");
 
             int index = branchOnStatement.Options.IndexOf(option);
-            writer.Write(edges[index].ToVertex);
-            writer.WriteLine(';');
-
-            if (edges[i].ToVertex == EndState || flowGraph.Vertices[edges[i].ToVertex].IsVisible)
-            {
-                writer.WriteLine("return;");
-            }
-            else
-            {
-                writer.WriteLine("continue;");
-            }
+            GenerateTransitionTo(edges[index].ToVertex);
 
             writer.Indent--;
             writer.WriteLine('}');
@@ -444,18 +367,7 @@ public sealed partial class Emitter
         writer.WriteLine('{');
         writer.Indent++;
 
-        writer.Write("state = ");
-        writer.Write(edges[branchOnStatement.Options.IndexOf(options[^1])].ToVertex);
-        writer.WriteLine(';');
-
-        if (edges[^1].ToVertex == EndState || flowGraph.Vertices[edges[^1].ToVertex].IsVisible)
-        {
-            writer.WriteLine("return;");
-        }
-        else
-        {
-            writer.WriteLine("continue;");
-        }
+        GenerateTransitionTo(edges[branchOnStatement.Options.IndexOf(options[^1])].ToVertex);
 
         writer.Indent--;
         writer.WriteLine('}');
@@ -473,18 +385,7 @@ public sealed partial class Emitter
 
         Debug.Assert(edges.Count == 1);
 
-        writer.Write("state = ");
-        writer.Write(edges[0].ToVertex);
-        writer.WriteLine(';');
-
-        if (edges[0].ToVertex == EndState || flowGraph.Vertices[edges[0].ToVertex].IsVisible)
-        {
-            writer.WriteLine("return;");
-        }
-        else
-        {
-            writer.WriteLine("continue;");
-        }
+        GenerateTransitionTo(edges[0].ToVertex);
     }
 
     private void GenerateSpectrumAdjustmentTransition(BoundSpectrumAdjustmentStatementNode spectrumAdjustment, ImmutableList<FlowEdge> edges)
@@ -504,16 +405,7 @@ public sealed partial class Emitter
 
         Debug.WriteLine(edges.Count == 1);
 
-        writer.WriteLine($"state = {edges[0].ToVertex};");
-
-        if (edges[0].ToVertex == EndState || flowGraph.Vertices[edges[0].ToVertex].IsVisible)
-        {
-            writer.WriteLine("return;");
-        }
-        else
-        {
-            writer.WriteLine("continue;");
-        }
+        GenerateTransitionTo(edges[0].ToVertex);
     }
 
     private void GenerateCallerTrackerTransition(CallerTrackerStatementNode trackerStatement, ImmutableList<FlowEdge> edges)
@@ -523,16 +415,7 @@ public sealed partial class Emitter
         writer.Write(trackerStatement.CallSiteIndex);
         writer.WriteLine(';');
 
-        writer.WriteLine($"state = {edges[0].ToVertex};");
-
-        if (edges[0].ToVertex == EndState || flowGraph.Vertices[edges[0].ToVertex].IsVisible)
-        {
-            writer.WriteLine("return;");
-        }
-        else
-        {
-            writer.WriteLine("continue;");
-        }
+        GenerateTransitionTo(edges[0].ToVertex);
     }
 
     private void GenerateCallerResolutionTransition(CallerResolutionStatementNode resolutionStatement, ImmutableList<FlowEdge> edges)
@@ -551,19 +434,7 @@ public sealed partial class Emitter
             writer.WriteLine(':');
             writer.Indent++;
 
-            writer.Write("state = ");
-            writer.Write(edges[i].ToVertex);
-            writer.WriteLine(';');
-
-            FlowVertex followingVertex = flowGraph.Vertices[edges[i].ToVertex];
-            if (edges[i].ToVertex == EndState || followingVertex.IsVisible)
-            {
-                writer.WriteLine("return;");
-            }
-            else
-            {
-                writer.WriteLine("continue;");
-            }
+            GenerateTransitionTo(edges[i].ToVertex);
 
             writer.Indent--;
         }
@@ -572,5 +443,55 @@ public sealed partial class Emitter
         writer.WriteLine('}');
         writer.WriteLine();
         writer.WriteLine("throw new global::System.InvalidOperationException(\"Fatal internal error: Invalid call site\");");
+    }
+
+    private void GenerateTransitionTo(int toVertex)
+    {
+        void GenerateSimpleTransitionTo(int toVertex)
+        {
+            writer.WriteLine($"state = {toVertex};");
+
+            if (toVertex == EndState || flowGraph.Vertices[toVertex].IsVisible)
+            {
+                writer.WriteLine("return;");
+            }
+            else
+            {
+                writer.WriteLine("continue;");
+            }
+        }
+
+        if (toVertex != EndState
+            &&flowGraph.Vertices[toVertex].AssociatedStatement is LoopSwitchStatementNode loopSwitch
+            && loopSwitch.Options.All(o => o.Kind != LoopSwitchOptionKind.Final))
+        {
+            // this loop switch has no final option, that is it terminates after all normal options have been selected
+            writer.Write("if (");
+            WriteLoopSwitchFieldName(loopSwitch);
+            writer.Write(" == ");
+            writer.Write((1 << loopSwitch.Options.Length) - 1); // (ls == 2^(options.length) - 1) means all bits for options have been set
+            writer.WriteLine(')');
+
+            writer.WriteLine('{');
+            writer.Indent++;
+
+            // the last edge of these loop switches is the one to the next state
+            GenerateSimpleTransitionTo(flowGraph.OutgoingEdges[toVertex][^1].ToVertex);
+
+            writer.Indent--;
+            writer.WriteLine('}');
+            writer.WriteLine("else");
+            writer.WriteLine('{');
+            writer.Indent++;
+
+            GenerateSimpleTransitionTo(toVertex);
+
+            writer.Indent--;
+            writer.WriteLine('}');
+        }
+        else
+        {
+            GenerateSimpleTransitionTo(toVertex);
+        }
     }
 }
