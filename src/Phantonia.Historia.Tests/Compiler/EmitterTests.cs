@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Phantonia.Historia.Language;
+using Phantonia.Historia.Language.FlowAnalysis;
 using System;
 using System.IO;
 
@@ -808,15 +809,7 @@ public sealed class EmitterTests
             """
             scene main
             {
-                // uh, I found a fatal bug with calling a scene more than once in the same scene
-                // that's why we have this workaround for now
-                // wtf antonia, what are you doing...
                 call LoopSwitch;
-                call Inter;
-            }
-
-            scene Inter
-            {
                 call LoopSwitch;
             }
 

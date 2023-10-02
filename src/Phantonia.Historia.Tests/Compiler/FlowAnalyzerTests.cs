@@ -910,4 +910,28 @@ public sealed class FlowAnalyzerTests
 
         Assert.AreEqual(expectedError, errors[0]);
     }
+
+    [TestMethod]
+    public void TestSceneCalledTwiceInScene()
+    {
+        string code =
+            """
+            scene main
+            {
+                call A;
+                call A;
+            }
+
+            scene A
+            {
+                output 0;
+            }
+            """;
+
+        FlowAnalyzer analyzer = PrepareFlowAnalyzer(code);
+        analyzer.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        // we assert that this method runs, especially w/o Debug.Assert firing
+        _ = analyzer.PerformFlowAnalysis();
+    }
 }

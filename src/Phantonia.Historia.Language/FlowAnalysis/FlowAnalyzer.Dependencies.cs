@@ -16,14 +16,14 @@ public sealed partial class FlowAnalyzer
 
         foreach ((SceneSymbol scene, FlowGraph flowGraph) in sceneFlowGraphs)
         {
-            IReadOnlyList<int> theseDependencies = GetDependencies(scene, flowGraph);
-            dependencies[scene.Index] = theseDependencies;
+            IReadOnlyDictionary<int, int> theseDependenciesAndReferenceCounts = GetDependenciesAndReferenceCounts(scene, flowGraph);
+            dependencies[scene.Index] = theseDependenciesAndReferenceCounts.Keys.ToList();
             symbols[scene.Index] = scene;
 
-            foreach (int dep in theseDependencies)
+            foreach ((int dep, int refCount) in theseDependenciesAndReferenceCounts)
             {
                 referenceCounts.TryAdd(dep, 0);
-                referenceCounts[dep]++;
+                referenceCounts[dep] += refCount;
             }
         }
 
@@ -47,18 +47,19 @@ public sealed partial class FlowAnalyzer
         return (topologicalOrder, finalReferenceCounts);
     }
 
-    private IReadOnlyList<int> GetDependencies(SceneSymbol scene, FlowGraph flowGraph)
+    private IReadOnlyDictionary<int, int> GetDependenciesAndReferenceCounts(SceneSymbol scene, FlowGraph flowGraph)
     {
-        HashSet<int> dependentScenes = new();
+        Dictionary<int, int> referenceCounts = new();
 
         foreach (FlowVertex vertex in flowGraph.Vertices.Values)
         {
             if (vertex.AssociatedStatement is BoundCallStatementNode { Scene: SceneSymbol calledScene })
             {
-                _ = dependentScenes.Add(calledScene.Index);
+                referenceCounts.TryAdd(calledScene.Index, 0);
+                referenceCounts[calledScene.Index]++;
             }
         }
 
-        return dependentScenes.ToList();
+        return referenceCounts;
     }
 }
