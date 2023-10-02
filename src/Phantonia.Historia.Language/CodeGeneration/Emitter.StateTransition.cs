@@ -194,14 +194,21 @@ public sealed partial class Emitter
 
             writer.Indent++;
 
-            if (loopSwitchStatement.Options[i].Kind == LoopSwitchOptionKind.None)
+            switch (loopSwitchStatement.Options[i].Kind)
             {
-                // for example: ls |= 1 << 3;
-                // we record that this option has been taken, blocking it for the future
-                WriteLoopSwitchFieldName(loopSwitchStatement);
-                writer.Write(" |= 1 << ");
-                writer.Write(i);
-                writer.WriteLine(';');
+                case LoopSwitchOptionKind.None:
+                    // for example: ls |= 1 << 3;
+                    // we record that this option has been taken, blocking it for the future
+                    WriteLoopSwitchFieldName(loopSwitchStatement);
+                    writer.Write(" |= 1 << ");
+                    writer.Write(i);
+                    writer.WriteLine(';');
+                    break;
+                case LoopSwitchOptionKind.Final:
+                    // reset loop switch field
+                    WriteLoopSwitchFieldName(loopSwitchStatement);
+                    writer.WriteLine(" = 0;");
+                    break;
             }
 
             GenerateTransitionTo(edges[i].ToVertex);
@@ -474,6 +481,10 @@ public sealed partial class Emitter
 
             writer.WriteLine('{');
             writer.Indent++;
+
+            // reset loop switch field
+            WriteLoopSwitchFieldName(loopSwitch);
+            writer.WriteLine(" = 0;");
 
             // the last edge of these loop switches is the one to the next state
             GenerateSimpleTransitionTo(flowGraph.OutgoingEdges[toVertex][^1].ToVertex);

@@ -81,9 +81,6 @@ public sealed partial class Emitter
 
         writer.Indent++;
 
-        writer.WriteLine("global::System.Array.Clear(options);");
-        writer.WriteLine();
-
         if (flowGraph.Vertices.Values.Any(v => v.AssociatedStatement is SwitchStatementNode or LoopSwitchStatementNode))
         {
             writer.WriteLine("switch (state)");

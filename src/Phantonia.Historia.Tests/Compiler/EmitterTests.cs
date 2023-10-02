@@ -800,4 +800,68 @@ public sealed class EmitterTests
 
         Assert.AreEqual(100, story.Output);
     }
+
+    [TestMethod]
+    public void TestRunningLoopSwitchTwice()
+    {
+        string code =
+            """
+            scene main
+            {
+                // uh, I found a fatal bug with calling a scene more than once in the same scene
+                // that's why we have this workaround for now
+                // wtf antonia, what are you doing...
+                call LoopSwitch;
+                call Inter;
+            }
+
+            scene Inter
+            {
+                call LoopSwitch;
+            }
+
+            scene LoopSwitch
+            {
+                loop switch (0)
+                {
+                    option (1)
+                    {
+                        output 1;
+                    }
+
+                    option (2)
+                    {
+                        output 2;
+                    }
+
+                    final option (3)
+                    {
+                        output 3;
+                    }
+                }
+            }
+            """;
+        
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStory");
+
+        Assert.IsTrue(story.TryContinue());
+
+        Assert.AreEqual(3, story.Options.Count);
+        Assert.IsTrue(story.TryContinueWithOption(0)); // option (1)
+        Assert.IsTrue(story.TryContinue());
+
+        Assert.AreEqual(2, story.Options.Count);
+        Assert.IsTrue(story.TryContinueWithOption(1)); // final option (3)
+        Assert.IsTrue(story.TryContinue());
+
+        Assert.AreEqual(3, story.Options.Count);
+    }
 }
