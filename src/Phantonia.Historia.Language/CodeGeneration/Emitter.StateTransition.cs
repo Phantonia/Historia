@@ -1,8 +1,8 @@
-﻿using Phantonia.Historia.Language.FlowAnalysis;
+﻿using Microsoft.CodeAnalysis;
+using Phantonia.Historia.Language.FlowAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -390,6 +390,17 @@ public sealed partial class Emitter
         writer.Write(outcomeAssignment.Outcome.OptionNames.IndexOf(outcomeAssignment.AssignedOption));
         writer.WriteLine(";");
 
+        if (outcomeAssignment.Outcome.Public)
+        {
+            writer.Write("Outcome");
+            writer.Write(outcomeAssignment.Outcome.Name);
+            writer.Write(" = Outcome");
+            writer.Write(outcomeAssignment.Outcome.Name);
+            writer.Write('.');
+            writer.Write(outcomeAssignment.AssignedOption);
+            writer.WriteLine(';');
+        }
+
         Debug.Assert(edges.Count == 1);
 
         GenerateTransitionTo(edges[0].ToVertex);
@@ -397,17 +408,95 @@ public sealed partial class Emitter
 
     private void GenerateSpectrumAdjustmentTransition(BoundSpectrumAdjustmentStatementNode spectrumAdjustment, ImmutableList<FlowEdge> edges)
     {
-        WriteSpectrumTotalFieldName(spectrumAdjustment.Spectrum);
+        SpectrumSymbol spectrum = spectrumAdjustment.Spectrum;
+
+        WriteSpectrumTotalFieldName(spectrum);
         writer.Write(" += ");
         GenerateExpression(spectrumAdjustment.AdjustmentAmount);
         writer.WriteLine(';');
 
         if (spectrumAdjustment.Strengthens)
         {
-            WriteSpectrumPositiveFieldName(spectrumAdjustment.Spectrum);
+            WriteSpectrumPositiveFieldName(spectrum);
             writer.Write(" += ");
             GenerateExpression(spectrumAdjustment.AdjustmentAmount);
             writer.WriteLine(';');
+        }
+
+        if (spectrum.Public)
+        {
+            writer.Write("Value");
+            writer.Write(spectrum.Name);
+            writer.Write(" = (double)");
+            WriteSpectrumPositiveFieldName(spectrum);
+            writer.Write(" / (double)");
+            WriteSpectrumTotalFieldName(spectrum);
+            writer.WriteLine(';');
+            writer.WriteLine();
+
+            writer.WriteLine('{');
+            writer.Indent++;
+
+            writer.Write("int value = ");
+            WriteSpectrumPositiveFieldName(spectrum);
+            writer.Write(" * ");
+            writer.Write(spectrum.Intervals.First().Value.UpperDenominator);
+            writer.WriteLine(';');
+            writer.WriteLine();
+
+            for (int i = 0; i < spectrum.OptionNames.Length - 1; i++)
+            {
+                string optionName = spectrum.OptionNames[i];
+
+                SpectrumInterval interval = spectrum.Intervals[optionName];
+
+                writer.Write("if (value <");
+
+                if (interval.Inclusive)
+                {
+                    writer.Write('=');
+                }
+
+                writer.Write(' ');
+                WriteSpectrumTotalFieldName(spectrum);
+                writer.Write(" * ");
+                writer.Write(interval.UpperNumerator);
+                writer.WriteLine(')');
+                writer.WriteLine('{');
+                writer.Indent++;
+
+                writer.Write("Spectrum");
+                writer.Write(spectrum.Name);
+                writer.Write(" = ");
+                writer.Write("Spectrum");
+                writer.Write(spectrum.Name);
+                writer.Write('.');
+                writer.Write(optionName);
+                writer.WriteLine(';');
+
+                writer.Indent--;
+                writer.WriteLine('}');
+                writer.Write("else ");
+            }
+
+            writer.WriteLine();
+            writer.WriteLine('{');
+            writer.Indent++;
+
+            writer.Write("Spectrum");
+            writer.Write(spectrum.Name);
+            writer.Write(" = ");
+            writer.Write("Spectrum");
+            writer.Write(spectrum.Name);
+            writer.Write('.');
+            writer.Write(spectrum.OptionNames[^1]);
+            writer.WriteLine(';');
+
+            writer.Indent--;
+            writer.WriteLine('}');
+
+            writer.Indent--;
+            writer.WriteLine('}');
         }
 
         Debug.WriteLine(edges.Count == 1);
@@ -469,7 +558,7 @@ public sealed partial class Emitter
         }
 
         if (toVertex != EndState
-            &&flowGraph.Vertices[toVertex].AssociatedStatement is LoopSwitchStatementNode loopSwitch
+            && flowGraph.Vertices[toVertex].AssociatedStatement is LoopSwitchStatementNode loopSwitch
             && loopSwitch.Options.All(o => o.Kind != LoopSwitchOptionKind.Final))
         {
             // this loop switch has no final option, that is it terminates after all normal options have been selected

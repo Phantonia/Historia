@@ -3,6 +3,7 @@ using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using Phantonia.Historia.Language.SyntaxAnalysis.Types;
+using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 
@@ -28,6 +29,8 @@ public sealed partial class Parser
                 return ParseEnumSymbolDeclaration(ref index);
             case { Kind: TokenKind.SettingKeyword }:
                 return ParseSettingDirective(ref index);
+            case { Kind: TokenKind.PublicKeyword }:
+                return ParsePublicTopLevelNode(ref index);
             case { Kind: TokenKind.OutcomeKeyword }:
                 {
                     (string name, ImmutableArray<string> options, string? defaultOption, int nodeIndex) = ParseOutcomeDeclaration(ref index);
@@ -37,6 +40,7 @@ public sealed partial class Parser
                         Name = name,
                         Options = options,
                         DefaultOption = defaultOption,
+                        Public = false,
                         Index = nodeIndex,
                     };
                 }
@@ -49,6 +53,7 @@ public sealed partial class Parser
                         Name = name,
                         Options = options,
                         DefaultOption = defaultOption,
+                        Public = false,
                         Index = nodeIndex,
                     };
                 }
@@ -288,5 +293,46 @@ public sealed partial class Parser
 
         Debug.Assert(false);
         return null;
+    }
+
+    private TopLevelNode? ParsePublicTopLevelNode(ref int index)
+    {
+        Debug.Assert(tokens[index] is { Kind: TokenKind.PublicKeyword });
+
+        int nodeIndex = tokens[index].Index;
+        index++;
+
+        switch (tokens[index])
+        {
+            case { Kind: TokenKind.SpectrumKeyword }:
+                {
+                    (string name, ImmutableArray<SpectrumOptionNode> options, string? defaultOption, _) = ParseSpectrumDeclaration(ref index);
+
+                    return new SpectrumSymbolDeclarationNode
+                    {
+                        Name = name,
+                        Options = options,
+                        DefaultOption = defaultOption,
+                        Public = true,
+                        Index = nodeIndex,
+                    };
+                }
+            case { Kind: TokenKind.OutcomeKeyword }:
+                {
+                    (string name, ImmutableArray<string> options, string? defaultOption, _) = ParseOutcomeDeclaration(ref index);
+
+                    return new OutcomeSymbolDeclarationNode
+                    {
+                        Name = name,
+                        Options = options,
+                        DefaultOption = defaultOption,
+                        Public = true,
+                        Index = nodeIndex,
+                    };
+                }
+            default:
+                ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index - 1]));
+                return ParseTopLevelNode(ref index);
+        }
     }
 }

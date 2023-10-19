@@ -34,6 +34,7 @@ public enum TokenKind
     LoopKeyword,
     BranchOnKeyword,
     OtherKeyword,
+    PublicKeyword,
     OutcomeKeyword,
     DefaultKeyword,
     SpectrumKeyword,

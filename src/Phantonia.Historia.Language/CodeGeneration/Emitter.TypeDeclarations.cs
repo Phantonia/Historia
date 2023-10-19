@@ -2,7 +2,6 @@
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using System;
-using System.CodeDom.Compiler;
 using System.Diagnostics;
 using System.Linq;
 
@@ -16,8 +15,7 @@ public sealed partial class Emitter
         {
             if (topLevelNode is not BoundSymbolDeclarationNode
                 {
-                    Declaration: TypeSymbolDeclarationNode,
-                    Symbol: TypeSymbol symbol,
+                    Symbol: Symbol symbol,
                 })
             {
                 continue;
@@ -34,9 +32,11 @@ public sealed partial class Emitter
                 case EnumTypeSymbol enumSymbol:
                     GenerateEnumDeclaration(enumSymbol);
                     break;
+                case OutcomeSymbol { Public: true } outcomeSymbol:
+                    GenerateOutcomeEnum(outcomeSymbol);
+                    break;
                 default:
-                    Debug.Assert(false);
-                    return;
+                    continue;
             }
 
             writer.WriteLine();
@@ -591,7 +591,7 @@ public sealed partial class Emitter
 
     private void GenerateEnumDeclaration(PseudoEnumTypeSymbol enumSymbol)
     {
-        writer.Write("public enum ");
+        writer.Write("public enum @");
         writer.WriteLine(enumSymbol.Name);
         writer.WriteLine('{');
 
@@ -605,6 +605,50 @@ public sealed partial class Emitter
 
         writer.Indent--;
 
+        writer.WriteLine('}');
+    }
+
+    private void GenerateOutcomeEnum(OutcomeSymbol outcomeSymbol)
+    {
+        writer.Write("public enum ");
+
+        if (outcomeSymbol is SpectrumSymbol)
+        {
+            writer.Write("Spectrum");
+        }
+        else
+        {
+            writer.Write("Outcome");
+        }
+
+        writer.WriteLine(outcomeSymbol.Name);
+        writer.WriteLine('{');
+        writer.Indent++;
+
+        if (outcomeSymbol.DefaultOption is null)
+        {
+            int i = 0;
+
+            while (outcomeSymbol.OptionNames.Contains(new string('_', i) + "Unset"))
+            {
+                i++;
+            }
+
+            for (int j = 0; j < i; j++)
+            {
+                writer.Write('_');
+            }
+
+            writer.WriteLine("Unset = 0,");
+        }
+
+        foreach (string option in outcomeSymbol.OptionNames)
+        {
+            writer.Write(option);
+            writer.WriteLine(',');
+        }
+
+        writer.Indent--;
         writer.WriteLine('}');
     }
 }

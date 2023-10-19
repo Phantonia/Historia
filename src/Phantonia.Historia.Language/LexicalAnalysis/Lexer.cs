@@ -463,6 +463,7 @@ public sealed class Lexer
             "loop" => TokenKind.LoopKeyword,
             "branchon" => TokenKind.BranchOnKeyword,
             "other" => TokenKind.OtherKeyword,
+            "public" => TokenKind.PublicKeyword,
             "outcome" => TokenKind.OutcomeKeyword,
             "default" => TokenKind.DefaultKeyword,
             "spectrum" => TokenKind.SpectrumKeyword,

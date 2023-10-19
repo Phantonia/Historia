@@ -11,6 +11,8 @@ public record SpectrumSymbolDeclarationNode : SymbolDeclarationNode, ISpectrumDe
     private readonly ImmutableArray<SpectrumOptionNode> options;
     private readonly ImmutableArray<string> stringOptions;
 
+    public required bool Public { get; init; }
+
     public required ImmutableArray<SpectrumOptionNode> Options
     {
         get => options;

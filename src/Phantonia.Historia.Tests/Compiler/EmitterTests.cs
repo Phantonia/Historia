@@ -3,6 +3,7 @@ using Phantonia.Historia.Language;
 using Phantonia.Historia.Language.FlowAnalysis;
 using System;
 using System.IO;
+using System.Reflection;
 
 namespace Phantonia.Historia.Tests.Compiler;
 
@@ -856,5 +857,47 @@ public sealed class EmitterTests
         Assert.IsTrue(story.TryContinue());
 
         Assert.AreEqual(3, story.Options.Count);
+    }
+
+    [TestMethod]
+    public void TestPublicOutcomes()
+    {
+        string code =
+            """
+            public outcome X (A, B, C);
+            public spectrum Y (A <= 1/2, B);
+            outcome Z (A, B);
+
+            scene main
+            {
+                X = A;
+                strengthen Y by 7;
+                weaken Y by 11;
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        IStory<int, int> story = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStory");
+
+        Type storyType = story.GetType();
+
+        MemberInfo[] outcomeX = storyType.GetMember("OutcomeX");
+        Assert.AreEqual(1, outcomeX.Length);
+        Assert.IsTrue(outcomeX[0] is PropertyInfo property && property.PropertyType.IsEnum);
+
+        MemberInfo[] spectrumY = storyType.GetMember("SpectrumY");
+        Assert.AreEqual(1, spectrumY.Length);
+        Assert.IsTrue(spectrumY[0] is PropertyInfo anotherProperty && anotherProperty.PropertyType.IsEnum);
+
+        MemberInfo[] valueY = storyType.GetMember("ValueY");
+        Assert.AreEqual(1, valueY.Length);
+        Assert.IsTrue(valueY[0] is PropertyInfo yetAnotherProperty && yetAnotherProperty.PropertyType == typeof(double));
     }
 }

@@ -8,7 +8,9 @@ public record OutcomeSymbol : Symbol
 
     public required ImmutableArray<string> OptionNames { get; init; }
 
-    public required bool AlwaysAssigned { get; init; } = false;
+    public required bool AlwaysAssigned { get; init; }
+
+    public required bool Public { get; init; }
 
     public string? DefaultOption { get; init; }
 

@@ -6,6 +6,7 @@ using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
+using System;
 using System.CodeDom.Compiler;
 using System.Diagnostics;
 using System.IO;
@@ -151,6 +152,8 @@ public sealed partial class Emitter
         writer.WriteLine(" Output { get; private set; }");
         writer.WriteLine();
 
+        GeneratePublicOutcomes();
+
         writer.WriteManyLines(
             $$"""
             public bool TryContinue()
@@ -271,6 +274,50 @@ public sealed partial class Emitter
                          .Select(n => n switch { SwitchStatementNode s => s.Options.Length, LoopSwitchStatementNode l => l.Options.Length, _ => int.MinValue })
                          .Append(0) // if sequence is empty, at least have one number
                          .Max();
+    }
+
+    private void GeneratePublicOutcomes()
+    {
+        foreach (Symbol symbol in symbolTable.AllSymbols)
+        {
+            if (symbol is not OutcomeSymbol { Public: true } outcome)
+            {
+                continue;
+            }
+
+            void WriteName()
+            {
+                if (outcome is SpectrumSymbol)
+                {
+                    writer.Write("Spectrum");
+                }
+                else
+                {
+                    writer.Write("Outcome");
+                }
+
+                writer.Write(outcome.Name);
+            }
+
+            writer.Write("public ");
+
+            WriteName(); // type
+            writer.Write(' ');
+
+            WriteName(); // property
+
+            writer.WriteLine(" { get; private set; }");
+
+            writer.WriteLine();
+
+            if (symbol is SpectrumSymbol)
+            {
+                writer.Write("public double Value");
+                writer.Write(outcome.Name);
+                writer.WriteLine(" { get; private set; }");
+                writer.WriteLine();
+            }
+        }
     }
 
     private void GenerateExpression(ExpressionNode expression)

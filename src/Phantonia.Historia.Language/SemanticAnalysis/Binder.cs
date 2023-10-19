@@ -225,6 +225,7 @@ public sealed partial class Binder
             OptionNames = optionNames.ToImmutableArray(),
             DefaultOption = outcomeDeclaration.DefaultOption,
             AlwaysAssigned = false,
+            Public = outcomeDeclaration.Public,
             Index = outcomeDeclaration.Index,
         };
     }
@@ -358,6 +359,7 @@ public sealed partial class Binder
             OptionNames = spectrumDeclaration.Options.Select(o => o.Name).ToImmutableArray(),
             DefaultOption = spectrumDeclaration.DefaultOption,
             AlwaysAssigned = false,
+            Public = spectrumDeclaration.Public,
             Index = spectrumDeclaration.Index,
         };
     }

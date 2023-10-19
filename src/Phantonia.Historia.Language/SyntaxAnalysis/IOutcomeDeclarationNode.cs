@@ -4,6 +4,8 @@ namespace Phantonia.Historia.Language.SyntaxAnalysis;
 
 public interface IOutcomeDeclarationNode : ISyntaxNode
 {
+    bool Public { get; }
+
     string Name { get; }
 
     ImmutableArray<string> Options { get; }

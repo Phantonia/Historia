@@ -133,6 +133,7 @@ public sealed partial class Binder
                     Name = switchStatement.Name,
                     OptionNames = optionNames.ToImmutableArray(),
                     AlwaysAssigned = true,
+                    Public = false,
                     Index = switchStatement.Index,
                 };
 
