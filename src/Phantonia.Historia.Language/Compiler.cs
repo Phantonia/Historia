@@ -84,6 +84,9 @@ public sealed class Compiler
 
         emitter.GenerateOutputCode();
 
-        return new CompilationResult();
+        return new CompilationResult
+        {
+            StoryName = settings.StoryName,
+        };
     }
 }
