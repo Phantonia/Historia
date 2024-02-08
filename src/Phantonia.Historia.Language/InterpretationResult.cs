@@ -12,7 +12,7 @@ public readonly record struct InterpretationResult
 
     public InterpreterStateMachine? StateMachine { get; init; }
 
-    [MemberNotNull(nameof(StateMachine))]
+    [MemberNotNullWhen(returnValue: true, nameof(StateMachine))]
     public bool IsValid
     {
         get
