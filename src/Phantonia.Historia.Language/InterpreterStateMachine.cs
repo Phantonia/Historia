@@ -29,7 +29,6 @@ public sealed class InterpreterStateMachine : IStory
     private int state = StartState;
     private readonly Dictionary<string, ulong> fields = new();
     private readonly List<object> options = new();
-    private int optionCount;
 
     public bool NotStartedStory { get; private set; } = true;
 
@@ -37,7 +36,7 @@ public sealed class InterpreterStateMachine : IStory
 
     public object? Output { get; private set; }
 
-    public ReadOnlyList<object?> Options => new(options, 0, optionCount);
+    public ReadOnlyList<object> Options => new(options, 0, options.Count);
 
     public bool TryContinue()
     {
@@ -87,10 +86,29 @@ public sealed class InterpreterStateMachine : IStory
         return true;
     }
 
+    public void Reset()
+    {
+        NotStartedStory = true;
+        FinishedStory = false;
+        fields.Clear();
+        options.Clear();
+        state = StartState;
+    }
+
     private void StateTransition(int option)
     {
         while (true)
         {
+            if (state == StartState)
+            {
+                state = flowGraph.StartVertex;
+
+                if (flowGraph.Vertices[state].IsVisible)
+                {
+                    return;
+                }
+            }
+
             switch (flowGraph.Vertices[state].AssociatedStatement)
             {
                 case OutputStatementNode:
@@ -152,7 +170,15 @@ public sealed class InterpreterStateMachine : IStory
                         state = flowGraph.OutgoingEdges[state][0].ToVertex;
                     }
                     break;
-                case BoundSpectrumAdjustmentStatementNode { Spectrum: SpectrumSymbol spectrum, Strengthens: bool strengthens, AdjustmentAmount: IntegerLiteralExpressionNode { Value: int amount } }:
+                case BoundSpectrumAdjustmentStatementNode
+                {
+                    Spectrum: SpectrumSymbol spectrum,
+                    Strengthens: bool strengthens,
+                    AdjustmentAmount: TypedExpressionNode
+                    {
+                        Expression: IntegerLiteralExpressionNode { Value: int amount },
+                    },
+                }:
                     {
                         string totalFieldName = $"total{spectrum.Index}";
                         fields.TryAdd(totalFieldName, 0);
@@ -164,11 +190,13 @@ public sealed class InterpreterStateMachine : IStory
                             fields.TryAdd(positiveFieldName, 0);
                             fields[positiveFieldName] += (ulong)amount;
                         }
+
+                        state = flowGraph.OutgoingEdges[state][0].ToVertex;
                     }
                     break;
             }
 
-            if (flowGraph.Vertices[state].IsVisible)
+            if (state == EndState || flowGraph.Vertices[state].IsVisible)
             {
                 return;
             }
@@ -257,6 +285,12 @@ public sealed class InterpreterStateMachine : IStory
 
     private void SetOutput()
     {
+        if (state == EndState)
+        {
+            Output = null;
+            return;
+        }
+
         IOutputStatementNode outputState = (IOutputStatementNode)flowGraph.Vertices[state].AssociatedStatement;
 
         Output = ExpressionToObject(outputState.OutputExpression);
@@ -264,21 +298,22 @@ public sealed class InterpreterStateMachine : IStory
 
     private void SetOptions()
     {
+        if (state == EndState)
+        {
+            options.Clear();
+            return;
+        }
+
         StatementNode statement = flowGraph.Vertices[state].AssociatedStatement;
 
         options.Clear();
 
         switch (statement)
         {
-            case OutputStatementNode:
-                optionCount = 0;
-                return;
             case SwitchStatementNode switchStatement:
-                optionCount = switchStatement.Options.Length;
                 options.AddRange(switchStatement.Options.Select(option => ExpressionToObject(option.Expression)));
                 return;
             case LoopSwitchStatementNode loopSwitchStatement:
-                optionCount = loopSwitchStatement.Options.Length;
                 options.AddRange(loopSwitchStatement.Options.Select(option => ExpressionToObject(option.Expression)));
                 return;
         }
