@@ -9,4 +9,8 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.7.0-2.final" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Phantonia.Historia\Phantonia.Historia.csproj" />
+  </ItemGroup>
+
 </Project>
