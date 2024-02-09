@@ -181,7 +181,7 @@ public sealed class InterpreterTests
 
             AssertContinue();
             Assert.AreEqual(8, (int)sm.Output);
-            //Assert.AreEqual(3, sm.Options.Count);
+            Assert.AreEqual(3, sm.Options.Count);
 
             for (int i = 0; i < 3; i++)
             {

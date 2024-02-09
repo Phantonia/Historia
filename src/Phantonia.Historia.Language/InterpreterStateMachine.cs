@@ -314,7 +314,21 @@ public sealed class InterpreterStateMachine : IStory
                 options.AddRange(switchStatement.Options.Select(option => ExpressionToObject(option.Expression)));
                 return;
             case LoopSwitchStatementNode loopSwitchStatement:
-                options.AddRange(loopSwitchStatement.Options.Select(option => ExpressionToObject(option.Expression)));
+                {
+                    string fieldName = $"ls{loopSwitchStatement.Index}";
+                    fields.TryAdd(fieldName, 0);
+                    ulong mask = fields[fieldName];
+
+                    for (int i = 0; i < loopSwitchStatement.Options.Length; i++)
+                    {
+                        LoopSwitchOptionNode option = loopSwitchStatement.Options[i];
+
+                        if ((mask & (1UL << i)) == 0)
+                        {
+                            options.Add(ExpressionToObject(option.Expression));
+                        }
+                    }
+                }
                 return;
         }
     }
