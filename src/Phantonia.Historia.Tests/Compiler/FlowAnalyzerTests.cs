@@ -934,4 +934,38 @@ public sealed class FlowAnalyzerTests
         // we assert that this method runs, especially w/o Debug.Assert firing
         _ = analyzer.PerformFlowAnalysis();
     }
+
+    [TestMethod]
+    public void TestOutcome()
+    {
+        string code =
+            """
+            scene main
+            {
+                outcome X(A, B);
+
+                branchon X
+                {
+                    option A
+                    {
+
+                    }
+
+                    option B
+                    {
+
+                    }
+                }
+            }
+            """;
+
+        FlowAnalyzer analyzer = PrepareFlowAnalyzer(code);
+
+        List<Error> errors = new();
+        analyzer.ErrorFound += errors.Add;
+
+        _ = analyzer.PerformFlowAnalysis();
+
+        Assert.AreEqual(1, errors.Count);
+    }
 }

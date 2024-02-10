@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public sealed record LoopSwitchStatementNode : StatementNode
+public sealed record LoopSwitchStatementNode : StatementNode, IOutputStatementNode
 {
     public LoopSwitchStatementNode() { }
 

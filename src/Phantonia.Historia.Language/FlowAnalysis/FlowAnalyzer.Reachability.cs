@@ -76,7 +76,10 @@ public sealed partial class FlowAnalyzer
 
         foreach (int vertex in order.Skip(1))
         {
-            data[vertex] = ProcessVertex(sceneFlowGraph, vertex, reversedFlowGraph.OutgoingEdges[vertex].Select(e => data[e.ToVertex]), defaultVertexData, sceneFlowGraphs, callStack);
+            IEnumerable<VertexData> previousData = reversedFlowGraph.OutgoingEdges[vertex]
+                                                                    .Where(e => !e.Weak)
+                                                                    .Select(e => data[e.ToVertex]);
+            data[vertex] = ProcessVertex(sceneFlowGraph, vertex, previousData, defaultVertexData, sceneFlowGraphs, callStack);
         }
 
         IEnumerable<VertexData> finalVertexData =
