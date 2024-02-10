@@ -194,6 +194,20 @@ public sealed class InterpreterStateMachine : IStory
                         state = flowGraph.OutgoingEdges[state][0].ToVertex;
                     }
                     break;
+                case CallerTrackerStatementNode callerTracker:
+                    {
+                        string fieldName = $"tracker{callerTracker.Tracker.Index}";
+                        fields[fieldName] = (ulong)callerTracker.CallSiteIndex;
+                        state = flowGraph.OutgoingEdges[state][0].ToVertex;
+                    }
+                    break;
+                case CallerResolutionStatementNode callerResolution:
+                    {
+                        string fieldName = $"tracker{callerResolution.Tracker.Index}";
+                        int callSite = (int)fields[fieldName];
+                        state = flowGraph.OutgoingEdges[state][callSite].ToVertex;
+                    }
+                    break;
             }
 
             if (state == EndState || flowGraph.Vertices[state].IsVisible)

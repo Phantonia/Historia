@@ -67,6 +67,8 @@ public sealed class InterpreterTests
                     }
                 }
 
+                call Scene;
+
                 branchon B
                 {
                     option X
@@ -102,6 +104,8 @@ public sealed class InterpreterTests
                     }
                 }
 
+                call Scene;
+
                 loop switch (8)
                 {
                     loop option (200)
@@ -124,6 +128,11 @@ public sealed class InterpreterTests
                         output 12;
                     }
                 }
+            }
+
+            scene Scene
+            {
+                output 300;
             }
             """;
 
@@ -169,7 +178,13 @@ public sealed class InterpreterTests
             Assert.AreEqual(2, (int)sm.Output);
 
             AssertContinue();
+            Assert.AreEqual(300, (int)sm.Output);
+
+            AssertContinue();
             Assert.AreEqual(7, (int)sm.Output);
+
+            AssertContinue();
+            Assert.AreEqual(300, (int)sm.Output);
 
             AssertContinue();
             Assert.AreEqual(8, (int)sm.Output);
