@@ -16,38 +16,62 @@
             </MenuItem>
         </Menu>
 
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+        <TabControl>
+            <TabItem Header="Code">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
-            <DockPanel Grid.Column="0">
-                <Label x:Name="labelCurrentFile"
-                       Content="No File Opened"
-                       DockPanel.Dock="Top"/>
-                <TextBox Name="textboxFile"
-                         IsReadOnly="True"
-                         FontFamily="Consolas"/>
-            </DockPanel>
+                    <DockPanel Grid.Column="0">
+                        <Label x:Name="labelCurrentFile"
+                               Content="No File Opened"
+                               DockPanel.Dock="Top"/>
+                        <TextBox Name="textboxFile"
+                                 IsReadOnly="False"
+                                 TextWrapping="Wrap"
+                                 AcceptsReturn="True"
+                                 AcceptsTab="True"
+                                 VerticalScrollBarVisibility="Visible"
+                                 FontFamily="Consolas"/>
+                    </DockPanel>
 
-            <DockPanel Grid.Column="1">
-                <Button x:Name="buttonCompile"
-                        Content="Compile"
-                        DockPanel.Dock="Top"/>
-                <ComboBox x:Name="comboboxOptions"
-                          DockPanel.Dock="Top"/>
-                <Button x:Name="buttonContinue"
-                        Content="Continue"
-                        DockPanel.Dock="Top"/>
-                <TextBox x:Name="textboxOutput"
-                         IsReadOnly="True"
-                         Height="100"
-                         DockPanel.Dock="Top"/>
-                <TextBox x:Name="textboxConsole"
-                         IsReadOnly="True"
-                         FontFamily="Consolas"/>
-            </DockPanel>
-        </Grid>
+                    <DockPanel Grid.Column="1">
+                        <Button x:Name="buttonBuild"
+                                Content="Build"
+                                DockPanel.Dock="Top"/>
+                        <TextBox x:Name="textboxConsole"
+                                 IsReadOnly="True"
+                                 FontFamily="Consolas"
+                                 Grid.Column="1"/>
+                    </DockPanel>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Interpreter">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TreeView x:Name="treeviewOutput"
+                              Grid.Column="0">
+                        <TreeViewItem x:Name="tviOutput"
+                                      Header="Output"/>
+                        <TreeViewItem x:Name="tviOptions"
+                                      Header="Options"/>
+                    </TreeView>
+
+                    <StackPanel x:Name="stackpanelButtons"
+                                Grid.Column="1">
+                        <Button x:Name="buttonContinue"
+                                Content="Continue"
+                                IsEnabled="True"/>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+        </TabControl>
     </DockPanel>
 </Window>

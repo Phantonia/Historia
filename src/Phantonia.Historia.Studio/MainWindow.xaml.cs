@@ -1,7 +1,6 @@
 ﻿using Microsoft.Win32;
 using Phantonia.Historia.Language;
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Windows;
@@ -17,33 +16,36 @@ public sealed partial class MainWindow : Window
 
         menuItemOpenFile.Click += OnOpenFile;
         menuItemExport.Click += OnExport;
-        buttonCompile.Click += OnCompile;
+        buttonBuild.Click += OnBuild;
         buttonContinue.Click += OnContinue;
     }
 
     private string? openedFile;
-    private string? outputCode;
-    private IStory? story;
+    private InterpreterStateMachine? stateMachine;
 
-    private void OnCompile(object sender, RoutedEventArgs e)
+    private void OnBuild(object sender, RoutedEventArgs e)
     {
-        if (openedFile is null)
+        TextReader GetInputReader()
         {
-            return;
+            if (openedFile is not null)
+            {
+                return new StreamReader(openedFile);
+            }
+
+            return new StringReader(textboxFile.Text);
         }
 
-        using StreamReader input = new(openedFile);
-        using StringWriter output = new();
+        using TextReader input = GetInputReader();
 
-        Compiler compiler = new(input, output);
-        CompilationResult compilationResult = compiler.Compile();
+        Interpreter intp = new(input);
+        InterpretationResult result = intp.Interpret();
 
-        if (!compilationResult.IsValid)
+        if (!result.IsValid)
         {
-            string fullCode = File.ReadAllText(openedFile);
+            string fullCode = GetInputReader().ReadToEnd();
             StringBuilder builder = new();
 
-            foreach (Error error in compilationResult.Errors)
+            foreach (Error error in result.Errors)
             {
                 string errorMessage = Errors.GenerateFullMessage(fullCode, error);
 
@@ -52,44 +54,106 @@ public sealed partial class MainWindow : Window
             }
 
             textboxConsole.Text = builder.ToString();
+            buttonContinue.IsEnabled = true;
         }
         else
         {
-            Debug.Assert(compilationResult.StoryName is not null);
-            outputCode = output.ToString();
-            story = DynamicCompiler.CompileToStory(outputCode, compilationResult.StoryName);
+            stateMachine = result.StateMachine;
+
+            textboxConsole.Text = "Build successful";
         }
     }
 
     private void OnContinue(object sender, RoutedEventArgs e)
     {
-        if (story is null)
+        if (stateMachine is null || stateMachine.Options.Count > 0)
+        {
+            buttonContinue.IsEnabled = false;
+            return;
+        }
+
+        stateMachine.TryContinue();
+
+        UpdateState();
+    }
+
+    private void UpdateState()
+    {
+        if (stateMachine is null)
         {
             return;
         }
 
-        if (story.Options.Count == 0)
+        void UpdateTreeViewItem(TreeViewItem item, object? value)
         {
-            story.TryContinue();
+            if (value is not RecordInstance recordInstance)
+            {
+                item.Header = value?.ToString() ?? "<null>";
+                return;
+            }
+
+            item.Header = recordInstance.RecordName;
+
+            foreach ((string propertyName, object propertyValue) in recordInstance.Properties)
+            {
+                TreeViewItem newItem = new()
+                {
+                    Header = propertyName,
+                };
+                item.Items.Add(newItem);
+
+                TreeViewItem newNewItem = new();
+                UpdateTreeViewItem(newNewItem, propertyValue);
+                newItem.Items.Add(newNewItem);
+            }
+        }
+
+        {
+            tviOutput.Items.Clear();
+            TreeViewItem newItem = new();
+            UpdateTreeViewItem(newItem, stateMachine.Output);
+            tviOutput.Items.Add(newItem);
+        }
+
+        tviOptions.Items.Clear();
+
+        foreach (object option in stateMachine.Options)
+        {
+            TreeViewItem newItem = new();
+            UpdateTreeViewItem(newItem, option);
+            tviOptions.Items.Add(newItem);
+        }
+
+        if (stateMachine.Options.Count > 0)
+        {
+            buttonContinue.IsEnabled = false;
+
+            for (int i = 0; i < stateMachine.Options.Count; i++)
+            {
+                Button optionButton = new()
+                {
+                    Content = $"Option {i}",
+                };
+
+                int index = i;
+
+                optionButton.Click += (_, _) =>
+                {
+                    stateMachine.TryContinueWithOption(index);
+                    UpdateState();
+                };
+
+                stackpanelButtons.Children.Add(optionButton);
+            }
         }
         else
         {
-            int option = comboboxOptions.SelectedIndex;
-            story.TryContinueWithOption(option);
-        }
+            buttonContinue.IsEnabled = true;
 
-        textboxOutput.Text = story.Output?.ToString() ?? "";
-
-        comboboxOptions.Items.Clear();
-
-        foreach (object? option in story.Options)
-        {
-            ComboBoxItem item = new()
+            for (int i = 1; i < stackpanelButtons.Children.Count; i++)
             {
-                Content = option?.ToString() ?? "",
-            };
-
-            comboboxOptions.Items.Add(item);
+                stackpanelButtons.Children.RemoveAt(i);
+            }
         }
     }
 
@@ -109,6 +173,7 @@ public sealed partial class MainWindow : Window
 
             using StreamReader stream = new(openedFile);
             textboxFile.Text = stream.ReadToEnd();
+            textboxFile.IsReadOnly = true;
 
             labelCurrentFile.Content = "Open file: " + openedFile;
         }
@@ -116,22 +181,23 @@ public sealed partial class MainWindow : Window
 
     private void OnExport(object sender, RoutedEventArgs e)
     {
-        if (outputCode is null)
-        {
-            return;
-        }
+        throw new NotImplementedException();
+        //if (outputCode is null)
+        //{
+        //    return;
+        //}
 
-        SaveFileDialog dlg = new()
-        {
-            Filter = "C# files (*.cs)|*.cs",
-        };
+        //SaveFileDialog dlg = new()
+        //{
+        //    Filter = "C# files (*.cs)|*.cs",
+        //};
 
-        bool? result = dlg.ShowDialog(this);
+        //bool? result = dlg.ShowDialog(this);
 
-        if (result == true)
-        {
-            using StreamWriter writer = new(dlg.FileName);
-            writer.Write(outputCode);
-        }
+        //if (result == true)
+        //{
+        //    using StreamWriter writer = new(dlg.FileName);
+        //    writer.Write(outputCode);
+        //}
     }
 }
