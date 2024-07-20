@@ -34,7 +34,7 @@ public sealed class FieldsEmitter
 
         GenerateFields();
 
-        writer.EndBlock();
+        writer.EndBlock(); // struct
         Debug.Assert(writer.Indent == initialIndent);
     }
 

@@ -23,6 +23,8 @@ public sealed class StateMachineEmitter
     {
         GeneralEmission.GenerateClassHeader("StateMachine", settings, writer);
 
+        writer.BeginBlock();
+
         GenerateConstructor();
 
         writer.WriteLine();
@@ -47,8 +49,7 @@ public sealed class StateMachineEmitter
 
         GenerateExplicitInterfaceImplementations();
 
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // class
     }
 
     private void GenerateConstructor()
@@ -56,8 +57,7 @@ public sealed class StateMachineEmitter
         writer.Write("public ");
         writer.Write(settings.StoryName);
         writer.WriteLine("StateMachine()");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
 
         writer.Write("fields.state = ");
         writer.Write(Constants.StartState);
@@ -80,9 +80,7 @@ public sealed class StateMachineEmitter
             writer.WriteLine(">();");
         }
 
-        writer.Indent--;
-
-        writer.WriteLine('}');
+        writer.EndBlock(); // constructor
     }
 
     private void GenerateContinueMethods()
@@ -144,8 +142,7 @@ public sealed class StateMachineEmitter
         writer.Write("public ");
         writer.Write(settings.StoryName);
         writer.WriteLine("Snapshot CreateSnapshot()");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
         GeneralEmission.GenerateType(settings.OptionType, writer);
         writer.Write("[] optionsCopy = new ");
         GeneralEmission.GenerateType(settings.OptionType, writer);
@@ -154,19 +151,18 @@ public sealed class StateMachineEmitter
         writer.Write("return new ");
         writer.Write(settings.StoryName);
         writer.WriteLine("Snapshot(fields, Output, optionsCopy, optionsCount);");
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // CreateSnapshot method
+
+        writer.WriteLine();
 
         writer.Write("public void RestoreSnapshot(");
         writer.Write(settings.StoryName);
         writer.WriteLine("Snapshot snapshot)");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
         writer.WriteLine("fields = snapshot.fields;");
         writer.WriteLine("Output = Heart.GetOutput(ref fields);");
         writer.WriteLine("Heart.GetOptions(ref fields, options, ref optionsCount);");
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // RestoreSnapshot method
     }
 
     private void GenerateExplicitInterfaceImplementations()
@@ -174,11 +170,11 @@ public sealed class StateMachineEmitter
         GeneralEmission.GenerateExplicitInterfaceImplementations("StateMachine", settings, writer);
 
         writer.WriteLine("global::Phantonia.Historia.IStorySnapshot global::Phantonia.Historia.IStoryStateMachine.CreateSnapshot()");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
         writer.WriteLine("return CreateSnapshot();");
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // CreateSnapshot method
+
+        writer.WriteLine();
 
         writer.Write("global::Phantonia.Historia.IStorySnapshot<");
         GeneralEmission.GenerateType(settings.OutputType, writer);
@@ -189,10 +185,8 @@ public sealed class StateMachineEmitter
         writer.Write(", ");
         GeneralEmission.GenerateType(settings.OptionType, writer);
         writer.WriteLine(">.CreateSnapshot()");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
         writer.WriteLine("return CreateSnapshot();");
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // CreateSnapshot method
     }
 }

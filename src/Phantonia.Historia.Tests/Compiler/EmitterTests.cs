@@ -900,4 +900,104 @@ public sealed class EmitterTests
         Assert.AreEqual(1, valueY.Length);
         Assert.IsTrue(valueY[0] is PropertyInfo yetAnotherProperty && yetAnotherProperty.PropertyType == typeof(double));
     }
+
+    [TestMethod]
+    public void TestSnapshots()
+    {
+        string code =
+            """
+            scene main
+            {
+                output 0;
+
+                outcome X(A, B);
+
+                switch (1)
+                {
+                    option (2)
+                    {
+                        output 3;
+                        X = A;
+                    }
+
+                    option (4)
+                    {
+                        output 5;
+                        X = B;
+                    }
+                }
+
+                output 6;
+
+                branchon X
+                {
+                    option A
+                    {
+                        output 7;
+                    }
+
+                    option B
+                    {
+                        output 8;
+                    }
+                }
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
+        IStorySnapshot<int, int> snapshot = stateMachine.CreateSnapshot();
+
+        Assert.IsTrue(snapshot.NotStartedStory);
+        Assert.IsFalse(snapshot.FinishedStory);
+
+        IStorySnapshot<int, int>? snapshot0 = snapshot.TryContinue();
+        Assert.IsNotNull(snapshot0);
+        Assert.AreEqual(0, snapshot0.Output);
+        Assert.AreEqual(0, snapshot0.Options.Count);
+
+        IStorySnapshot<int, int>? snapshot1 = snapshot0.TryContinue();
+        Assert.IsNotNull(snapshot1);
+        Assert.AreEqual(1, snapshot1.Output);
+        Assert.AreEqual(2, snapshot1.Options.Count);
+        Assert.AreEqual(2, snapshot1.Options[0]);
+        Assert.AreEqual(4, snapshot1.Options[1]);
+        Assert.IsNull(snapshot1.TryContinue());
+
+        IStorySnapshot<int, int>? snapshot3 = snapshot1.TryContinueWithOption(0);
+        Assert.IsNotNull(snapshot3);
+        Assert.AreEqual(3, snapshot3.Output);
+        Assert.AreEqual(0, snapshot3.Options.Count);
+
+        IStorySnapshot<int, int>? snapshot5 = snapshot1.TryContinueWithOption(1);
+        Assert.IsNotNull(snapshot5);
+        Assert.AreEqual(5, snapshot5.Output);
+
+        IStorySnapshot<int, int>? snapshot6a = snapshot3.TryContinue();
+        Assert.IsNotNull(snapshot6a);
+        Assert.AreEqual(6, snapshot6a.Output);
+
+        IStorySnapshot<int, int>? snapshot6b = snapshot5.TryContinue();
+        Assert.IsNotNull(snapshot6b);
+        Assert.AreEqual(6, snapshot6b.Output);
+
+        IStorySnapshot<int, int>? snapshot7 = snapshot6a.TryContinue();
+        Assert.IsNotNull(snapshot7);
+        Assert.AreEqual(7, snapshot7.Output);
+
+        IStorySnapshot<int, int>? snapshot8 = snapshot6b.TryContinue();
+        Assert.IsNotNull(snapshot8);
+        Assert.AreEqual(7, snapshot7.Output);
+
+        IStorySnapshot<int, int>? snapshotE = snapshot7.TryContinue();
+        Assert.IsNotNull(snapshotE);
+        Assert.IsTrue(snapshotE.FinishedStory);
+    }
 }

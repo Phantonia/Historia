@@ -92,6 +92,7 @@ public sealed class StateTransitionEmitter
 
         writer.EndBlock(); // switch
 
+        writer.WriteLine();
         writer.WriteLine(@"throw new global::System.InvalidOperationException(""Fatal internal error: Invalid state"");");
     }
 
@@ -154,7 +155,7 @@ public sealed class StateTransitionEmitter
             writer.Indent--;
         }
 
-        writer.EndBlock();
+        writer.EndBlock(); // switch
         writer.WriteLine();
         writer.WriteLine("break;"); // C# is so weird - you cannot fall from a case label so they require you to slap a 'break' at the end instead of just not doing that smh
     }
@@ -225,12 +226,12 @@ public sealed class StateTransitionEmitter
             writer.Indent--;
         }
 
-        writer.EndBlock();
+        writer.EndBlock(); // switch
 
         writer.WriteLine();
         writer.WriteLine("break;"); // mandatory C# break
 
-        writer.EndBlock();
+        writer.EndBlock(); // scope
     }
 
     private void GenerateBranchOnTransition(BoundBranchOnStatementNode branchOnStatement, ImmutableList<FlowEdge> edges)
@@ -281,7 +282,7 @@ public sealed class StateTransitionEmitter
             }
         }
 
-        writer.EndBlock();
+        writer.EndBlock(); // switch
         writer.WriteLine();
         writer.WriteLine("throw new global::System.InvalidOperationException(\"Fatal internal error: Invalid outcome\");");
     }
@@ -317,7 +318,7 @@ public sealed class StateTransitionEmitter
 
             GenerateTransitionTo((int)nextState);
 
-            writer.EndBlock();
+            writer.EndBlock(); // if
         }
 
         writer.Write("int value = fields.");
@@ -366,7 +367,7 @@ public sealed class StateTransitionEmitter
             int index = branchOnStatement.Options.IndexOf(option);
             GenerateTransitionTo(edges[index].ToVertex);
 
-            writer.EndBlock();
+            writer.EndBlock(); // if/else if
             writer.Write("else ");
         }
 
@@ -375,9 +376,9 @@ public sealed class StateTransitionEmitter
 
         GenerateTransitionTo(edges[branchOnStatement.Options.IndexOf(options[^1])].ToVertex);
 
-        writer.EndBlock();
+        writer.EndBlock(); // else
 
-        writer.EndBlock();
+        writer.EndBlock(); // scope
     }
 
     private void GenerateOutcomeAssignmentTransition(BoundOutcomeAssignmentStatementNode outcomeAssignment, ImmutableList<FlowEdge> edges)
@@ -448,7 +449,7 @@ public sealed class StateTransitionEmitter
             writer.Indent--;
         }
 
-        writer.EndBlock();
+        writer.EndBlock(); // switch
         writer.WriteLine();
         writer.WriteLine("throw new global::System.InvalidOperationException(\"Fatal internal error: Invalid call site\");");
     }
@@ -490,13 +491,13 @@ public sealed class StateTransitionEmitter
             // the last edge of these loop switches is the one to the next state
             GenerateSimpleTransitionTo(flowGraph.OutgoingEdges[toVertex][^1].ToVertex);
 
-            writer.EndBlock();
+            writer.EndBlock(); // if
 
             writer.WriteLine("else");
 
             writer.BeginBlock();
             GenerateSimpleTransitionTo(toVertex);
-            writer.EndBlock();
+            writer.EndBlock(); // else
         }
         else
         {

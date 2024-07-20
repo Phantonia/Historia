@@ -26,7 +26,6 @@ public static class GeneralEmission
         writer.Write(", ");
         GenerateType(settings.OptionType, writer);
         writer.WriteLine('>');
-        writer.BeginBlock();
     }
 
     public static void GenerateFields(Settings settings, bool readOnly, bool publicFields, IndentedTextWriter writer)
@@ -96,8 +95,8 @@ public static class GeneralEmission
         GenerateType(settings.OptionType, writer);
         writer.WriteLine(">(options, 0, optionsCount);");
 
-        writer.EndBlock();
-        writer.EndBlock();
+        writer.EndBlock(); // get
+        writer.EndBlock(); // property
 
         writer.WriteLine();
 
@@ -176,8 +175,7 @@ public static class GeneralEmission
                     writer.Write(" * ");
                     writer.Write(interval.UpperNumerator);
                     writer.WriteLine(')');
-                    writer.WriteLine('{');
-                    writer.Indent++;
+                    writer.BeginBlock();
 
                     writer.Write("return Spectrum");
                     writer.Write(spectrum.Name);
@@ -185,7 +183,7 @@ public static class GeneralEmission
                     writer.Write(optionName);
                     writer.WriteLine(';');
 
-                    writer.EndBlock();
+                    writer.EndBlock(); // if/else if
 
                     writer.Write("else ");
                 }
@@ -199,7 +197,7 @@ public static class GeneralEmission
                 writer.Write(spectrum.OptionNames[^1]);
                 writer.WriteLine(';');
 
-                writer.EndBlock();
+                writer.EndBlock(); // else
             }
             else
             {
@@ -210,9 +208,9 @@ public static class GeneralEmission
                 writer.WriteLine(';');
             }
 
-            writer.EndBlock();
+            writer.EndBlock(); // get
 
-            writer.EndBlock();
+            writer.EndBlock(); // property
 
             writer.WriteLine();
 
@@ -231,9 +229,9 @@ public static class GeneralEmission
                 GenerateSpectrumTotalFieldName(spectrum2, writer);
                 writer.Write(';');
 
-                writer.EndBlock();
+                writer.EndBlock(); // get
 
-                writer.EndBlock();
+                writer.EndBlock(); // Value property
 
                 writer.WriteLine();
             }
@@ -286,8 +284,8 @@ public static class GeneralEmission
         writer.Write("return new global::Phantonia.Historia.ObjectReadOnlyList<");
         GenerateType(settings.OptionType, writer);
         writer.WriteLine(">(Options);");
-        writer.EndBlock();
-        writer.EndBlock();
+        writer.EndBlock(); // get
+        writer.EndBlock(); // Options property
     }
 
     public static void GenerateType(TypeSymbol type, IndentedTextWriter writer)

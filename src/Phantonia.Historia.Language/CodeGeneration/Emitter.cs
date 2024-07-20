@@ -60,7 +60,7 @@ public sealed class Emitter
 
         if (settings.Namespace != "")
         {
-            writer.EndBlock();
+            writer.EndBlock(); // namespace
         }
 
         Debug.Assert(writer.Indent == 0);

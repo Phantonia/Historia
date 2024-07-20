@@ -82,12 +82,12 @@ public sealed class OutputEmitter
         writer.WriteLine("return default;");
         writer.Indent--;
 
-        writer.EndBlock();
+        writer.EndBlock(); // switch
         writer.WriteLine();
 
         writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid state\");");
 
-        writer.EndBlock();
+        writer.EndBlock(); // GetOutput method
     }
 
     private void GenerateGetOptionsMethod()
@@ -139,8 +139,7 @@ public sealed class OutputEmitter
                     writer.WriteLine(':');
                     writer.Indent++;
 
-                    writer.WriteLine('{');
-                    writer.Indent++;
+                    writer.BeginBlock();
 
                     writer.WriteLine("global::System.Array.Clear(options);");
                     writer.WriteLine("int i = 0;");
@@ -158,8 +157,7 @@ public sealed class OutputEmitter
                         writer.Write(i);
                         writer.WriteLine(")) == 0)");
 
-                        writer.WriteLine('{');
-                        writer.Indent++;
+                        writer.BeginBlock();
 
                         writer.Write("options[i] = ");
                         GeneralEmission.GenerateExpression(loopSwitchStatement.Options[i].Expression, writer);
@@ -167,8 +165,7 @@ public sealed class OutputEmitter
 
                         writer.WriteLine("i++;");
 
-                        writer.Indent--;
-                        writer.WriteLine('}');
+                        writer.EndBlock(); // if
                     }
 
                     writer.WriteLine();
@@ -178,22 +175,18 @@ public sealed class OutputEmitter
 
                     writer.WriteLine("return;");
 
-                    writer.Indent--;
-                    writer.WriteLine('}');
+                    writer.EndBlock(); // scope
 
                     writer.Indent--;
                 }
             }
 
-            writer.Indent--;
-
-            writer.WriteLine('}');
+            writer.EndBlock(); // switch
             writer.WriteLine();
         }
 
         writer.WriteLine("optionsCount = 0;");
 
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // GetOptions emitter
     }
 }

@@ -23,6 +23,8 @@ public sealed class SnapshotEmitter
     {
         GeneralEmission.GenerateClassHeader("Snapshot", settings, writer);
 
+        writer.BeginBlock();
+
         GenerateConstructors();
 
         writer.WriteLine();
@@ -37,29 +39,25 @@ public sealed class SnapshotEmitter
 
         GeneralEmission.GeneratePublicOutcomes(symbolTable, readOnly: true, writer); // ends in writer.WriteLine()
 
-        writer.WriteLine();
-
         GenerateContinueMethods();
 
         writer.WriteLine();
 
         GenerateExplicitInterfaceImplementations();
 
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // class
     }
 
     private void GenerateConstructors()
     {
-        writer.Write("internal @");
+        writer.Write("internal ");
         writer.Write(settings.StoryName);
         writer.Write("Snapshot(Fields fields, ");
         GeneralEmission.GenerateType(settings.OutputType, writer);
         writer.Write(" output, ");
         GeneralEmission.GenerateType(settings.OptionType, writer);
         writer.WriteLine("[] options, int optionsCount)");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
 
         writer.WriteLine("this.fields = fields;");
         writer.WriteLine("Output = output;");
@@ -74,8 +72,7 @@ public sealed class SnapshotEmitter
         writer.Write(Constants.EndState);
         writer.WriteLine(';');
 
-        writer.Indent--;
-        writer.Write('}');
+        writer.EndBlock(); // constructor
     }
 
     private void GenerateContinueMethods()
@@ -83,8 +80,7 @@ public sealed class SnapshotEmitter
         writer.Write("public ");
         writer.Write(settings.StoryName);
         writer.WriteLine("Snapshot? TryContinue()");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
 
         writer.WriteManyLines(
             """
@@ -98,16 +94,14 @@ public sealed class SnapshotEmitter
 
         GenerateTransition("0");
 
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // TryContinue method
 
         writer.WriteLine();
 
         writer.Write("public ");
         writer.Write(settings.StoryName);
         writer.WriteLine("Snapshot? TryContinueWithOption(int option)");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
 
         writer.WriteManyLines(
             """
@@ -119,8 +113,7 @@ public sealed class SnapshotEmitter
 
         GenerateTransition("option");
 
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // TryContinueWithOption method
     }
 
     private void GenerateTransition(string option)
@@ -140,7 +133,7 @@ public sealed class SnapshotEmitter
 
         writer.Write("return new ");
         writer.Write(settings.StoryName);
-        writer.Write("Snapshot(fieldsCopy, output, optionsCopy, optionsCountCopy);");
+        writer.WriteLine("Snapshot(fieldsCopy, output, optionsCopy, optionsCountCopy);");
     }
 
     private void GenerateExplicitInterfaceImplementations()
@@ -159,10 +152,8 @@ public sealed class SnapshotEmitter
         GeneralEmission.GenerateType(settings.OptionType, writer);
         writer.WriteLine(">.TryContinue()");
         writer.BeginBlock();
-
         writer.WriteLine("return TryContinue();");
-
-        writer.EndBlock();
+        writer.EndBlock(); // TryContinue method
 
         writer.WriteLine();
 
@@ -176,25 +167,19 @@ public sealed class SnapshotEmitter
         GeneralEmission.GenerateType(settings.OptionType, writer);
         writer.WriteLine(">.TryContinueWithOption(int option)");
         writer.BeginBlock();
-
         writer.WriteLine("return TryContinueWithOption(option);");
-
-        writer.EndBlock();
+        writer.EndBlock(); // TryContinueWithOption method
 
         writer.WriteLine();
 
-        writer.Write("global::Phantonia.Historia.IStorySnapshot? global::Phantonia.Historia.IStorySnapshot.TryContinueWithOption(int option)");
+        writer.WriteLine("global::Phantonia.Historia.IStorySnapshot? global::Phantonia.Historia.IStorySnapshot.TryContinueWithOption(int option)");
         writer.BeginBlock();
-
         writer.WriteLine("return TryContinueWithOption(option);");
+        writer.EndBlock(); // TryContinueWithOption method
 
-        writer.EndBlock();
-
-        writer.Write("global::Phantonia.Historia.IStorySnapshot? global::Phantonia.Historia.IStorySnapshot.TryContinue()");
+        writer.WriteLine("global::Phantonia.Historia.IStorySnapshot? global::Phantonia.Historia.IStorySnapshot.TryContinue()");
         writer.BeginBlock();
-
         writer.WriteLine("return TryContinue();");
-
-        writer.EndBlock();
+        writer.EndBlock(); // TryContinue method
     }
 }
