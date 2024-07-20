@@ -1,8 +1,8 @@
-﻿using Microsoft.CodeAnalysis;
-using Phantonia.Historia.Language.FlowAnalysis;
+﻿using Phantonia.Historia.Language.FlowAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
+using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -10,24 +10,41 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
-public sealed partial class Emitter
+public sealed class StateTransitionEmitter
 {
-    private void GenerateStateTransitionMethod()
+    public StateTransitionEmitter(FlowGraph flowGraph, Settings settings, IndentedTextWriter writer)
     {
-        writer.WriteManyLines(
-            """
-            private void StateTransition(int option)
-            {
-                while (true)
-                {
-                    switch (state)
-                    {
-            """);
+        this.flowGraph = flowGraph;
+        this.settings = settings;
+        this.writer = writer;
+    }
 
-        writer.Indent += 3;
+    private readonly FlowGraph flowGraph;
+    private readonly Settings settings;
+    private readonly IndentedTextWriter writer;
+
+    public void GenerateStateTransitionMethod()
+    {
+        writer.WriteLine("public static void StateTransition(ref Fields fields, int option)");
+        writer.BeginBlock();
+
+        writer.WriteLine("while (true)");
+        writer.BeginBlock();
+
+        GenerateSwitch();
+
+        writer.EndBlock(); // while
+
+        writer.EndBlock(); // method
+    }
+
+    private void GenerateSwitch()
+    {
+        writer.WriteLine("switch (fields.state)");
+        writer.BeginBlock();
 
         writer.Write("case ");
-        writer.Write(StartState);
+        writer.Write(Constants.StartState);
         writer.WriteLine(':');
         writer.Indent++;
 
@@ -73,26 +90,18 @@ public sealed partial class Emitter
             writer.Indent--;
         }
 
-        writer.Indent -= 3;
+        writer.EndBlock(); // switch
 
-        writer.WriteManyLines(
-            """
-                    }
-
-                    throw new global::System.InvalidOperationException("Fatal internal error: Invalid state");
-                }
-            }
-            """);
-
+        writer.WriteLine(@"throw new global::System.InvalidOperationException(""Fatal internal error: Invalid state"");");
     }
 
     private void GenerateStartTransition()
     {
-        writer.Write("state = ");
+        writer.Write("fields.state = ");
         writer.Write(flowGraph.StartVertex);
         writer.WriteLine(';');
 
-        if (flowGraph.StartVertex == EndState || flowGraph.Vertices[flowGraph.StartVertex].IsVisible)
+        if (flowGraph.StartVertex == Constants.EndState || flowGraph.Vertices[flowGraph.StartVertex].IsVisible)
         {
             writer.WriteLine("return;");
         }
@@ -113,8 +122,7 @@ public sealed partial class Emitter
         Debug.Assert(switchStatement.Options.Length == edges.Count);
 
         writer.WriteLine("switch (option)");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
 
         for (int i = 0; i < switchStatement.Options.Length; i++)
         {
@@ -134,7 +142,8 @@ public sealed partial class Emitter
 
             if (switchStatement is BoundNamedSwitchStatementNode { Outcome: OutcomeSymbol outcome })
             {
-                WriteOutcomeFieldName(outcome);
+                writer.Write("fields.");
+                GeneralEmission.GenerateOutcomeFieldName(outcome, writer);
                 writer.Write(" = ");
                 writer.Write(outcome.OptionNames.IndexOf(switchStatement.Options[i].Name!));
                 writer.WriteLine(';');
@@ -145,16 +154,14 @@ public sealed partial class Emitter
             writer.Indent--;
         }
 
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock();
         writer.WriteLine();
         writer.WriteLine("break;"); // C# is so weird - you cannot fall from a case label so they require you to slap a 'break' at the end instead of just not doing that smh
     }
 
     private void GenerateLoopSwitchTransition(LoopSwitchStatementNode loopSwitchStatement, ImmutableList<FlowEdge> edges)
     {
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
 
         // we do some bitwise black magic
         // ((ls & (1UL << i)) == 0) is true if the i'th bit is zero
@@ -165,7 +172,7 @@ public sealed partial class Emitter
 
             for (int i = 0; i < 64; i++)
             {
-                if (({{GetLoopSwitchFieldName(loopSwitchStatement)}} & (1UL << i)) == 0)
+                if ((fields.{{GeneralEmission.GetLoopSwitchFieldName(loopSwitchStatement)}} & (1UL << i)) == 0)
                 {
                     tempOption--;
                 }
@@ -199,14 +206,16 @@ public sealed partial class Emitter
                 case LoopSwitchOptionKind.None:
                     // for example: ls |= 1 << 3;
                     // we record that this option has been taken, blocking it for the future
-                    WriteLoopSwitchFieldName(loopSwitchStatement);
+                    writer.Write("fields.");
+                    GeneralEmission.GenerateLoopSwitchFieldName(loopSwitchStatement, writer);
                     writer.Write(" |= 1 << ");
                     writer.Write(i);
                     writer.WriteLine(';');
                     break;
                 case LoopSwitchOptionKind.Final:
                     // reset loop switch field
-                    WriteLoopSwitchFieldName(loopSwitchStatement);
+                    writer.Write("fields.");
+                    GeneralEmission.GenerateLoopSwitchFieldName(loopSwitchStatement, writer);
                     writer.WriteLine(" = 0;");
                     break;
             }
@@ -216,14 +225,12 @@ public sealed partial class Emitter
             writer.Indent--;
         }
 
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock();
 
         writer.WriteLine();
         writer.WriteLine("break;"); // mandatory C# break
 
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock();
     }
 
     private void GenerateBranchOnTransition(BoundBranchOnStatementNode branchOnStatement, ImmutableList<FlowEdge> edges)
@@ -240,11 +247,10 @@ public sealed partial class Emitter
 
     private void GenerateOutcomeBranchOnTransition(BoundBranchOnStatementNode branchOnStatement, ImmutableList<FlowEdge> edges)
     {
-        writer.Write("switch (");
-        WriteOutcomeFieldName(branchOnStatement.Outcome);
+        writer.Write("switch (fields.");
+        GeneralEmission.GenerateOutcomeFieldName(branchOnStatement.Outcome, writer);
         writer.WriteLine(')');
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
 
         for (int i = 0; i < branchOnStatement.Options.Length; i++)
         {
@@ -275,8 +281,7 @@ public sealed partial class Emitter
             }
         }
 
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock();
         writer.WriteLine();
         writer.WriteLine("throw new global::System.InvalidOperationException(\"Fatal internal error: Invalid outcome\");");
     }
@@ -289,16 +294,14 @@ public sealed partial class Emitter
 
         Debug.Assert(spectrum.Intervals.All(i => i.Value.UpperDenominator == spectrum.Intervals.First().Value.UpperDenominator));
 
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
 
         if (spectrum.DefaultOption is not null)
         {
-            writer.Write("if (");
-            WriteSpectrumTotalFieldName(spectrum);
+            writer.Write("if (fields.");
+            GeneralEmission.GenerateSpectrumTotalFieldName(spectrum, writer);
             writer.WriteLine(" == 0)");
-            writer.WriteLine('{');
-            writer.Indent++;
+            writer.BeginBlock();
 
             int? nextState = null;
 
@@ -314,12 +317,11 @@ public sealed partial class Emitter
 
             GenerateTransitionTo((int)nextState);
 
-            writer.Indent--;
-            writer.WriteLine('}');
+            writer.EndBlock();
         }
 
-        writer.Write("int value = ");
-        WriteSpectrumPositiveFieldName(spectrum);
+        writer.Write("int value = fields.");
+        GeneralEmission.GenerateSpectrumPositiveFieldName(spectrum, writer);
         writer.Write(" * ");
         writer.Write(spectrum.Intervals.First().Value.UpperDenominator);
         writer.WriteLine(';');
@@ -354,52 +356,37 @@ public sealed partial class Emitter
                 writer.Write('=');
             }
 
-            writer.Write(' ');
-            WriteSpectrumTotalFieldName(spectrum);
+            writer.Write(" fields.");
+            GeneralEmission.GenerateSpectrumTotalFieldName(spectrum, writer);
             writer.Write(" * ");
             writer.Write(interval.UpperNumerator);
             writer.WriteLine(')');
-            writer.WriteLine('{');
-            writer.Indent++;
+            writer.BeginBlock();
 
             int index = branchOnStatement.Options.IndexOf(option);
             GenerateTransitionTo(edges[index].ToVertex);
 
-            writer.Indent--;
-            writer.WriteLine('}');
+            writer.EndBlock();
             writer.Write("else ");
         }
 
         writer.WriteLine();
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
 
         GenerateTransitionTo(edges[branchOnStatement.Options.IndexOf(options[^1])].ToVertex);
 
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock();
 
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock();
     }
 
     private void GenerateOutcomeAssignmentTransition(BoundOutcomeAssignmentStatementNode outcomeAssignment, ImmutableList<FlowEdge> edges)
     {
-        WriteOutcomeFieldName(outcomeAssignment.Outcome);
+        writer.Write("fields.");
+        GeneralEmission.GenerateOutcomeFieldName(outcomeAssignment.Outcome, writer);
         writer.Write(" = ");
         writer.Write(outcomeAssignment.Outcome.OptionNames.IndexOf(outcomeAssignment.AssignedOption));
         writer.WriteLine(";");
-
-        if (outcomeAssignment.Outcome.Public)
-        {
-            writer.Write("Outcome");
-            writer.Write(outcomeAssignment.Outcome.Name);
-            writer.Write(" = Outcome");
-            writer.Write(outcomeAssignment.Outcome.Name);
-            writer.Write('.');
-            writer.Write(outcomeAssignment.AssignedOption);
-            writer.WriteLine(';');
-        }
 
         Debug.Assert(edges.Count == 1);
 
@@ -410,93 +397,19 @@ public sealed partial class Emitter
     {
         SpectrumSymbol spectrum = spectrumAdjustment.Spectrum;
 
-        WriteSpectrumTotalFieldName(spectrum);
+        writer.Write("fields.");
+        GeneralEmission.GenerateSpectrumTotalFieldName(spectrum, writer);
         writer.Write(" += ");
-        GenerateExpression(spectrumAdjustment.AdjustmentAmount);
+        GeneralEmission.GenerateExpression(spectrumAdjustment.AdjustmentAmount, writer);
         writer.WriteLine(';');
 
         if (spectrumAdjustment.Strengthens)
         {
-            WriteSpectrumPositiveFieldName(spectrum);
+            writer.Write("fields.");
+            GeneralEmission.GenerateSpectrumPositiveFieldName(spectrum, writer);
             writer.Write(" += ");
-            GenerateExpression(spectrumAdjustment.AdjustmentAmount);
+            GeneralEmission.GenerateExpression(spectrumAdjustment.AdjustmentAmount, writer);
             writer.WriteLine(';');
-        }
-
-        if (spectrum.Public)
-        {
-            writer.Write("Value");
-            writer.Write(spectrum.Name);
-            writer.Write(" = (double)");
-            WriteSpectrumPositiveFieldName(spectrum);
-            writer.Write(" / (double)");
-            WriteSpectrumTotalFieldName(spectrum);
-            writer.WriteLine(';');
-            writer.WriteLine();
-
-            writer.WriteLine('{');
-            writer.Indent++;
-
-            writer.Write("int value = ");
-            WriteSpectrumPositiveFieldName(spectrum);
-            writer.Write(" * ");
-            writer.Write(spectrum.Intervals.First().Value.UpperDenominator);
-            writer.WriteLine(';');
-            writer.WriteLine();
-
-            for (int i = 0; i < spectrum.OptionNames.Length - 1; i++)
-            {
-                string optionName = spectrum.OptionNames[i];
-
-                SpectrumInterval interval = spectrum.Intervals[optionName];
-
-                writer.Write("if (value <");
-
-                if (interval.Inclusive)
-                {
-                    writer.Write('=');
-                }
-
-                writer.Write(' ');
-                WriteSpectrumTotalFieldName(spectrum);
-                writer.Write(" * ");
-                writer.Write(interval.UpperNumerator);
-                writer.WriteLine(')');
-                writer.WriteLine('{');
-                writer.Indent++;
-
-                writer.Write("Spectrum");
-                writer.Write(spectrum.Name);
-                writer.Write(" = ");
-                writer.Write("Spectrum");
-                writer.Write(spectrum.Name);
-                writer.Write('.');
-                writer.Write(optionName);
-                writer.WriteLine(';');
-
-                writer.Indent--;
-                writer.WriteLine('}');
-                writer.Write("else ");
-            }
-
-            writer.WriteLine();
-            writer.WriteLine('{');
-            writer.Indent++;
-
-            writer.Write("Spectrum");
-            writer.Write(spectrum.Name);
-            writer.Write(" = ");
-            writer.Write("Spectrum");
-            writer.Write(spectrum.Name);
-            writer.Write('.');
-            writer.Write(spectrum.OptionNames[^1]);
-            writer.WriteLine(';');
-
-            writer.Indent--;
-            writer.WriteLine('}');
-
-            writer.Indent--;
-            writer.WriteLine('}');
         }
 
         Debug.WriteLine(edges.Count == 1);
@@ -506,7 +419,8 @@ public sealed partial class Emitter
 
     private void GenerateCallerTrackerTransition(CallerTrackerStatementNode trackerStatement, ImmutableList<FlowEdge> edges)
     {
-        WriteTrackerFieldName(trackerStatement.Tracker);
+        writer.Write("fields.");
+        GeneralEmission.GenerateTrackerFieldName(trackerStatement.Tracker, writer);
         writer.Write(" = ");
         writer.Write(trackerStatement.CallSiteIndex);
         writer.WriteLine(';');
@@ -516,12 +430,11 @@ public sealed partial class Emitter
 
     private void GenerateCallerResolutionTransition(CallerResolutionStatementNode resolutionStatement, ImmutableList<FlowEdge> edges)
     {
-        writer.Write("switch (");
-        WriteTrackerFieldName(resolutionStatement.Tracker);
+        writer.Write("switch (fields.");
+        GeneralEmission.GenerateTrackerFieldName(resolutionStatement.Tracker, writer);
         writer.WriteLine(')');
 
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
 
         for (int i = 0; i < resolutionStatement.Tracker.CallSiteCount; i++)
         {
@@ -535,8 +448,7 @@ public sealed partial class Emitter
             writer.Indent--;
         }
 
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock();
         writer.WriteLine();
         writer.WriteLine("throw new global::System.InvalidOperationException(\"Fatal internal error: Invalid call site\");");
     }
@@ -545,9 +457,9 @@ public sealed partial class Emitter
     {
         void GenerateSimpleTransitionTo(int toVertex)
         {
-            writer.WriteLine($"state = {toVertex};");
+            writer.WriteLine($"fields.state = {toVertex};");
 
-            if (toVertex == EndState || flowGraph.Vertices[toVertex].IsVisible)
+            if (toVertex == Constants.EndState || flowGraph.Vertices[toVertex].IsVisible)
             {
                 writer.WriteLine("return;");
             }
@@ -557,37 +469,34 @@ public sealed partial class Emitter
             }
         }
 
-        if (toVertex != EndState
+        if (toVertex != Constants.EndState
             && flowGraph.Vertices[toVertex].AssociatedStatement is LoopSwitchStatementNode loopSwitch
             && loopSwitch.Options.All(o => o.Kind != LoopSwitchOptionKind.Final))
         {
             // this loop switch has no final option, that is it terminates after all normal options have been selected
-            writer.Write("if (");
-            WriteLoopSwitchFieldName(loopSwitch);
+            writer.Write("if (fields.");
+            GeneralEmission.GenerateLoopSwitchFieldName(loopSwitch, writer);
             writer.Write(" == ");
             writer.Write((1 << loopSwitch.Options.Length) - 1); // (ls == 2^(options.length) - 1) means all bits for options have been set
             writer.WriteLine(')');
 
-            writer.WriteLine('{');
-            writer.Indent++;
+            writer.BeginBlock();
 
             // reset loop switch field
-            WriteLoopSwitchFieldName(loopSwitch);
+            writer.Write("fields.");
+            GeneralEmission.GenerateLoopSwitchFieldName(loopSwitch, writer);
             writer.WriteLine(" = 0;");
 
             // the last edge of these loop switches is the one to the next state
             GenerateSimpleTransitionTo(flowGraph.OutgoingEdges[toVertex][^1].ToVertex);
 
-            writer.Indent--;
-            writer.WriteLine('}');
+            writer.EndBlock();
+
             writer.WriteLine("else");
-            writer.WriteLine('{');
-            writer.Indent++;
 
+            writer.BeginBlock();
             GenerateSimpleTransitionTo(toVertex);
-
-            writer.Indent--;
-            writer.WriteLine('}');
+            writer.EndBlock();
         }
         else
         {

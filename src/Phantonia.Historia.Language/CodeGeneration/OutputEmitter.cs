@@ -1,25 +1,43 @@
 ﻿using Phantonia.Historia.Language.FlowAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
+using System.CodeDom.Compiler;
 using System.Linq;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
-public sealed partial class Emitter
+public sealed class OutputEmitter
 {
+    public OutputEmitter(FlowGraph flowGraph, Settings settings, IndentedTextWriter writer)
+    {
+        this.flowGraph = flowGraph;
+        this.settings = settings;
+        this.writer = writer;
+    }
+
+    private readonly FlowGraph flowGraph;
+    private readonly Settings settings;
+    private readonly IndentedTextWriter writer;
+
+    public void GenerateOutputMethods()
+    {
+        GenerateGetOutputMethod();
+
+        writer.WriteLine();
+
+        GenerateGetOptionsMethod();
+    }
+
     private void GenerateGetOutputMethod()
     {
-        writer.Write("private ");
-        GenerateType(settings.OutputType);
-        writer.WriteLine(" GetOutput()");
+        writer.Write("public static ");
+        GeneralEmission.GenerateType(settings.OutputType, writer);
+        writer.WriteLine(" GetOutput(ref Fields fields)");
 
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
 
-        writer.WriteLine("switch (state)");
-        writer.WriteLine('{');
-
-        writer.Indent++;
+        writer.WriteLine("switch (fields.state)");
+        writer.BeginBlock();
 
         foreach ((int index, FlowVertex vertex) in flowGraph.Vertices)
         {
@@ -51,42 +69,39 @@ public sealed partial class Emitter
 
             writer.Indent++;
             writer.Write($"return ");
-            GenerateExpression(outputExpression);
+            GeneralEmission.GenerateExpression(outputExpression, writer);
             writer.WriteLine(";");
             writer.Indent--;
         }
 
         writer.Write("case ");
-        writer.Write(EndState);
+        writer.Write(Constants.EndState);
         writer.WriteLine(":");
         writer.Indent++;
 
         writer.WriteLine("return default;");
-        writer.Indent -= 2;
+        writer.Indent--;
 
-        writer.WriteLine('}');
+        writer.EndBlock();
         writer.WriteLine();
 
         writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid state\");");
 
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock();
     }
 
     private void GenerateGetOptionsMethod()
     {
-        writer.WriteLine("private void GetOptions()");
-        
-        writer.WriteLine('{');
+        writer.Write("public static void GetOptions(ref Fields fields, ");
+        GeneralEmission.GenerateType(settings.OptionType, writer);
+        writer.WriteLine("[] options, ref int optionsCount)");
 
-        writer.Indent++;
+        writer.BeginBlock();
 
         if (flowGraph.Vertices.Values.Any(v => v.AssociatedStatement is SwitchStatementNode or LoopSwitchStatementNode))
         {
-            writer.WriteLine("switch (state)");
-            writer.WriteLine('{');
-
-            writer.Indent++;
+            writer.WriteLine("switch (fields.state)");
+            writer.BeginBlock();
 
             foreach ((int index, FlowVertex vertex) in flowGraph.Vertices)
             {
@@ -105,7 +120,7 @@ public sealed partial class Emitter
                         writer.Write("options[");
                         writer.Write(i);
                         writer.Write("] = ");
-                        GenerateExpression(switchStatement.Options[i].Expression);
+                        GeneralEmission.GenerateExpression(switchStatement.Options[i].Expression, writer);
                         writer.WriteLine(';');
                     }
 
@@ -129,7 +144,7 @@ public sealed partial class Emitter
 
                     writer.WriteLine("global::System.Array.Clear(options);");
                     writer.WriteLine("int i = 0;");
-                    
+
                     for (int i = 0; i < loopSwitchStatement.Options.Length; i++)
                     {
                         writer.WriteLine();
@@ -137,8 +152,8 @@ public sealed partial class Emitter
                         // if the condition ((ls & (1 << i)) == 0) is true,
                         // the corresponding option has not yet been selected,
                         // so we put it into the array
-                        writer.Write("if ((");
-                        WriteLoopSwitchFieldName(loopSwitchStatement);
+                        writer.Write("if ((fields.");
+                        GeneralEmission.GenerateLoopSwitchFieldName(loopSwitchStatement, writer);
                         writer.Write(" & (1UL << ");
                         writer.Write(i);
                         writer.WriteLine(")) == 0)");
@@ -147,7 +162,7 @@ public sealed partial class Emitter
                         writer.Indent++;
 
                         writer.Write("options[i] = ");
-                        GenerateExpression(loopSwitchStatement.Options[i].Expression);
+                        GeneralEmission.GenerateExpression(loopSwitchStatement.Options[i].Expression, writer);
                         writer.WriteLine(';');
 
                         writer.WriteLine("i++;");
