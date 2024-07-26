@@ -1,15 +1,24 @@
 ﻿using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
+using Phantonia.Historia.Language.SyntaxAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
-using System;
-using System.Diagnostics;
+using System.CodeDom.Compiler;
 using System.Linq;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
-public sealed partial class Emitter
+public sealed class TypeDeclarationsEmitter
 {
-    private void GenerateTypeDeclarations()
+    public TypeDeclarationsEmitter(StoryNode boundStory, IndentedTextWriter writer)
+    {
+        this.boundStory = boundStory;
+        this.writer = writer;
+    }
+
+    private readonly StoryNode boundStory;
+    private readonly IndentedTextWriter writer;
+
+    public void GenerateTypeDeclarations()
     {
         foreach (TopLevelNode topLevelNode in boundStory.TopLevelNodes)
         {
@@ -51,9 +60,7 @@ public sealed partial class Emitter
         writer.Write(record.Name);
         writer.WriteLine('>');
 
-        writer.WriteLine('{');
-
-        writer.Indent++;
+        writer.BeginBlock();
 
         GenerateRecordConstructor(record);
         writer.WriteLine();
@@ -62,8 +69,7 @@ public sealed partial class Emitter
 
         GenerateRecordEquality(record);
 
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // struct
     }
 
     private void GenerateRecordConstructor(RecordTypeSymbol record)
@@ -74,20 +80,18 @@ public sealed partial class Emitter
 
         foreach (PropertySymbol property in record.Properties.Take(record.Properties.Length - 1))
         {
-            GenerateType(property.Type);
+            GeneralEmission.GenerateType(property.Type, writer);
             writer.Write(" @");
             writer.Write(property.Name);
             writer.Write(", ");
         }
 
-        GenerateType(record.Properties[^1].Type);
+        GeneralEmission.GenerateType(record.Properties[^1].Type, writer);
         writer.Write(" @");
         writer.Write(record.Properties[^1].Name);
         writer.WriteLine(')');
 
-        writer.WriteLine('{');
-
-        writer.Indent++;
+        writer.BeginBlock();
 
         foreach (PropertySymbol property in record.Properties)
         {
@@ -99,8 +103,7 @@ public sealed partial class Emitter
         }
 
         writer.WriteLine();
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // constructor
     }
 
     private void GenerateRecordProperties(RecordTypeSymbol record)
@@ -108,7 +111,7 @@ public sealed partial class Emitter
         foreach (PropertySymbol property in record.Properties.Take(record.Properties.Length - 1))
         {
             writer.Write("public ");
-            GenerateType(property.Type);
+            GeneralEmission.GenerateType(property.Type, writer);
             writer.Write(" @");
             writer.Write(property.Name);
             writer.WriteLine(" { get; }");
@@ -116,7 +119,7 @@ public sealed partial class Emitter
         }
 
         writer.Write("public ");
-        GenerateType(record.Properties[^1].Type);
+        GeneralEmission.GenerateType(record.Properties[^1].Type, writer);
         writer.Write(" @");
         writer.Write(record.Properties[^1].Name);
         writer.WriteLine(" { get; }");
@@ -129,8 +132,7 @@ public sealed partial class Emitter
         writer.Write("public bool Equals(@");
         writer.Write(record.Name);
         writer.WriteLine(" other)");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
         writer.Write("return ");
 
         foreach (PropertySymbol property in record.Properties.Take(record.Properties.Length - 1))
@@ -147,24 +149,20 @@ public sealed partial class Emitter
         writer.Write(" == other.@");
         writer.Write(record.Properties[^1].Name);
         writer.WriteLine(';');
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // Equals method
         writer.WriteLine();
 
         // object.Equals()
         writer.WriteLine("public override bool Equals(object? other)");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
         writer.Write("return other is @");
         writer.Write(record.Name);
         writer.WriteLine(" record && Equals(record);");
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // Equals method
         writer.WriteLine();
 
         writer.WriteLine("public override int GetHashCode()");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
         writer.WriteLine("global::System.HashCode hashcode = default;");
 
         foreach (PropertySymbol property in record.Properties)
@@ -175,8 +173,7 @@ public sealed partial class Emitter
         }
 
         writer.WriteLine("return hashcode.ToHashCode();");
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // GetHashCode method
         writer.WriteLine();
 
         // == operator
@@ -185,11 +182,9 @@ public sealed partial class Emitter
         writer.Write(" x, @");
         writer.Write(record.Name);
         writer.WriteLine(" y)");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
         writer.WriteLine("return x.Equals(y);");
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // == operator
         writer.WriteLine();
 
         // != operator
@@ -198,11 +193,9 @@ public sealed partial class Emitter
         writer.Write(" x, @");
         writer.Write(record.Name);
         writer.WriteLine(" y)");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
         writer.WriteLine("return !x.Equals(y);");
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // != operator
     }
 
     private void GenerateUnionDeclaration(UnionTypeSymbol union)
@@ -221,9 +214,7 @@ public sealed partial class Emitter
         }
 
         writer.WriteLine();
-        writer.WriteLine('{');
-
-        writer.Indent++;
+        writer.BeginBlock();
 
         GenerateUnionConstructors(union);
         GenerateUnionProperties(union);
@@ -233,6 +224,8 @@ public sealed partial class Emitter
         GenerateUnionEquality(union);
         GenerateUnionDiscriminatorEnum(union);
         GenerateUnionExplicitInterfaceImplementations(union);
+
+        writer.EndBlock(); // type
     }
 
     private void GenerateUnionExplicitInterfaceImplementations(UnionTypeSymbol union)
@@ -241,30 +234,23 @@ public sealed partial class Emitter
         {
             for (int i = 0; i < union.Subtypes.Length; i++)
             {
-                GenerateType(union.Subtypes[i]);
+                GeneralEmission.GenerateType(union.Subtypes[i], writer);
                 writer.Write(' ');
                 GenerateUnionInterfaceName(union);
                 writer.Write(".Value");
                 writer.WriteLine(i);
-                writer.WriteLine('{');
-
-                writer.Indent++;
+                writer.BeginBlock();
 
                 writer.WriteLine("get");
-                writer.WriteLine('{');
-
-                writer.Indent++;
+                writer.BeginBlock();
 
                 writer.Write("return this.");
                 GenerateUnionSubtypeName(union.Subtypes[i]);
                 writer.WriteLine(';');
 
-                writer.Indent--;
+                writer.EndBlock(); // get
 
-                writer.WriteLine('}');
-
-                writer.Indent--;
-                writer.WriteLine('}');
+                writer.EndBlock(); // Value property
 
                 writer.WriteLine();
             }
@@ -272,25 +258,16 @@ public sealed partial class Emitter
             writer.Write("int ");
             GenerateUnionInterfaceName(union);
             writer.WriteLine(".Discriminator");
-            writer.WriteLine('{');
-
-            writer.Indent++;
+            writer.BeginBlock();
 
             writer.WriteLine("get");
-            writer.WriteLine('{');
-
-            writer.Indent++;
+            writer.BeginBlock();
 
             writer.WriteLine("return (int)Discriminator;");
 
-            writer.Indent--;
-            writer.WriteLine('}');
+            writer.EndBlock(); // Discriminator.get
 
-            writer.Indent--;
-            writer.WriteLine('}');
-
-            writer.Indent--;
-            writer.WriteLine('}');
+            writer.EndBlock(); // property Discriminator
         }
     }
 
@@ -299,8 +276,7 @@ public sealed partial class Emitter
         writer.Write("public enum ");
         writer.Write(union.Name);
         writer.WriteLine("Discriminator");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
 
         foreach (TypeSymbol subtype in union.Subtypes)
         {
@@ -308,8 +284,7 @@ public sealed partial class Emitter
             writer.WriteLine(',');
         }
 
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // enum
         writer.WriteLine();
     }
 
@@ -319,8 +294,7 @@ public sealed partial class Emitter
         writer.Write("public bool Equals(@");
         writer.Write(union.Name);
         writer.WriteLine(" other)");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
         writer.Write("return Discriminator == other.Discriminator");
 
         foreach (TypeSymbol subtype in union.Subtypes)
@@ -332,25 +306,21 @@ public sealed partial class Emitter
         }
 
         writer.WriteLine(';');
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // Equals method
         writer.WriteLine();
 
         // object.Equals()
         writer.WriteLine("public override bool Equals(object? other)");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
         writer.Write("return other is @");
         writer.Write(union.Name);
         writer.WriteLine(" union && Equals(union);");
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // Equals method
         writer.WriteLine();
 
         // GetHashCode()
         writer.WriteLine("public override int GetHashCode()");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
         writer.WriteLine("global::System.HashCode hashcode = default;");
 
         foreach (TypeSymbol subtype in union.Subtypes)
@@ -361,8 +331,7 @@ public sealed partial class Emitter
         }
 
         writer.WriteLine("return hashcode.ToHashCode();");
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // GetHashCode method
         writer.WriteLine();
 
         // == operator
@@ -371,11 +340,9 @@ public sealed partial class Emitter
         writer.Write(" x, @");
         writer.Write(union.Name);
         writer.WriteLine(" y)");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
         writer.WriteLine("return x.Equals(y);");
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // == operator
         writer.WriteLine();
 
         // != operator
@@ -384,11 +351,9 @@ public sealed partial class Emitter
         writer.Write(" x, @");
         writer.Write(union.Name);
         writer.WriteLine(" y)");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
         writer.WriteLine("return !x.Equals(y);");
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // != operator
         writer.WriteLine();
     }
 
@@ -399,22 +364,20 @@ public sealed partial class Emitter
         foreach (TypeSymbol subtype in union.Subtypes.Take(union.Subtypes.Length - 1))
         {
             writer.Write("global::System.Func<");
-            GenerateType(subtype);
+            GeneralEmission.GenerateType(subtype, writer);
             writer.Write(", T> function");
             GenerateUnionSubtypeName(subtype, includeAt: false);
             writer.Write(", ");
         }
 
         writer.Write("global::System.Func<");
-        GenerateType(union.Subtypes[^1]);
+        GeneralEmission.GenerateType(union.Subtypes[^1], writer);
         writer.Write(", T> function");
         GenerateUnionSubtypeName(union.Subtypes[^1], includeAt: false);
         writer.WriteLine(')');
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
         writer.WriteLine("switch (Discriminator)");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
 
         foreach (TypeSymbol subtype in union.Subtypes)
         {
@@ -432,12 +395,10 @@ public sealed partial class Emitter
             writer.Indent--;
         }
 
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // switch
         writer.WriteLine();
         writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid discriminator\");");
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // evaluate method
         writer.WriteLine();
     }
 
@@ -448,23 +409,21 @@ public sealed partial class Emitter
         foreach (TypeSymbol subtype in union.Subtypes.Take(union.Subtypes.Length - 1))
         {
             writer.Write("global::System.Action<");
-            GenerateType(subtype);
+            GeneralEmission.GenerateType(subtype, writer);
             writer.Write("> action");
             GenerateUnionSubtypeName(subtype, includeAt: false);
             writer.Write(", ");
         }
 
         writer.Write("global::System.Action<");
-        GenerateType(union.Subtypes[^1]);
+        GeneralEmission.GenerateType(union.Subtypes[^1], writer);
         writer.Write("> action");
         GenerateUnionSubtypeName(union.Subtypes[^1], includeAt: false);
         writer.WriteLine(')');
 
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
         writer.WriteLine("switch (Discriminator)");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
 
         foreach (TypeSymbol subtype in union.Subtypes)
         {
@@ -483,23 +442,19 @@ public sealed partial class Emitter
             writer.Indent--;
         }
 
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // switch
         writer.WriteLine();
         writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid discriminator\");");
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // Run method
         writer.WriteLine();
     }
 
     private void GenerateUnionAsObjectMethod(UnionTypeSymbol union)
     {
         writer.WriteLine("public object? AsObject()");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
         writer.WriteLine("switch (Discriminator)");
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
 
         foreach (TypeSymbol subtype in union.Subtypes)
         {
@@ -515,12 +470,10 @@ public sealed partial class Emitter
             writer.Indent--;
         }
 
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // switch
         writer.WriteLine();
         writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid discriminator\");");
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // AsObject method
         writer.WriteLine();
     }
 
@@ -529,7 +482,7 @@ public sealed partial class Emitter
         foreach (TypeSymbol subtype in union.Subtypes)
         {
             writer.Write("public ");
-            GenerateType(subtype);
+            GeneralEmission.GenerateType(subtype, writer);
             writer.Write(' ');
             GenerateUnionSubtypeName(subtype); // the property gets the same name as the type
             writer.WriteLine(" { get; }");
@@ -547,10 +500,9 @@ public sealed partial class Emitter
         foreach (TypeSymbol subtype in union.Subtypes)
         {
             writer.Write($"internal @{union.Name}(");
-            GenerateType(subtype);
+            GeneralEmission.GenerateType(subtype, writer);
             writer.WriteLine(" value)");
-            writer.WriteLine('{');
-            writer.Indent++;
+            writer.BeginBlock();
             writer.Write("this.");
             GenerateUnionSubtypeName(subtype);
             writer.WriteLine(" = value;");
@@ -559,8 +511,7 @@ public sealed partial class Emitter
             writer.Write("Discriminator.");
             GenerateUnionSubtypeName(subtype);
             writer.WriteLine(';');
-            writer.Indent--;
-            writer.WriteLine('}');
+            writer.EndBlock(); // constructor
             writer.WriteLine();
         }
     }
@@ -571,11 +522,11 @@ public sealed partial class Emitter
 
         foreach (TypeSymbol subtype in union.Subtypes.Take(union.Subtypes.Length - 1))
         {
-            GenerateType(subtype);
+            GeneralEmission.GenerateType(subtype, writer);
             writer.Write(", ");
         }
 
-        GenerateType(union.Subtypes[^1]);
+        GeneralEmission.GenerateType(union.Subtypes[^1], writer);
         writer.Write('>');
     }
 
@@ -593,9 +544,7 @@ public sealed partial class Emitter
     {
         writer.Write("public enum @");
         writer.WriteLine(enumSymbol.Name);
-        writer.WriteLine('{');
-
-        writer.Indent++;
+        writer.BeginBlock();
 
         foreach (string option in enumSymbol.Options)
         {
@@ -603,9 +552,7 @@ public sealed partial class Emitter
             writer.WriteLine(',');
         }
 
-        writer.Indent--;
-
-        writer.WriteLine('}');
+        writer.EndBlock(); // enum
     }
 
     private void GenerateOutcomeEnum(OutcomeSymbol outcomeSymbol)
@@ -622,8 +569,7 @@ public sealed partial class Emitter
         }
 
         writer.WriteLine(outcomeSymbol.Name);
-        writer.WriteLine('{');
-        writer.Indent++;
+        writer.BeginBlock();
 
         if (outcomeSymbol.DefaultOption is null)
         {
@@ -648,7 +594,6 @@ public sealed partial class Emitter
             writer.WriteLine(',');
         }
 
-        writer.Indent--;
-        writer.WriteLine('}');
+        writer.EndBlock(); // enum
     }
 }

@@ -2,7 +2,7 @@
 
 namespace Phantonia.Historia;
 
-public interface IStory
+public interface IStoryStateMachine
 {
     bool NotStartedStory { get; }
 
@@ -15,11 +15,15 @@ public interface IStory
     bool TryContinue();
 
     bool TryContinueWithOption(int option);
+
+    IStorySnapshot CreateSnapshot();
 }
 
-public interface IStory<out TOutput, out TOption> : IStory
+public interface IStoryStateMachine<out TOutput, out TOption> : IStoryStateMachine
 {
     new TOutput? Output { get; }
 
     new IReadOnlyList<TOption> Options { get; }
+
+    new IStorySnapshot<TOutput, TOption> CreateSnapshot();
 }

@@ -12,4 +12,16 @@ internal static class IndentedTextWriterExtensions
             writer.WriteLine(line);
         }
     }
+
+    public static void BeginBlock(this IndentedTextWriter writer)
+    {
+        writer.WriteLine('{');
+        writer.Indent++;
+    }
+
+    public static void EndBlock(this IndentedTextWriter writer)
+    {
+        writer.Indent--;
+        writer.WriteLine('}');
+    }
 }

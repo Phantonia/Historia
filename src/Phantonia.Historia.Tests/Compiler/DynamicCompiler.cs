@@ -14,7 +14,7 @@ namespace Phantonia.Historia.Tests.Compiler;
 
 internal static class DynamicCompiler
 {
-    public static IStory CompileToStory(string csharpCode, string storyClass)
+    public static IStoryStateMachine CompileToStory(string csharpCode, string storyClass)
     {
         // define source code, then parse it (to the type used for compilation)
         SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(csharpCode);
@@ -29,7 +29,7 @@ internal static class DynamicCompiler
             MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location),
             MetadataReference.CreateFromFile(runtimePath),
             MetadataReference.CreateFromFile(typeof(ImmutableArray).Assembly.Location),
-            MetadataReference.CreateFromFile(typeof(IStory).Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(IStoryStateMachine).Assembly.Location),
         };
 
         // analyse and generate IL code from syntax tree
@@ -70,16 +70,16 @@ internal static class DynamicCompiler
             object? obj = Activator.CreateInstance(type);
             Assert.IsNotNull(obj);
 
-            return (IStory)obj;
+            return (IStoryStateMachine)obj;
         }
     }
 
-    public static IStory<TOutput, TOption> CompileToStory<TOutput, TOption>(string csharpCode, string storyClass)
+    public static IStoryStateMachine<TOutput, TOption> CompileToStory<TOutput, TOption>(string csharpCode, string storyClass)
     {
-        IStory story = CompileToStory(csharpCode, storyClass);
+        IStoryStateMachine story = CompileToStory(csharpCode, storyClass);
 
-        Assert.IsTrue(story is IStory<TOutput, TOption>);
+        Assert.IsTrue(story is IStoryStateMachine<TOutput, TOption>);
 
-        return (IStory<TOutput, TOption>)story;
+        return (IStoryStateMachine<TOutput, TOption>)story;
     }
 }
