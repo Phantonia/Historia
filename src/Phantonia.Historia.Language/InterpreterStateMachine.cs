@@ -12,7 +12,7 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language;
 
-public sealed class InterpreterStateMachine : IStory
+public sealed class InterpreterStateMachine : IStoryStateMachine
 {
     private const int EndState = FlowGraph.FinalVertex;
     private const int StartState = -2;
@@ -377,5 +377,10 @@ public sealed class InterpreterStateMachine : IStory
         }
     }
 
-    IReadOnlyList<object?> IStory.Options => Options;
+    IReadOnlyList<object?> IStoryStateMachine.Options => Options;
+
+    IStorySnapshot IStoryStateMachine.CreateSnapshot()
+    {
+        throw new NotImplementedException();
+    }
 }
