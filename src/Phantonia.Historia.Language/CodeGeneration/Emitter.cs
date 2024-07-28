@@ -58,6 +58,11 @@ public sealed class Emitter
         HeartEmitter heartEmitter = new(flowGraph, settings, writer);
         heartEmitter.GenerateHeartClass();
 
+        writer.WriteLine();
+
+        StoryGraphEmitter storyGraphEmitter = new(flowGraph, settings, writer);
+        storyGraphEmitter.GenerateStoryGraphClass();
+
         if (settings.Namespace != "")
         {
             writer.EndBlock(); // namespace

@@ -401,7 +401,7 @@ public sealed class StateTransitionEmitter
         writer.Write("fields.");
         GeneralEmission.GenerateSpectrumTotalFieldName(spectrum, writer);
         writer.Write(" += ");
-        GeneralEmission.GenerateExpression(spectrumAdjustment.AdjustmentAmount, writer);
+        GeneralEmission.GenerateExpression(spectrumAdjustment.AdjustmentAmount, settings, writer);
         writer.WriteLine(';');
 
         if (spectrumAdjustment.Strengthens)
@@ -409,7 +409,7 @@ public sealed class StateTransitionEmitter
             writer.Write("fields.");
             GeneralEmission.GenerateSpectrumPositiveFieldName(spectrum, writer);
             writer.Write(" += ");
-            GeneralEmission.GenerateExpression(spectrumAdjustment.AdjustmentAmount, writer);
+            GeneralEmission.GenerateExpression(spectrumAdjustment.AdjustmentAmount, settings, writer);
             writer.WriteLine(';');
         }
 

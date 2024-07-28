@@ -1,4 +1,8 @@
-﻿using System;
+﻿using Phantonia.Historia.Language.CodeGeneration;
+using Phantonia.Historia.Language.SyntaxAnalysis;
+using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
+using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -18,7 +22,7 @@ public sealed record FlowGraph
     public static readonly FlowEdge FinalEdge = new()
     {
         ToVertex = FinalVertex,
-        Weak = false,
+        IsWeak = false,
     };
 
     public static FlowGraph Empty { get; } = new();
@@ -202,7 +206,7 @@ public sealed record FlowGraph
                     tempEdges[edge.ToVertex] = new List<FlowEdge>();
                 }
 
-                tempEdges[edge.ToVertex].Add(new FlowEdge { ToVertex = vertex, Weak = edge.Weak });
+                tempEdges[edge.ToVertex].Add(new FlowEdge { ToVertex = vertex, IsWeak = edge.IsWeak });
             }
         }
 
@@ -211,6 +215,68 @@ public sealed record FlowGraph
             Vertices = Vertices,
             OutgoingEdges = tempEdges.ToImmutableDictionary(p => p.Key, p => p.Value.ToImmutableList()),
             StartVertex = StartVertex,
+        };
+    }
+
+    public FlowGraph RemoveInvisible()
+    {
+        MutEdges tempEdges = OutgoingEdges.ToDictionary(p => p.Key, p => p.Value.ToList());
+        Dictionary<int, FlowVertex> tempVertices = Vertices.ToDictionary(p => p.Key, p => p.Value);
+
+        int tempStartVertex = StartVertex;
+
+        foreach (FlowVertex vertex in Vertices.Values)
+        {
+            if (vertex.IsVisible)
+            {
+                continue;
+            }
+
+            tempVertices.Remove(vertex.Index);
+            tempEdges.Remove(vertex.Index);
+
+            ImmutableList<FlowEdge> outgoingEdges = OutgoingEdges[vertex.Index];
+
+            foreach (int otherVertex in tempVertices.Keys)
+            {
+                if (!tempEdges[otherVertex].Any(e => e.ToVertex == vertex.Index))
+                {
+                    continue;
+                }
+
+                tempEdges[otherVertex].RemoveAll(e => e.ToVertex == vertex.Index);
+                tempEdges[otherVertex].AddRange(outgoingEdges.Where(e => e.ToVertex != otherVertex));
+            }
+
+            if (vertex.Index == tempStartVertex)
+            {
+                if (outgoingEdges.Count == 1)
+                {
+                    tempStartVertex = outgoingEdges[0].ToVertex;
+                }
+                else
+                {
+                    // after removing invisible nodes, the start vertex is suddenly multiple vertices
+                    // so we need to synthesize a new vertex in its place
+                    FlowVertex synth = new()
+                    {
+                        AssociatedStatement = new SynthesizedStartStatementNode { Index = StartVertex },
+                        Index = StartVertex,
+                        IsVisible = true,
+                    };
+
+                    tempVertices[synth.Index] = synth;
+                    tempEdges[synth.Index] = outgoingEdges.ToList();
+                    tempStartVertex = synth.Index;
+                }
+            }
+        }
+
+        return this with
+        {
+            OutgoingEdges = tempEdges.ToImmutableDictionary(p => p.Key, p => p.Value.ToImmutableList()),
+            Vertices = tempVertices.ToImmutableDictionary(),
+            StartVertex = tempStartVertex,
         };
     }
 
@@ -241,7 +307,7 @@ public sealed record FlowGraph
 
             foreach (FlowEdge edge in OutgoingEdges[vertex])
             {
-                if (!edge.Weak && edge.ToVertex != FinalVertex && !marked[edge.ToVertex])
+                if (!edge.IsWeak && edge.ToVertex != FinalVertex && !marked[edge.ToVertex])
                 {
                     DepthFirstSearch(edge.ToVertex);
                 }

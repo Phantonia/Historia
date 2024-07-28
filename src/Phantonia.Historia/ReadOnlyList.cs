@@ -6,6 +6,8 @@ namespace Phantonia.Historia;
 
 public readonly struct ReadOnlyList<T> : IReadOnlyList<T>
 {
+    public ReadOnlyList(IReadOnlyList<T> list) : this(list, startIndex: 0, list.Count) { }
+
     public ReadOnlyList(IReadOnlyList<T> list, int startIndex, int endIndex)
     {
         if (startIndex < 0)

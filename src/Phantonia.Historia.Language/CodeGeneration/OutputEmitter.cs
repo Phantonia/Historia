@@ -69,7 +69,7 @@ public sealed class OutputEmitter
 
             writer.Indent++;
             writer.Write($"return ");
-            GeneralEmission.GenerateExpression(outputExpression, writer);
+            GeneralEmission.GenerateExpression(outputExpression, settings, writer);
             writer.WriteLine(";");
             writer.Indent--;
         }
@@ -120,7 +120,7 @@ public sealed class OutputEmitter
                         writer.Write("options[");
                         writer.Write(i);
                         writer.Write("] = ");
-                        GeneralEmission.GenerateExpression(switchStatement.Options[i].Expression, writer);
+                        GeneralEmission.GenerateExpression(switchStatement.Options[i].Expression, settings, writer);
                         writer.WriteLine(';');
                     }
 
@@ -160,7 +160,7 @@ public sealed class OutputEmitter
                         writer.BeginBlock();
 
                         writer.Write("options[i] = ");
-                        GeneralEmission.GenerateExpression(loopSwitchStatement.Options[i].Expression, writer);
+                        GeneralEmission.GenerateExpression(loopSwitchStatement.Options[i].Expression, settings, writer);
                         writer.WriteLine(';');
 
                         writer.WriteLine("i++;");

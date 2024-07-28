@@ -6,6 +6,7 @@ using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
+using System;
 using System.CodeDom.Compiler;
 using System.Diagnostics;
 using System.Linq;
@@ -305,7 +306,19 @@ public static class GeneralEmission
         }
     }
 
-    public static void GenerateExpression(ExpressionNode expression, IndentedTextWriter writer)
+    public static void GenerateGenericStoryType(string typeName, Settings settings, IndentedTextWriter writer)
+    {
+        writer.Write(typeName);
+        writer.Write('<');
+        GenerateType(settings.OutputType, writer);
+        writer.Write(", ");
+        GenerateType(settings.OptionType, writer);
+        writer.Write('>');
+    }
+
+    public static void GenerateGenericStoryType(Type type, Settings settings, IndentedTextWriter writer) => GenerateGenericStoryType($"global::{type.FullName?[..type.FullName.IndexOf('`')]}", settings, writer);
+
+    public static void GenerateExpression(ExpressionNode expression, Settings settings, IndentedTextWriter writer)
     {
         TypedExpressionNode? typedExpression = expression as TypedExpressionNode;
         Debug.Assert(typedExpression is not null);
@@ -320,7 +333,7 @@ public static class GeneralEmission
             GenerateExpression(typedExpression with
             {
                 TargetType = typedExpression.SourceType,
-            }, writer);
+            }, settings, writer);
             writer.Write(')');
             return;
         }
@@ -339,16 +352,21 @@ public static class GeneralEmission
                 writer.Write('(');
                 foreach (BoundArgumentNode argument in recordCreation.BoundArguments.Take(recordCreation.BoundArguments.Length - 1))
                 {
-                    GenerateExpression(argument.Expression, writer);
+                    GenerateExpression(argument.Expression, settings, writer);
                     writer.Write(", ");
                 }
-                GenerateExpression(recordCreation.BoundArguments[^1].Expression, writer);
+                GenerateExpression(recordCreation.BoundArguments[^1].Expression, settings, writer);
                 writer.Write(')');
                 return;
             case BoundEnumOptionExpressionNode enumOptionExpression:
                 writer.Write(enumOptionExpression.EnumName);
                 writer.Write('.');
                 writer.Write(enumOptionExpression.OptionName);
+                return;
+            case SynthesizedEmptyExpressionNode:
+                writer.Write("default(");
+                GenerateType(settings.OutputType, writer);
+                writer.Write(')');
                 return;
         }
 

@@ -14,7 +14,7 @@ namespace Phantonia.Historia.Tests.Compiler;
 
 internal static class DynamicCompiler
 {
-    public static IStoryStateMachine CompileToStory(string csharpCode, string storyClass)
+    public static Type CompileAndGetType(string csharpCode, string typeName)
     {
         // define source code, then parse it (to the type used for compilation)
         SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(csharpCode);
@@ -64,14 +64,20 @@ internal static class DynamicCompiler
             Assembly assembly = Assembly.Load(ms.ToArray());
 
             // create instance of the desired class and call the desired function
-            Type? type = assembly.GetType(storyClass);
+            Type? type = assembly.GetType(typeName);
             Assert.IsNotNull(type);
 
-            object? obj = Activator.CreateInstance(type);
-            Assert.IsNotNull(obj);
-
-            return (IStoryStateMachine)obj;
+            return type;
         }
+    }
+
+    public static IStoryStateMachine CompileToStory(string csharpCode, string storyClass)
+    {
+        Type stateMachineType = CompileAndGetType(csharpCode, storyClass);
+        object? obj = Activator.CreateInstance(stateMachineType);
+        Assert.IsNotNull(obj);
+
+        return (IStoryStateMachine)obj;
     }
 
     public static IStoryStateMachine<TOutput, TOption> CompileToStory<TOutput, TOption>(string csharpCode, string storyClass)

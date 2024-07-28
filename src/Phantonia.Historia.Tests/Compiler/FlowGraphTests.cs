@@ -183,4 +183,39 @@ public sealed class FlowGraphTests
         Assert.AreEqual(3, resultGraph.OutgoingEdges[2][0].ToVertex);
         Assert.AreEqual(4, resultGraph.OutgoingEdges[2][1].ToVertex);
     }
+
+    [TestMethod]
+    public void TestRemoveInvisible()
+    {
+        FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 0, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateTo(1), FlowEdge.CreateTo(2))
+                                             .AddVertex(new FlowVertex { Index = 1, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateTo(2), FlowEdge.CreateTo(4))
+                                             .AddVertex(new FlowVertex { Index = 2, AssociatedStatement = new Stub(), IsVisible = false }, FlowEdge.CreateTo(3))
+                                             .AddVertex(new FlowVertex { Index = 3, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateTo(4))
+                                             .AddVertex(new FlowVertex { Index = 4, AssociatedStatement = new Stub(), IsVisible = true }, FlowGraph.FinalEdge);
+
+        FlowGraph visibleGraph = flowGraph.RemoveInvisible();
+
+        Assert.AreEqual(4, visibleGraph.Vertices.Count);
+        Assert.IsTrue(visibleGraph.Vertices.ContainsKey(0));
+        Assert.IsTrue(visibleGraph.Vertices.ContainsKey(1));
+        Assert.IsFalse(visibleGraph.Vertices.ContainsKey(2));
+        Assert.IsTrue(visibleGraph.Vertices.ContainsKey(3));
+        Assert.IsTrue(visibleGraph.Vertices.ContainsKey(4));
+
+        Assert.AreEqual(2, visibleGraph.OutgoingEdges[0].Count);
+        Assert.IsTrue(visibleGraph.OutgoingEdges[0][0].ToVertex is 1 or 3);
+        Assert.IsTrue(visibleGraph.OutgoingEdges[0][1].ToVertex is 1 or 3);
+        Assert.AreNotEqual(visibleGraph.OutgoingEdges[0][0].ToVertex, visibleGraph.OutgoingEdges[0][1].ToVertex);
+
+        Assert.AreEqual(2, visibleGraph.OutgoingEdges[1].Count);
+        Assert.IsTrue(visibleGraph.OutgoingEdges[1][0].ToVertex is 3 or 4);
+        Assert.IsTrue(visibleGraph.OutgoingEdges[1][1].ToVertex is 3 or 4);
+        Assert.AreNotEqual(visibleGraph.OutgoingEdges[1][0].ToVertex, visibleGraph.OutgoingEdges[1][1].ToVertex);
+
+        Assert.AreEqual(1, visibleGraph.OutgoingEdges[3].Count);
+        Assert.AreEqual(4, visibleGraph.OutgoingEdges[3][0].ToVertex);
+
+        Assert.AreEqual(1, visibleGraph.OutgoingEdges[4].Count);
+        Assert.AreEqual(FlowGraph.FinalVertex, visibleGraph.OutgoingEdges[4][0].ToVertex);
+    }
 }

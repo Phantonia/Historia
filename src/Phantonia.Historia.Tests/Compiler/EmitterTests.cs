@@ -2,7 +2,9 @@
 using Phantonia.Historia.Language;
 using Phantonia.Historia.Language.FlowAnalysis;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 
 namespace Phantonia.Historia.Tests.Compiler;
@@ -999,5 +1001,203 @@ public sealed class EmitterTests
         IStorySnapshot<int, int>? snapshotE = snapshot7.TryContinue();
         Assert.IsNotNull(snapshotE);
         Assert.IsTrue(snapshotE.FinishedStory);
+    }
+
+    [TestMethod]
+    public void TestStoryGraph()
+    {
+        string code =
+            """
+            scene main
+            {
+                output 0;
+
+                outcome X(A, B);
+
+                switch (1)
+                {
+                    option (2)
+                    {
+                        output 3;
+                        X = A;
+                    }
+
+                    option (4)
+                    {
+                        output 5;
+                        X = B;
+                    }
+                }
+
+                output 6;
+
+                branchon X
+                {
+                    option A
+                    {
+                        output 7;
+                    }
+
+                    option B
+                    {
+                        output 8;
+                    }
+                }
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        Type storyGraphType = DynamicCompiler.CompileAndGetType(resultCode, "HistoriaStoryGraph");
+        Assert.IsTrue(storyGraphType.IsAbstract && storyGraphType.IsSealed); // is static class
+
+        MethodInfo? createMethod = storyGraphType.GetMethod("CreateStoryGraph");
+        Assert.IsNotNull(createMethod);
+
+        StoryGraph<int, int>? storyGraph = createMethod.Invoke(null, Array.Empty<object?>()) as StoryGraph<int, int>;
+        Assert.IsNotNull(storyGraph);
+
+        Assert.AreEqual(storyGraph.StartVertex, code.IndexOf("output 0;"));
+
+        IEnumerable<int> vertices = storyGraph.Vertices.Keys.Order();
+        int[] expectedVertices = new[]
+        {
+            code.IndexOf("output 0;"),
+            code.IndexOf("switch (1)"),
+            code.IndexOf("output 3;"),
+            code.IndexOf("output 5;"),
+            code.IndexOf("output 6;"),
+            code.IndexOf("output 7;"),
+            code.IndexOf("output 8;"),
+        };
+
+        Assert.IsTrue(vertices.SequenceEqual(expectedVertices));
+
+        void AssertOutgoingEdgesAre(int index, params int[] expectedAdjacentVertices)
+        {
+            Assert.IsTrue(storyGraph.Vertices[index].OutgoingEdges.Select(e => e.ToVertex).Order().SequenceEqual(expectedAdjacentVertices));
+        }
+
+        void AssertIncomingEdgesAre(int index, params int[] expectedAdjacentVertices)
+        {
+            Assert.IsTrue(storyGraph.Vertices[index].IncomingEdges.Select(e => e.FromVertex).Order().SequenceEqual(expectedAdjacentVertices));
+        }
+
+        AssertOutgoingEdgesAre(expectedVertices[0], expectedVertices[1]);
+        Assert.AreEqual(0, storyGraph.Vertices[expectedVertices[0]].IncomingEdges.Count);
+
+        AssertOutgoingEdgesAre(expectedVertices[1], expectedVertices[2], expectedVertices[3]);
+        AssertIncomingEdgesAre(expectedVertices[1], expectedVertices[0]);
+
+        AssertOutgoingEdgesAre(expectedVertices[2], expectedVertices[4]);
+        AssertIncomingEdgesAre(expectedVertices[2], expectedVertices[1]);
+
+        AssertOutgoingEdgesAre(expectedVertices[3], expectedVertices[4]);
+        AssertIncomingEdgesAre(expectedVertices[3], expectedVertices[1]);
+
+        AssertOutgoingEdgesAre(expectedVertices[4], expectedVertices[5], expectedVertices[6]);
+        AssertIncomingEdgesAre(expectedVertices[4], expectedVertices[2], expectedVertices[3]);
+
+        AssertOutgoingEdgesAre(expectedVertices[5], FlowGraph.FinalVertex);
+        AssertIncomingEdgesAre(expectedVertices[5], expectedVertices[4]);
+
+        AssertOutgoingEdgesAre(expectedVertices[6], FlowGraph.FinalVertex);
+        AssertIncomingEdgesAre(expectedVertices[6], expectedVertices[4]);
+    }
+
+    [TestMethod]
+    public void TestMoreComplicatedStoryGraph()
+    {
+        // regression test specifically for the edges at the end of switch (1) to the beginnings of branchon X
+        string code =
+            """
+            scene main
+            {
+                output 0;
+
+                outcome X (A, B);
+
+                switch (1)
+                {
+                    option (2)
+                    {
+                        output 3;
+                        X = A;
+                    }
+
+                    option (4)
+                    {
+                        output 5;
+                        X = B;
+                    }
+
+                    option (6)
+                    {
+                        switch (7)
+                        {
+                            option (8)
+                            {
+                                output 9;
+                                X = A;
+                            }
+
+                            option (10)
+                            {
+                                output 11;
+                                X = B;
+                            }
+                        }
+                    }
+                }
+
+                branchon X
+                {
+                    option A
+                    {
+                        output 12;
+                    }
+
+                    option B
+                    {
+                        output 13;
+                    }
+                }
+
+                output 14;
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        Type storyGraphType = DynamicCompiler.CompileAndGetType(resultCode, "HistoriaStoryGraph");
+        Assert.IsTrue(storyGraphType.IsAbstract && storyGraphType.IsSealed); // is static class
+
+        MethodInfo? createMethod = storyGraphType.GetMethod("CreateStoryGraph");
+        Assert.IsNotNull(createMethod);
+
+        StoryGraph<int, int>? storyGraph = createMethod.Invoke(null, Array.Empty<object?>()) as StoryGraph<int, int>;
+        Assert.IsNotNull(storyGraph);
+
+        Assert.IsFalse(storyGraph.Vertices.ContainsKey(code.IndexOf("branchon X")));
+        Assert.IsTrue(storyGraph.ContainsEdge(code.IndexOf("output 3"), code.IndexOf("output 12")));
+        Assert.IsTrue(storyGraph.ContainsEdge(code.IndexOf("output 3"), code.IndexOf("output 13")));
+        Assert.IsTrue(storyGraph.ContainsEdge(code.IndexOf("output 5"), code.IndexOf("output 12")));
+        Assert.IsTrue(storyGraph.ContainsEdge(code.IndexOf("output 5"), code.IndexOf("output 13")));
+        Assert.IsTrue(storyGraph.ContainsEdge(code.IndexOf("output 9"), code.IndexOf("output 12")));
+        Assert.IsTrue(storyGraph.ContainsEdge(code.IndexOf("output 9"), code.IndexOf("output 13")));
+        Assert.IsTrue(storyGraph.ContainsEdge(code.IndexOf("output 11"), code.IndexOf("output 12")));
+        Assert.IsTrue(storyGraph.ContainsEdge(code.IndexOf("output 11"), code.IndexOf("output 13")));
     }
 }

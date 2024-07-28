@@ -5,16 +5,16 @@ public readonly record struct FlowEdge
     public static FlowEdge CreateTo(int toVertex) => new()
     {
         ToVertex = toVertex,
-        Weak = false,
+        IsWeak = false,
     };
 
     public static FlowEdge CreateWeakTo(int toVertex) => new()
     {
         ToVertex = toVertex,
-        Weak = true,
+        IsWeak = true,
     };
 
     public int ToVertex { get; init; }
 
-    public bool Weak { get; init; }
+    public bool IsWeak { get; init; }
 }
