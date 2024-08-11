@@ -1,7 +1,4 @@
 ﻿using Phantonia.Historia.Language.CodeGeneration;
-using Phantonia.Historia.Language.SyntaxAnalysis;
-using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
-using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -22,7 +19,7 @@ public sealed record FlowGraph
     public static readonly FlowEdge FinalEdge = new()
     {
         ToVertex = FinalVertex,
-        IsWeak = false,
+        Kind = FlowEdgeKind.Strong,
     };
 
     public static FlowGraph Empty { get; } = new();
@@ -70,7 +67,7 @@ public sealed record FlowGraph
             {
                 if (edges[i].ToVertex == FinalVertex)
                 {
-                    edges[i] = FlowEdge.CreateTo(graph.StartVertex);
+                    edges[i] = edges[i] with { ToVertex = graph.StartVertex, }; // FlowEdge.CreateStrongTo(graph.StartVertex);
                 }
             }
         }
@@ -117,7 +114,7 @@ public sealed record FlowGraph
             tempVertices[currentVertex] = graph.Vertices[currentVertex];
         }
 
-        tempEdges[vertex].Add(FlowEdge.CreateTo(graph.StartVertex));
+        tempEdges[vertex].Add(FlowEdge.CreateStrongTo(graph.StartVertex));
 
         return this with
         {
@@ -158,7 +155,7 @@ public sealed record FlowGraph
             {
                 if (edges[i].ToVertex == replacedVertex)
                 {
-                    edges[i] = FlowEdge.CreateTo(graph.StartVertex);
+                    edges[i] = FlowEdge.CreateStrongTo(graph.StartVertex);
                 }
             }
         }
@@ -201,12 +198,8 @@ public sealed record FlowGraph
         {
             foreach (FlowEdge edge in edges)
             {
-                if (!tempEdges.ContainsKey(edge.ToVertex))
-                {
-                    tempEdges[edge.ToVertex] = new List<FlowEdge>();
-                }
-
-                tempEdges[edge.ToVertex].Add(new FlowEdge { ToVertex = vertex, IsWeak = edge.IsWeak });
+                tempEdges.TryAdd(edge.ToVertex, new List<FlowEdge>());
+                tempEdges[edge.ToVertex].Add(edge with { ToVertex = vertex });
             }
         }
 
@@ -305,9 +298,10 @@ public sealed record FlowGraph
         {
             marked[vertex] = true;
 
-            foreach (FlowEdge edge in OutgoingEdges[vertex])
+            // without a reverse here, the way the stack works, vertices on the same level will always be the wrong way around
+            foreach (FlowEdge edge in OutgoingEdges[vertex].Reverse())
             {
-                if (!edge.IsWeak && edge.ToVertex != FinalVertex && !marked[edge.ToVertex])
+                if (edge.IsSemantic && edge.ToVertex != FinalVertex && !marked[edge.ToVertex])
                 {
                     DepthFirstSearch(edge.ToVertex);
                 }

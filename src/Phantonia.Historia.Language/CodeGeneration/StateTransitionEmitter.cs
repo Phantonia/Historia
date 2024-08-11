@@ -114,7 +114,7 @@ public sealed class StateTransitionEmitter
 
     private void GenerateOutputTransition(int index, ImmutableList<FlowEdge> edges)
     {
-        Debug.Assert(flowGraph.OutgoingEdges[index].Count == 1);
+        Debug.Assert(flowGraph.OutgoingEdges[index].Count(o => o.IsStory) == 1);
         GenerateTransitionTo(edges[0].ToVertex);
     }
 

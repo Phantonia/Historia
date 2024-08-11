@@ -77,7 +77,7 @@ public sealed partial class FlowAnalyzer
         foreach (int vertex in order.Skip(1))
         {
             IEnumerable<VertexData> previousData = reversedFlowGraph.OutgoingEdges[vertex]
-                                                                    .Where(e => !e.IsWeak)
+                                                                    .Where(e => e.IsSemantic)
                                                                     .Select(e => data[e.ToVertex]);
             data[vertex] = ProcessVertex(sceneFlowGraph, vertex, previousData, defaultVertexData, sceneFlowGraphs, callStack);
         }
@@ -123,7 +123,7 @@ public sealed partial class FlowAnalyzer
                 case BoundOutcomeAssignmentStatementNode boundAssignment when boundAssignment.Outcome == outcome:
                     if (possiblyAssigned)
                     {
-                        ErrorFound?.Invoke(Errors.OutcomeMayBeAssignedMoreThanOnce(outcome.Name, callStack.Select(s => s.Name), boundAssignment.Index));
+                        ErrorFound?.Invoke(Errors.OutcomeMightBeAssignedMoreThanOnce(outcome.Name, callStack.Select(s => s.Name), boundAssignment.Index));
                     }
 
                     definitelyAssigned = true;

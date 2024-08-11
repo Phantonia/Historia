@@ -307,7 +307,7 @@ public static class Errors
     {
         return new Error
         {
-            ErrorMessage = $"'{outcomeName}' is an outcome, but it isn't assigned one of it's options",
+            ErrorMessage = $"'{outcomeName}' is an outcome, but it isn't assigned one of its options",
             Index = index,
         };
     }
@@ -375,11 +375,11 @@ public static class Errors
         };
     }
 
-    public static Error OutcomeMayBeAssignedMoreThanOnce(string outcomeName, IEnumerable<string> callStack, int index)
+    public static Error OutcomeMightBeAssignedMoreThanOnce(string outcomeName, IEnumerable<string> callStack, int index)
     {
         return new Error
         {
-            ErrorMessage = $"The outcome '{outcomeName}' may already be assigned once this assignment executes through the following scene calls: {string.Join(", ", callStack.Reverse())}. Keep in mind that outcomes may only be assigned once",
+            ErrorMessage = $"The outcome '{outcomeName}' might already be assigned once this assignment executes through the following scene calls: {string.Join(", ", callStack.Reverse())}. Keep in mind that outcomes may only be assigned once in a given walkthrough",
             Index = index,
         };
     }
@@ -388,7 +388,7 @@ public static class Errors
     {
         return new Error
         {
-            ErrorMessage = $"The outcome '{outcomeName}' may not be assigned once this statement executes through the following scene calls: {string.Join(", ", callStack.Reverse())}. Consider adding a default option",
+            ErrorMessage = $"The outcome '{outcomeName}' might not be assigned once this statement executes through the following scene calls: {string.Join(", ", callStack.Reverse())}. Consider adding a default option",
             Index = index,
         };
     }
@@ -440,6 +440,7 @@ public static class Errors
 
     public static Error ConflictingStoryName(string storyName, int index)
     {
+        // TODO: change this to reflect the StateMachine / Snapshot suffixes
         return new Error
         {
             ErrorMessage = $"Story name '{storyName}' conflicts with a symbol in your story which will also be generated as a type",

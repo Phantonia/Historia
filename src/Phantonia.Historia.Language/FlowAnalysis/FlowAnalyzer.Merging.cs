@@ -104,8 +104,8 @@ public sealed partial class FlowAnalyzer
                         mainFlowGraph.OutgoingEdges.SetItem(
                             vertex.Index,
                             mainFlowGraph.OutgoingEdges[vertex.Index]
-                                         .Remove(FlowEdge.CreateTo(callVertex)) // there are no weak edges to call vertices (only weak edges back to loop switches)
-                                         .Add(FlowEdge.CreateTo(sceneFlowGraph.StartVertex))),
+                                         .Remove(FlowEdge.CreateStrongTo(callVertex)) // there are no weak edges to call vertices (only weak edges back to loop switches)
+                                         .Add(FlowEdge.CreateStrongTo(sceneFlowGraph.StartVertex))),
                 };
             }
         }
@@ -122,7 +122,7 @@ public sealed partial class FlowAnalyzer
                             vertex.Index,
                             mainFlowGraph.OutgoingEdges[vertex.Index]
                                          .Remove(FlowGraph.FinalEdge)
-                                         .Add(FlowEdge.CreateTo(nextVertex))),
+                                         .Add(FlowEdge.CreateStrongTo(nextVertex))),
                 };
             }
         }
@@ -180,7 +180,7 @@ public sealed partial class FlowAnalyzer
                 Vertices = mainFlowGraph.Vertices.SetItem(vertex.Index, trackerVertex),
                 OutgoingEdges = mainFlowGraph.OutgoingEdges.SetItem(
                     vertex.Index,
-                    ImmutableList.Create(FlowEdge.CreateTo(sceneFlowGraph.StartVertex))),
+                    ImmutableList.Create(FlowEdge.CreateStrongTo(sceneFlowGraph.StartVertex))),
             };
         }
 
@@ -202,7 +202,7 @@ public sealed partial class FlowAnalyzer
 
         foreach (int site in callSites)
         {
-            edgesBuilder.Add(FlowEdge.CreateTo(nextVertices[site]));
+            edgesBuilder.Add(FlowEdge.CreateStrongTo(nextVertices[site]));
         }
 
         mainFlowGraph = mainFlowGraph with
@@ -220,7 +220,7 @@ public sealed partial class FlowAnalyzer
                 {
                     OutgoingEdges = mainFlowGraph.OutgoingEdges.SetItem(
                         vertex.Index,
-                        mainFlowGraph.OutgoingEdges[vertex.Index].Remove(FlowGraph.FinalEdge).Add(FlowEdge.CreateTo(resolution.Index))),
+                        mainFlowGraph.OutgoingEdges[vertex.Index].Remove(FlowGraph.FinalEdge).Add(FlowEdge.CreateStrongTo(resolution.Index))),
                 };
             }
         }

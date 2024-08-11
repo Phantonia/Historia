@@ -6,7 +6,6 @@ using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 
 namespace Phantonia.Historia.Language.FlowAnalysis;
@@ -139,12 +138,17 @@ public sealed partial class FlowAnalyzer
 
     private FlowGraph GenerateLoopSwitchFlowGraph(LoopSwitchStatementNode loopSwitchStatement)
     {
+        bool hasFinalOption = loopSwitchStatement.Options.Any(o => o.Kind == LoopSwitchOptionKind.Final);
+
         FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex
         {
             Index = loopSwitchStatement.Index,
             AssociatedStatement = loopSwitchStatement,
             IsVisible = true,
         });
+
+        List<int> nonFinalEndVertices = new();
+        List<int> finalStartVertices = new();
 
         foreach (LoopSwitchOptionNode option in loopSwitchStatement.Options)
         {
@@ -166,12 +170,47 @@ public sealed partial class FlowAnalyzer
                                     FlowGraph.FinalEdge,
                                     FlowEdge.CreateWeakTo(loopSwitchStatement.Index))), // important: weak edge
                     };
+
+                    nonFinalEndVertices.Add(vertex);
                 }
+            }
+            else
+            {
+                finalStartVertices.Add(nestedFlowGraph.StartVertex);
+            }
+        }
+
+        foreach (int nonFinalEndVertex in nonFinalEndVertices)
+        {
+            if (hasFinalOption)
+            {
+                // add purely semantic edge from all end vertices of non final options to all start vertices of final options
+                foreach (int finalStartVertex in finalStartVertices)
+                {
+                    flowGraph = flowGraph with
+                    {
+                        OutgoingEdges = flowGraph.OutgoingEdges.SetItem(
+                            nonFinalEndVertex,
+                            flowGraph.OutgoingEdges[nonFinalEndVertex].Add(
+                                FlowEdge.CreatePurelySemanticTo(finalStartVertex))),
+                    };
+                }
+            }
+            else
+            {
+                // add purely semantic edges from all end vertices of non final options into nothingness
+                flowGraph = flowGraph with
+                {
+                    OutgoingEdges = flowGraph.OutgoingEdges.SetItem(
+                            nonFinalEndVertex,
+                            flowGraph.OutgoingEdges[nonFinalEndVertex].Add(
+                                FlowEdge.CreatePurelySemanticTo(FlowGraph.FinalVertex))),
+                };
             }
         }
 
         // loop switches without final options automatically continue after all normal options have been selected
-        if (loopSwitchStatement.Options.All(o => o.Kind != LoopSwitchOptionKind.Final))
+        if (!hasFinalOption)
         {
             flowGraph = flowGraph with
             {
