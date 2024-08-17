@@ -54,6 +54,11 @@ public sealed class StateTransitionEmitter
 
         foreach ((int index, ImmutableList<FlowEdge> edges) in flowGraph.OutgoingEdges)
         {
+            if (!flowGraph.Vertices[index].IsStory) // purely semantic vertex
+            {
+                continue;
+            }
+
             writer.Write("case ");
             writer.Write(index);
             writer.WriteLine(':');

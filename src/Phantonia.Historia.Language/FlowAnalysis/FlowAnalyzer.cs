@@ -6,6 +6,7 @@ using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 
 namespace Phantonia.Historia.Language.FlowAnalysis;
@@ -88,7 +89,7 @@ public sealed partial class FlowAnalyzer
             {
                 Index = statement.Index,
                 AssociatedStatement = statement,
-                IsVisible = true,
+                Kind = FlowVertexKind.Visible,
             }),
             SwitchStatementNode switchStatement => GenerateSwitchFlowGraph(switchStatement),
             LoopSwitchStatementNode loopSwitchStatement => GenerateLoopSwitchFlowGraph(loopSwitchStatement),
@@ -99,19 +100,19 @@ public sealed partial class FlowAnalyzer
             {
                 Index = statement.Index,
                 AssociatedStatement = statement,
-                IsVisible = false,
+                Kind = FlowVertexKind.Invisible,
             }),
             SpectrumAdjustmentStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex
             {
                 Index = statement.Index,
                 AssociatedStatement = statement,
-                IsVisible = false,
+                Kind = FlowVertexKind.Invisible,
             }),
             CallStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex
             {
                 Index = statement.Index,
                 AssociatedStatement = statement,
-                IsVisible = true,
+                Kind = FlowVertexKind.Visible,
             }),
             _ => throw new NotImplementedException($"Unknown statement type {statement.GetType().FullName}"),
         };
@@ -123,7 +124,7 @@ public sealed partial class FlowAnalyzer
         {
             Index = switchStatement.Index,
             AssociatedStatement = switchStatement,
-            IsVisible = true,
+            Kind = FlowVertexKind.Visible,
         });
 
         foreach (SwitchOptionNode option in switchStatement.Options)
@@ -144,7 +145,14 @@ public sealed partial class FlowAnalyzer
         {
             Index = loopSwitchStatement.Index,
             AssociatedStatement = loopSwitchStatement,
-            IsVisible = true,
+            Kind = FlowVertexKind.Visible,
+        });
+
+        FlowGraph semanticCopy = FlowGraph.Empty.AddVertex(new FlowVertex
+        {
+            Index = loopSwitchStatement.Index - 1,
+            AssociatedStatement = loopSwitchStatement,
+            Kind = FlowVertexKind.PurelySemantic,
         });
 
         List<int> nonFinalEndVertices = new();
@@ -158,6 +166,9 @@ public sealed partial class FlowAnalyzer
 
             if (option.Kind != LoopSwitchOptionKind.Final)
             {
+                FlowGraph nestedSemanticCopy = CreateSemanticCopy(nestedFlowGraph);
+                semanticCopy = semanticCopy.AppendToVertex(semanticCopy.StartVertex, nestedSemanticCopy);
+
                 // redirect final edges as weak edges back up
                 foreach (int vertex in flowGraph.OutgoingEdges.Where(p => p.Value.Contains(FlowGraph.FinalEdge)).Select(p => p.Key))
                 {
@@ -221,7 +232,54 @@ public sealed partial class FlowAnalyzer
             };
         }
 
+        flowGraph = semanticCopy.Append(flowGraph);
+
         return flowGraph;
+    }
+
+    private static FlowGraph CreateSemanticCopy(FlowGraph flowGraph)
+    {
+        static FlowVertex SemantifyVertex(FlowVertex vertex) => vertex with
+        {
+            Kind = FlowVertexKind.PurelySemantic,
+            Index = vertex.Index - 1,
+        };
+
+        ImmutableDictionary<int, FlowVertex> vertices
+            = flowGraph.Vertices.Select(p => KeyValuePair.Create(p.Key - 1, SemantifyVertex(p.Value)))
+                                .ToImmutableDictionary();
+
+        static FlowEdge SemantifyEdge(FlowEdge edge)
+        {
+            FlowEdgeKind kind = edge.IsSemantic ? FlowEdgeKind.Semantic : FlowEdgeKind.None;
+
+            if (edge.ToVertex == FlowGraph.FinalVertex)
+            {
+                return edge with
+                {
+                    Kind = kind,
+                };
+            }
+            else
+            {
+                return edge with
+                {
+                    Kind = kind,
+                    ToVertex = edge.ToVertex - 1,
+                };
+            }
+        }
+
+        ImmutableDictionary<int, ImmutableList<FlowEdge>> edges
+            = flowGraph.OutgoingEdges.Select(p => KeyValuePair.Create(p.Key - 1, p.Value.Select(e => SemantifyEdge(e)).ToImmutableList()))
+                                     .ToImmutableDictionary();
+
+        return flowGraph with
+        {
+            StartVertex = flowGraph.StartVertex - 1,
+            Vertices = vertices,
+            OutgoingEdges = edges,
+        };
     }
 
     private FlowGraph GenerateBranchOnFlowGraph(BranchOnStatementNode branchOnStatement)
@@ -230,7 +288,7 @@ public sealed partial class FlowAnalyzer
         {
             Index = branchOnStatement.Index,
             AssociatedStatement = branchOnStatement,
-            IsVisible = false,
+            Kind = FlowVertexKind.Invisible,
         });
 
         foreach (BranchOnOptionNode option in branchOnStatement.Options)

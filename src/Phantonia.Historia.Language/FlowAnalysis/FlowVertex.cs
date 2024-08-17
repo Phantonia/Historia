@@ -10,7 +10,18 @@ public readonly record struct FlowVertex
 
     public required int Index { get; init; }
 
-    public required bool IsVisible { get; init; }
+    public bool IsVisible => Kind is FlowVertexKind.Visible;
 
-    private string GetDebuggerDisplay() => $"{(IsVisible ? "" : "in")}visible flow vertex w/ statement ({AssociatedStatement.GetDebuggerDisplay()}) @ index {Index}";
+    public bool IsStory => Kind is FlowVertexKind.Visible or FlowVertexKind.Invisible;
+
+    public required FlowVertexKind Kind { get; init; }
+
+    private string GetDebuggerDisplay()
+        => $"{Kind switch
+        {
+            FlowVertexKind.Visible => "visible",
+            FlowVertexKind.Invisible => "invisible",
+            FlowVertexKind.PurelySemantic => "purely semantic",
+            _ => "",
+        }} flow vertex w/ statement ({AssociatedStatement.GetDebuggerDisplay()}) @ index {Index}";
 }

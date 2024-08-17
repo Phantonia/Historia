@@ -255,7 +255,7 @@ public sealed record FlowGraph
                     {
                         AssociatedStatement = new SynthesizedStartStatementNode { Index = StartVertex },
                         Index = StartVertex,
-                        IsVisible = true,
+                        Kind = FlowVertexKind.Visible,
                     };
 
                     tempVertices[synth.Index] = synth;

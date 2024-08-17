@@ -170,7 +170,7 @@ public sealed partial class FlowAnalyzer
                     Index = vertex.Index,
                     Tracker = tracker,
                 },
-                IsVisible = false,
+                Kind = FlowVertexKind.Invisible,
             };
 
             callSites.Add(vertex.Index);
@@ -195,7 +195,7 @@ public sealed partial class FlowAnalyzer
         {
             AssociatedStatement = resolution,
             Index = resolution.Index,
-            IsVisible = false,
+            Kind = FlowVertexKind.Invisible,
         };
 
         ImmutableList<FlowEdge>.Builder edgesBuilder = ImmutableList.CreateBuilder<FlowEdge>();

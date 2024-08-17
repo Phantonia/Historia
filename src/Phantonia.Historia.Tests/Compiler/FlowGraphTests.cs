@@ -28,7 +28,7 @@ public sealed class FlowGraphTests
     [TestMethod]
     public void TestSimpleFlowGraph()
     {
-        FlowGraph simpleGraph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 42, AssociatedStatement = new Stub(), IsVisible = true });
+        FlowGraph simpleGraph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 42, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible });
 
         Assert.AreEqual(42, simpleGraph.StartVertex);
         Assert.AreEqual(1, simpleGraph.OutgoingEdges.Count);
@@ -40,8 +40,8 @@ public sealed class FlowGraphTests
     [TestMethod]
     public void TestSimpleAppend()
     {
-        FlowGraph fgA = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 42, AssociatedStatement = new Stub(), IsVisible = true });
-        FlowGraph fgB = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 64, AssociatedStatement = new Stub(), IsVisible = true });
+        FlowGraph fgA = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 42, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible });
+        FlowGraph fgB = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 64, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible });
 
         FlowGraph resultGraph = fgA.Append(fgB);
 
@@ -58,7 +58,7 @@ public sealed class FlowGraphTests
     [TestMethod]
     public void TestEmptyAppend()
     {
-        FlowGraph graph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 42, AssociatedStatement = new Stub(), IsVisible = true });
+        FlowGraph graph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 42, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible });
 
         Assert.AreEqual(FlowGraph.FinalVertex, FlowGraph.Empty.StartVertex);
 
@@ -76,11 +76,11 @@ public sealed class FlowGraphTests
     [TestMethod]
     public void TestVertices()
     {
-        FlowGraph graph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 0, AssociatedStatement = new Stub(), IsVisible = true });
+        FlowGraph graph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 0, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible });
 
         for (int i = 1; i < 8; i++)
         {
-            graph = graph.Append(FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = i, AssociatedStatement = new Stub(), IsVisible = true }));
+            graph = graph.Append(FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = i, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }));
         }
 
         for (int i = 0; i < 8; i++)
@@ -92,10 +92,10 @@ public sealed class FlowGraphTests
     [TestMethod]
     public void TestMoreComplexGraph()
     {
-        FlowGraph graph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 5, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateStrongTo(6), FlowEdge.CreateStrongTo(7))
-                                         .AddVertex(new FlowVertex { Index = 6, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateStrongTo(7), FlowGraph.FinalEdge)
-                                         .AddVertex(new FlowVertex { Index = 7, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateStrongTo(8))
-                                         .AddVertex(new FlowVertex { Index = 8, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateStrongTo(6), FlowGraph.FinalEdge);
+        FlowGraph graph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 5, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowEdge.CreateStrongTo(6), FlowEdge.CreateStrongTo(7))
+                                         .AddVertex(new FlowVertex { Index = 6, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowEdge.CreateStrongTo(7), FlowGraph.FinalEdge)
+                                         .AddVertex(new FlowVertex { Index = 7, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowEdge.CreateStrongTo(8))
+                                         .AddVertex(new FlowVertex { Index = 8, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowEdge.CreateStrongTo(6), FlowGraph.FinalEdge);
 
         Assert.AreEqual(5, graph.StartVertex);
 
@@ -125,14 +125,14 @@ public sealed class FlowGraphTests
     [TestMethod]
     public void TestReplace()
     {
-        FlowGraph graphA = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 5, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateStrongTo(6), FlowEdge.CreateStrongTo(7))
-                                          .AddVertex(new FlowVertex { Index = 6, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateStrongTo(7), FlowGraph.FinalEdge)
-                                          .AddVertex(new FlowVertex { Index = 7, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateStrongTo(8))
-                                          .AddVertex(new FlowVertex { Index = 8, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateStrongTo(6), FlowGraph.FinalEdge);
+        FlowGraph graphA = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 5, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowEdge.CreateStrongTo(6), FlowEdge.CreateStrongTo(7))
+                                          .AddVertex(new FlowVertex { Index = 6, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowEdge.CreateStrongTo(7), FlowGraph.FinalEdge)
+                                          .AddVertex(new FlowVertex { Index = 7, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowEdge.CreateStrongTo(8))
+                                          .AddVertex(new FlowVertex { Index = 8, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowEdge.CreateStrongTo(6), FlowGraph.FinalEdge);
 
-        FlowGraph graphB = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 9, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateStrongTo(10), FlowEdge.CreateStrongTo(11))
-                                          .AddVertex(new FlowVertex { Index = 10, AssociatedStatement = new Stub(), IsVisible = true }, FlowGraph.FinalEdge)
-                                          .AddVertex(new FlowVertex { Index = 11, AssociatedStatement = new Stub(), IsVisible = true }, FlowGraph.FinalEdge);
+        FlowGraph graphB = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 9, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowEdge.CreateStrongTo(10), FlowEdge.CreateStrongTo(11))
+                                          .AddVertex(new FlowVertex { Index = 10, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowGraph.FinalEdge)
+                                          .AddVertex(new FlowVertex { Index = 11, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowGraph.FinalEdge);
 
         FlowGraph graphC = graphA.Replace(5, graphB);
 
@@ -163,12 +163,12 @@ public sealed class FlowGraphTests
     [TestMethod]
     public void TestAppendToVertex()
     {
-        FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 0, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateStrongTo(1))
-                                             .AddVertex(new FlowVertex { Index = 1, AssociatedStatement = new Stub(), IsVisible = true }, FlowGraph.FinalEdge);
+        FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 0, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowEdge.CreateStrongTo(1))
+                                             .AddVertex(new FlowVertex { Index = 1, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowGraph.FinalEdge);
 
-        FlowGraph nestedGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 2, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateStrongTo(3), FlowEdge.CreateStrongTo(4))
-                                               .AddVertex(new FlowVertex { Index = 3, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateStrongTo(4))
-                                               .AddVertex(new FlowVertex { Index = 4, AssociatedStatement = new Stub(), IsVisible = true }, FlowGraph.FinalEdge);
+        FlowGraph nestedGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 2, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowEdge.CreateStrongTo(3), FlowEdge.CreateStrongTo(4))
+                                               .AddVertex(new FlowVertex { Index = 3, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowEdge.CreateStrongTo(4))
+                                               .AddVertex(new FlowVertex { Index = 4, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowGraph.FinalEdge);
 
         FlowGraph resultGraph = flowGraph.AppendToVertex(0, nestedGraph);
 
@@ -187,11 +187,11 @@ public sealed class FlowGraphTests
     [TestMethod]
     public void TestRemoveInvisible()
     {
-        FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 0, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateStrongTo(1), FlowEdge.CreateStrongTo(2))
-                                             .AddVertex(new FlowVertex { Index = 1, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateStrongTo(2), FlowEdge.CreateStrongTo(4))
-                                             .AddVertex(new FlowVertex { Index = 2, AssociatedStatement = new Stub(), IsVisible = false }, FlowEdge.CreateStrongTo(3))
-                                             .AddVertex(new FlowVertex { Index = 3, AssociatedStatement = new Stub(), IsVisible = true }, FlowEdge.CreateStrongTo(4))
-                                             .AddVertex(new FlowVertex { Index = 4, AssociatedStatement = new Stub(), IsVisible = true }, FlowGraph.FinalEdge);
+        FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex { Index = 0, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowEdge.CreateStrongTo(1), FlowEdge.CreateStrongTo(2))
+                                             .AddVertex(new FlowVertex { Index = 1, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowEdge.CreateStrongTo(2), FlowEdge.CreateStrongTo(4))
+                                             .AddVertex(new FlowVertex { Index = 2, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Invisible }, FlowEdge.CreateStrongTo(3))
+                                             .AddVertex(new FlowVertex { Index = 3, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowEdge.CreateStrongTo(4))
+                                             .AddVertex(new FlowVertex { Index = 4, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowGraph.FinalEdge);
 
         FlowGraph visibleGraph = flowGraph.RemoveInvisible();
 
