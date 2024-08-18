@@ -54,7 +54,8 @@ public sealed class FlowAnalyzerTests
 
         int[] vertices = graph.Vertices.Keys.ToArray();
 
-        Assert.AreEqual(vertices[0], graph.StartVertex);
+        Assert.AreEqual(1, graph.StartEdges.Length);
+        Assert.AreEqual(vertices[0], graph.StartEdges[0].ToVertex);
 
         foreach ((_, ImmutableList<FlowEdge> pointedVertices) in graph.OutgoingEdges)
         {
@@ -129,9 +130,9 @@ public sealed class FlowAnalyzerTests
         }
 
         // switch (4)
-        int startVertex = flowGraph.StartVertex;
+        int startVertex = flowGraph.GetStoryStartVertex();
         AssertHasOutputValue(startVertex, 4);
-        Assert.AreEqual(2, flowGraph.OutgoingEdges[flowGraph.StartVertex].Count);
+        Assert.AreEqual(2, flowGraph.OutgoingEdges[startVertex].Count);
 
         // output 6
         int output6Vertex = flowGraph.OutgoingEdges[startVertex][0].ToVertex;
@@ -392,15 +393,15 @@ public sealed class FlowAnalyzerTests
 
         FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         flowAnalyzer.ErrorFound += errors.Add;
 
         _ = flowAnalyzer.PerformFlowAnalysis();
 
         Assert.AreEqual(2, errors.Count);
 
-        Error expectedFirstError = Errors.OutcomeMightBeAssignedMoreThanOnce("X", new[] { "main" }, code.IndexOf("X = B"));
-        Error expectedSecondError = Errors.OutcomeNotDefinitelyAssigned("Y", new[] { "main" }, code.IndexOf("branchon Y"));
+        Error expectedFirstError = Errors.OutcomeMightBeAssignedMoreThanOnce("X", ["main"], code.IndexOf("X = B"));
+        Error expectedSecondError = Errors.OutcomeNotDefinitelyAssigned("Y", ["main"], code.IndexOf("branchon Y"));
 
         Assert.IsTrue(expectedFirstError == errors[0] || expectedFirstError == errors[1]);
         Assert.IsTrue(expectedSecondError == errors[0] || expectedSecondError == errors[1]);
@@ -445,14 +446,14 @@ public sealed class FlowAnalyzerTests
 
         FlowAnalyzer analyzer = PrepareFlowAnalyzer(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         analyzer.ErrorFound += errors.Add;
 
         _ = analyzer.PerformFlowAnalysis();
 
         Assert.AreEqual(1, errors.Count);
 
-        Error expectedError = Errors.SpectrumNotDefinitelyAssigned("X", new[] { "main" }, code.IndexOf("branchon X"));
+        Error expectedError = Errors.SpectrumNotDefinitelyAssigned("X", ["main"], code.IndexOf("branchon X"));
 
         Assert.AreEqual(expectedError, errors[0]);
     }
@@ -597,7 +598,8 @@ public sealed class FlowAnalyzerTests
         AssertIsOutput(s7, 7);
 
         // -> s2
-        Assert.AreEqual(s2, mainFlowGraph.StartVertex);
+        Assert.AreEqual(1, mainFlowGraph.StartEdges.Length);
+        Assert.AreEqual(s2, mainFlowGraph.StartEdges[0].ToVertex);
 
         // s2 -> s1
         Assert.AreEqual(s1, mainFlowGraph.OutgoingEdges[s2].Single().ToVertex);
@@ -672,7 +674,7 @@ public sealed class FlowAnalyzerTests
         Assert.IsTrue(new[] { o0, o1, o2, o10, o20, t0, t1, rA }.Order().SequenceEqual(graph.Vertices.Keys.Order()));
 
         // -> o0
-        Assert.AreEqual(o0, graph.StartVertex);
+        Assert.AreEqual(o0, graph.GetStoryStartVertex());
 
         // o0 -> t0
         Assert.AreEqual(t0, graph.OutgoingEdges[o0].Single().ToVertex);

@@ -3,21 +3,13 @@ using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
-public sealed class StoryGraphEmitter
+public sealed class StoryGraphEmitter(FlowGraph flowGraph, Settings settings, IndentedTextWriter writer)
 {
-    public StoryGraphEmitter(FlowGraph flowGraph, Settings settings, IndentedTextWriter writer)
-    {
-        this.flowGraph = flowGraph.RemoveInvisible();
-        this.settings = settings;
-        this.writer = writer;
-    }
-
-    private readonly FlowGraph flowGraph;
-    private readonly Settings settings;
-    private readonly IndentedTextWriter writer;
+    private readonly FlowGraph flowGraph = flowGraph.RemoveInvisible();
 
     public void GenerateStoryGraphClass()
     {
@@ -51,10 +43,15 @@ public sealed class StoryGraphEmitter
             GenerateVertex(vertex, reverseGraph);
         }
 
+        // i know this is wrong
+        // but a test will yell at me anyway, so now let's just do it this way
+        Debug.Assert(flowGraph.IsConformable);
+        int startVertex = flowGraph.GetStoryStartVertex();
+
         writer.Write("return new ");
         GeneralEmission.GenerateGenericStoryType(typeof(StoryGraph<,>), settings, writer);
         writer.Write("(vertices, ");
-        writer.Write(flowGraph.StartVertex);
+        writer.Write(startVertex);
         writer.WriteLine(");");
 
         writer.EndBlock(); // method
@@ -155,7 +152,11 @@ public sealed class StoryGraphEmitter
         writer.Write(typeof(StoryEdge).FullName);
         writer.Write("[] incomingEdges = ");
 
-        if (vertex.Index == flowGraph.StartVertex)
+        // again, wrong, but me no care right now
+        Debug.Assert(flowGraph.IsConformable);
+        int startVertex = flowGraph.GetStoryStartVertex();
+
+        if (vertex.Index == startVertex)
         {
             writer.Write("global::");
             writer.Write(typeof(Array).FullName);

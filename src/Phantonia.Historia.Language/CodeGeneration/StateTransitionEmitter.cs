@@ -103,11 +103,15 @@ public sealed class StateTransitionEmitter
 
     private void GenerateStartTransition()
     {
+        Debug.Assert(flowGraph.IsConformable);
+
+        int startVertex = flowGraph.StartEdges.Single(e => e.IsStory).ToVertex;
+
         writer.Write("fields.state = ");
-        writer.Write(flowGraph.StartVertex);
+        writer.Write(startVertex);
         writer.WriteLine(';');
 
-        if (flowGraph.StartVertex == Constants.EndState || flowGraph.Vertices[flowGraph.StartVertex].IsVisible)
+        if (startVertex == Constants.EndState || flowGraph.Vertices[startVertex].IsVisible)
         {
             writer.WriteLine("return;");
         }

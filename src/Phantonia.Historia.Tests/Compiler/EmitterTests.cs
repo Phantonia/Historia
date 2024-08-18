@@ -1060,14 +1060,15 @@ public sealed class EmitterTests
         MethodInfo? createMethod = storyGraphType.GetMethod("CreateStoryGraph");
         Assert.IsNotNull(createMethod);
 
-        StoryGraph<int, int>? storyGraph = createMethod.Invoke(null, Array.Empty<object?>()) as StoryGraph<int, int>;
+        StoryGraph<int, int>? storyGraph = createMethod.Invoke(null, []) as StoryGraph<int, int>;
         Assert.IsNotNull(storyGraph);
 
-        Assert.AreEqual(storyGraph.StartVertex, code.IndexOf("output 0;"));
+        Assert.AreEqual(1, storyGraph.StartEdges.Count);
+        Assert.AreEqual(storyGraph.StartEdges[0].ToVertex, code.IndexOf("output 0;"));
 
         IEnumerable<int> vertices = storyGraph.Vertices.Keys.Order();
-        int[] expectedVertices = new[]
-        {
+        int[] expectedVertices =
+        [
             code.IndexOf("output 0;"),
             code.IndexOf("switch (1)"),
             code.IndexOf("output 3;"),
@@ -1075,7 +1076,7 @@ public sealed class EmitterTests
             code.IndexOf("output 6;"),
             code.IndexOf("output 7;"),
             code.IndexOf("output 8;"),
-        };
+        ];
 
         Assert.IsTrue(vertices.SequenceEqual(expectedVertices));
 

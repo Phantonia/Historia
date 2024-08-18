@@ -86,11 +86,15 @@ public sealed partial class FlowAnalyzer
         Debug.Assert(nextVertex != int.MinValue);
 
         // 3. for all vertices V s.t. (V -> callVertex) instead let (V -> sceneFlowGraph.StartVertex)
-        if (callVertex == mainFlowGraph.StartVertex)
+        if (mainFlowGraph.StartEdges.Any(e => e.ToVertex == callVertex))
         {
+            List<FlowEdge> newStartEdges = [.. mainFlowGraph.StartEdges];
+            newStartEdges.RemoveAll(e => e.ToVertex == callVertex);
+            newStartEdges.AddRange(sceneFlowGraph.StartEdges);
+
             mainFlowGraph = mainFlowGraph with
             {
-                StartVertex = sceneFlowGraph.StartVertex,
+                StartEdges = [.. newStartEdges],
             };
         }
 
@@ -105,7 +109,7 @@ public sealed partial class FlowAnalyzer
                             vertex.Index,
                             mainFlowGraph.OutgoingEdges[vertex.Index]
                                          .Remove(FlowEdge.CreateStrongTo(callVertex)) // there are no weak edges to call vertices (only weak edges back to loop switches)
-                                         .Add(FlowEdge.CreateStrongTo(sceneFlowGraph.StartVertex))),
+                                         .AddRange(sceneFlowGraph.StartEdges)),
                 };
             }
         }
@@ -149,8 +153,8 @@ public sealed partial class FlowAnalyzer
         }
 
         // 2. find all callsites, replace them with tracker statements and redirect them correctly
-        Dictionary<int, int> nextVertices = new();
-        List<int> callSites = new();
+        Dictionary<int, int> nextVertices = [];
+        List<int> callSites = [];
 
         foreach (FlowVertex vertex in mainFlowGraph.Vertices.Values)
         {
@@ -180,7 +184,7 @@ public sealed partial class FlowAnalyzer
                 Vertices = mainFlowGraph.Vertices.SetItem(vertex.Index, trackerVertex),
                 OutgoingEdges = mainFlowGraph.OutgoingEdges.SetItem(
                     vertex.Index,
-                    ImmutableList.Create(FlowEdge.CreateStrongTo(sceneFlowGraph.StartVertex))),
+                    [.. sceneFlowGraph.StartEdges]),
             };
         }
 

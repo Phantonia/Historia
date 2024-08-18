@@ -30,7 +30,8 @@ public sealed class FlowGraphTests
     {
         FlowGraph simpleGraph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 42, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible });
 
-        Assert.AreEqual(42, simpleGraph.StartVertex);
+        Assert.AreEqual(1, simpleGraph.StartEdges.Length);
+        Assert.AreEqual(42, simpleGraph.StartEdges[0].ToVertex);
         Assert.AreEqual(1, simpleGraph.OutgoingEdges.Count);
         Assert.IsTrue(simpleGraph.OutgoingEdges.ContainsKey(42));
         Assert.AreEqual(1, simpleGraph.OutgoingEdges[42].Count);
@@ -45,7 +46,7 @@ public sealed class FlowGraphTests
 
         FlowGraph resultGraph = fgA.Append(fgB);
 
-        Assert.AreEqual(42, resultGraph.StartVertex);
+        Assert.AreEqual(42, resultGraph.GetStoryStartVertex());
         Assert.AreEqual(2, resultGraph.OutgoingEdges.Count);
 
         Assert.AreEqual(1, resultGraph.OutgoingEdges[42].Count);
@@ -60,11 +61,11 @@ public sealed class FlowGraphTests
     {
         FlowGraph graph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex { Index = 42, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible });
 
-        Assert.AreEqual(FlowGraph.FinalVertex, FlowGraph.Empty.StartVertex);
+        Assert.AreEqual(FlowGraph.FinalVertex, FlowGraph.Empty.GetStoryStartVertex());
 
         FlowGraph otherGraph = FlowGraph.Empty.Append(graph);
 
-        Assert.AreEqual(42, otherGraph.StartVertex);
+        Assert.AreEqual(42, otherGraph.GetStoryStartVertex());
 
         Assert.AreEqual(1, otherGraph.Vertices.Count);
         Assert.AreEqual(1, otherGraph.OutgoingEdges.Count);
@@ -97,7 +98,7 @@ public sealed class FlowGraphTests
                                          .AddVertex(new FlowVertex { Index = 7, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowEdge.CreateStrongTo(8))
                                          .AddVertex(new FlowVertex { Index = 8, AssociatedStatement = new Stub(), Kind = FlowVertexKind.Visible }, FlowEdge.CreateStrongTo(6), FlowGraph.FinalEdge);
 
-        Assert.AreEqual(5, graph.StartVertex);
+        Assert.AreEqual(5, graph.GetStoryStartVertex());
 
         Assert.AreEqual(4, graph.Vertices.Count);
         Assert.AreEqual(4, graph.OutgoingEdges.Count);
@@ -145,7 +146,7 @@ public sealed class FlowGraphTests
             Assert.AreEqual(rightKey, graphC.Vertices[rightKey].Index);
         }
 
-        Assert.AreEqual(9, graphC.StartVertex);
+        Assert.AreEqual(9, graphC.GetStoryStartVertex());
 
         void AssertHasEdges(int vertex, params int[] edges)
         {
@@ -172,7 +173,7 @@ public sealed class FlowGraphTests
 
         FlowGraph resultGraph = flowGraph.AppendToVertex(0, nestedGraph);
 
-        Assert.AreEqual(0, resultGraph.StartVertex);
+        Assert.AreEqual(0, resultGraph.GetStoryStartVertex());
 
         Assert.AreEqual(5, resultGraph.Vertices.Count);
         Assert.AreEqual(2, resultGraph.OutgoingEdges[0].Count);

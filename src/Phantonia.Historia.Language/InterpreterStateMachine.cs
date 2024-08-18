@@ -19,6 +19,7 @@ public sealed class InterpreterStateMachine : IStoryStateMachine
 
     public InterpreterStateMachine(FlowGraph flowGraph, SymbolTable symbolTable)
     {
+        Debug.Assert(flowGraph.IsConformable);
         this.flowGraph = flowGraph;
         this.symbolTable = symbolTable;
     }
@@ -101,7 +102,7 @@ public sealed class InterpreterStateMachine : IStoryStateMachine
         {
             if (state == StartState)
             {
-                state = flowGraph.StartVertex;
+                state = flowGraph.GetStoryStartVertex();
 
                 if (flowGraph.Vertices[state].IsVisible)
                 {

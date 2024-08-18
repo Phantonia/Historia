@@ -1,7 +1,7 @@
-﻿using Phantonia.Historia.Language.CodeGeneration;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using Edges = System.Collections.Immutable.ImmutableDictionary<
     int, System.Collections.Immutable.ImmutableList<
@@ -16,18 +16,14 @@ public sealed record FlowGraph
 {
     public const int FinalVertex = -1;
 
-    public static readonly FlowEdge FinalEdge = new()
-    {
-        ToVertex = FinalVertex,
-        Kind = FlowEdgeKind.Strong,
-    };
+    public static FlowEdge FinalEdge { get; set; } = FlowEdge.CreateStrongTo(FinalVertex);
 
     public static FlowGraph Empty { get; } = new();
 
     public static FlowGraph CreateSimpleFlowGraph(FlowVertex vertex) => Empty with
     {
-        StartVertex = vertex.Index,
-        OutgoingEdges = Empty.OutgoingEdges.Add(vertex.Index, ImmutableList.Create(FinalEdge)),
+        StartEdges = [FlowEdge.CreateStrongTo(vertex.Index)],
+        OutgoingEdges = Empty.OutgoingEdges.Add(vertex.Index, [FinalEdge]),
         Vertices = Empty.Vertices.Add(vertex.Index, vertex),
     };
 
@@ -35,9 +31,23 @@ public sealed record FlowGraph
 
     public Edges OutgoingEdges { get; init; } = Edges.Empty;
 
-    public int StartVertex { get; init; } = FinalVertex;
+    public ImmutableArray<FlowEdge> StartEdges { get; init; } = [FinalEdge];
 
     public ImmutableDictionary<int, FlowVertex> Vertices { get; init; } = ImmutableDictionary<int, FlowVertex>.Empty;
+
+    // a flow graph is conformable if it only has a single start edge which is a story edge
+    // what used to be StartVertex
+    public bool IsConformable => StartEdges.Where(e => e.IsStory).Count() == 1;
+
+    public int GetStoryStartVertex()
+    {
+        if (!IsConformable)
+        {
+            throw new InvalidOperationException("Non conformable flow graph doesn't have a (single) story start vertex");
+        }
+
+        return StartEdges.Single(e => e.IsStory).ToVertex;
+    }
 
     public FlowGraph AddVertex(FlowVertex vertex, params FlowEdge[] edges)
     {
@@ -46,12 +56,23 @@ public sealed record FlowGraph
             throw new ArgumentException("Cannot add a vertex that is already there");
         }
 
-        return this with
+        if (StartEdges is [{ ToVertex: FinalVertex }])
         {
-            Vertices = Vertices.Add(vertex.Index, vertex),
-            OutgoingEdges = OutgoingEdges.Add(vertex.Index, edges.ToImmutableList()),
-            StartVertex = StartVertex == FinalVertex ? vertex.Index : StartVertex,
-        };
+            return this with
+            {
+                Vertices = Vertices.Add(vertex.Index, vertex),
+                OutgoingEdges = OutgoingEdges.Add(vertex.Index, [.. edges]),
+                StartEdges = [FlowEdge.CreateStrongTo(vertex.Index)],
+            };
+        }
+        else
+        {
+            return this with
+            {
+                Vertices = Vertices.Add(vertex.Index, vertex),
+                OutgoingEdges = OutgoingEdges.Add(vertex.Index, [.. edges]),
+            };
+        }
     }
 
     public FlowGraph Append(FlowGraph graph)
@@ -63,12 +84,29 @@ public sealed record FlowGraph
 
         foreach ((int currentVertex, List<FlowEdge> edges) in tempEdges)
         {
+            FlowEdgeKind kind = FlowEdgeKind.None;
+
             for (int i = 0; i < edges.Count; i++)
             {
                 if (edges[i].ToVertex == FinalVertex)
                 {
-                    edges[i] = edges[i] with { ToVertex = graph.StartVertex, }; // FlowEdge.CreateStrongTo(graph.StartVertex);
+                    kind = edges[i].Kind;
+                    edges.RemoveAt(i);
+                    break;
                 }
+            }
+
+            Debug.Assert(edges.All(e => e.ToVertex != FinalVertex));
+
+            if (kind == FlowEdgeKind.None)
+            {
+                continue;
+            }
+
+            foreach (FlowEdge startEdge in graph.StartEdges)
+            {
+                // the old edge kind overrides the startEdge kind - is that correct?
+                edges.Add(startEdge with { Kind = kind });
             }
         }
 
@@ -79,15 +117,23 @@ public sealed record FlowGraph
                 throw new InvalidOperationException("Duplicated vertex key");
             }
 
-            tempEdges[currentVertex] = edges.ToList();
+            tempEdges[currentVertex] = [.. edges];
             tempVertices[currentVertex] = graph.Vertices[currentVertex];
+        }
+
+        List<FlowEdge> newStartEdges = [.. StartEdges];
+
+        if (newStartEdges.Any(e => e.ToVertex == FinalVertex))
+        {
+            newStartEdges.RemoveAll(e => e.ToVertex == FinalVertex);
+            newStartEdges.AddRange(graph.StartEdges);
         }
 
         return this with
         {
             OutgoingEdges = tempEdges.ToImmutableDictionary(p => p.Key, p => p.Value.ToImmutableList()),
             Vertices = tempVertices.ToImmutableDictionary(),
-            StartVertex = StartVertex == FinalVertex ? graph.StartVertex : StartVertex,
+            StartEdges = [.. newStartEdges],
         };
     }
 
@@ -110,17 +156,31 @@ public sealed record FlowGraph
                 throw new InvalidOperationException("Duplicated vertex key");
             }
 
-            tempEdges[currentVertex] = edges.ToList();
+            tempEdges[currentVertex] = [.. edges];
             tempVertices[currentVertex] = graph.Vertices[currentVertex];
         }
 
-        tempEdges[vertex].Add(FlowEdge.CreateStrongTo(graph.StartVertex));
+        foreach (FlowEdge edge in graph.StartEdges)
+        {
+            if (!tempEdges[vertex].Any(e => e.ToVertex == edge.ToVertex))
+            {
+                tempEdges[vertex].Add(edge);
+            }
+        }
+
+        List<FlowEdge> newStartEdges = [.. StartEdges];
+
+        if (newStartEdges.Any(e => e.ToVertex == FinalVertex))
+        {
+            newStartEdges.RemoveAll(e => e.ToVertex == FinalVertex);
+            newStartEdges.AddRange(graph.StartEdges);
+        }
 
         return this with
         {
             OutgoingEdges = tempEdges.ToImmutableDictionary(p => p.Key, p => p.Value.ToImmutableList()),
             Vertices = tempVertices.ToImmutableDictionary(),
-            StartVertex = StartVertex == FinalVertex ? graph.StartVertex : StartVertex,
+            StartEdges = [.. newStartEdges],
         };
     }
 
@@ -144,19 +204,37 @@ public sealed record FlowGraph
                 throw new InvalidOperationException("Duplicated vertex key");
             }
 
-            tempEdges[currentVertex] = edges.ToList();
+            tempEdges[currentVertex] = [.. edges];
             tempVertices[currentVertex] = graph.Vertices[currentVertex];
         }
 
-        // redirect all edges to 'vertex' to 'graph.StartVertex'
+        // turn every edge to 'vertex' into 'graph.StartEdges'
         foreach ((int currentVertex, List<FlowEdge> edges) in tempEdges)
         {
+            FlowEdgeKind kind = FlowEdgeKind.None;
+
             for (int i = 0; i < edges.Count; i++)
             {
                 if (edges[i].ToVertex == replacedVertex)
                 {
-                    edges[i] = FlowEdge.CreateStrongTo(graph.StartVertex);
+                    kind = edges[i].Kind;
+                    edges.RemoveAt(i);
+                    break;
                 }
+            }
+
+            // assert that there was only one edge to 'replacedVertex'
+            Debug.Assert(edges.All(e => e.ToVertex != replacedVertex));
+
+            if (kind == FlowEdgeKind.None)
+            {
+                continue;
+            }
+
+            foreach (FlowEdge startEdge in graph.StartEdges)
+            {
+                // the old edge kind overrides the startEdge kind - is that correct?
+                edges.Add(startEdge with { Kind = kind });
             }
         }
 
@@ -179,6 +257,14 @@ public sealed record FlowGraph
             }
         }
 
+        List<FlowEdge> newStartEdges = [.. StartEdges];
+        
+        if (newStartEdges.Any(e => e.ToVertex == replacedVertex))
+        {
+            newStartEdges.RemoveAll(e => e.ToVertex == replacedVertex);
+            newStartEdges.AddRange(graph.StartEdges);
+        }
+
         tempVertices.Remove(replacedVertex);
         tempEdges.Remove(replacedVertex);
 
@@ -186,20 +272,26 @@ public sealed record FlowGraph
         {
             OutgoingEdges = tempEdges.ToImmutableDictionary(p => p.Key, p => p.Value.ToImmutableList()),
             Vertices = tempVertices.ToImmutableDictionary(),
-            StartVertex = StartVertex == replacedVertex ? graph.StartVertex : StartVertex,
+            StartEdges = [.. newStartEdges],
         };
     }
 
     public FlowGraph Reverse()
     {
-        MutEdges tempEdges = new();
+        MutEdges tempEdges = [];
+        List<FlowEdge> newStartEdges = [];
 
         foreach ((int vertex, ImmutableList<FlowEdge> edges) in OutgoingEdges)
         {
             foreach (FlowEdge edge in edges)
             {
-                tempEdges.TryAdd(edge.ToVertex, new List<FlowEdge>());
+                tempEdges.TryAdd(edge.ToVertex, []);
                 tempEdges[edge.ToVertex].Add(edge with { ToVertex = vertex });
+
+                if (edge.ToVertex == FinalVertex)
+                {
+                    newStartEdges.Add(edge with { ToVertex = vertex });
+                }
             }
         }
 
@@ -207,7 +299,7 @@ public sealed record FlowGraph
         {
             Vertices = Vertices,
             OutgoingEdges = tempEdges.ToImmutableDictionary(p => p.Key, p => p.Value.ToImmutableList()),
-            StartVertex = StartVertex,
+            StartEdges = [.. newStartEdges],
         };
     }
 
@@ -216,7 +308,7 @@ public sealed record FlowGraph
         MutEdges tempEdges = OutgoingEdges.ToDictionary(p => p.Key, p => p.Value.ToList());
         Dictionary<int, FlowVertex> tempVertices = Vertices.ToDictionary(p => p.Key, p => p.Value);
 
-        int tempStartVertex = StartVertex;
+        List<int> newStartVertices = [.. StartEdges.Where(e => e.IsStory).Select(e => e.ToVertex)];
 
         foreach (FlowVertex vertex in Vertices.Values)
         {
@@ -241,26 +333,13 @@ public sealed record FlowGraph
                 tempEdges[otherVertex].AddRange(outgoingEdges.Where(e => e.ToVertex != otherVertex));
             }
 
-            if (vertex.Index == tempStartVertex)
+            if (newStartVertices.Contains(vertex.Index))
             {
-                if (outgoingEdges.Count == 1)
-                {
-                    tempStartVertex = outgoingEdges[0].ToVertex;
-                }
-                else
-                {
-                    // after removing invisible nodes, the start vertex is suddenly multiple vertices
-                    // so we need to synthesize a new vertex in its place
-                    FlowVertex synth = new()
-                    {
-                        AssociatedStatement = new SynthesizedStartStatementNode { Index = StartVertex },
-                        Index = StartVertex,
-                        Kind = FlowVertexKind.Visible,
-                    };
+                newStartVertices.Remove(vertex.Index);
 
-                    tempVertices[synth.Index] = synth;
-                    tempEdges[synth.Index] = outgoingEdges.ToList();
-                    tempStartVertex = synth.Index;
+                foreach (FlowEdge edge in outgoingEdges)
+                {
+                    newStartVertices.Add(edge.ToVertex);
                 }
             }
         }
@@ -269,20 +348,20 @@ public sealed record FlowGraph
         {
             OutgoingEdges = tempEdges.ToImmutableDictionary(p => p.Key, p => p.Value.ToImmutableList()),
             Vertices = tempVertices.ToImmutableDictionary(),
-            StartVertex = tempStartVertex,
+            StartEdges = [.. newStartVertices.Select(FlowEdge.CreateStrongTo)],
         };
     }
 
     public IEnumerable<int> TopologicalSort()
     {
-        Dictionary<int, bool> marked = new();
+        Dictionary<int, bool> marked = [];
 
         foreach (int vertex in Vertices.Keys)
         {
             marked[vertex] = false;
         }
 
-        Stack<int> postOrder = new();
+        Stack<int> postOrder = [];
 
         foreach (int vertex in Vertices.Keys)
         {

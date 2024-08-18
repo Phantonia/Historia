@@ -28,7 +28,7 @@ public sealed partial class FlowAnalyzer
 
     public FlowAnalysisResult PerformFlowAnalysis()
     {
-        Dictionary<SceneSymbol, FlowGraph> sceneFlowGraphs = new();
+        Dictionary<SceneSymbol, FlowGraph> sceneFlowGraphs = [];
 
         foreach (TopLevelNode symbolDeclaration in story.TopLevelNodes)
         {
@@ -120,7 +120,7 @@ public sealed partial class FlowAnalyzer
 
     private FlowGraph GenerateSwitchFlowGraph(SwitchStatementNode switchStatement)
     {
-        FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex
+        FlowGraph flowGraph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex
         {
             Index = switchStatement.Index,
             AssociatedStatement = switchStatement,
@@ -131,7 +131,7 @@ public sealed partial class FlowAnalyzer
         {
             FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body);
 
-            flowGraph = flowGraph.AppendToVertex(flowGraph.StartVertex, nestedFlowGraph);
+            flowGraph = flowGraph.AppendToVertex(switchStatement.Index, nestedFlowGraph);
         }
 
         return flowGraph;
@@ -141,33 +141,33 @@ public sealed partial class FlowAnalyzer
     {
         bool hasFinalOption = loopSwitchStatement.Options.Any(o => o.Kind == LoopSwitchOptionKind.Final);
 
-        FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex
+        FlowGraph flowGraph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex
         {
             Index = loopSwitchStatement.Index,
             AssociatedStatement = loopSwitchStatement,
             Kind = FlowVertexKind.Visible,
         });
 
-        FlowGraph semanticCopy = FlowGraph.Empty.AddVertex(new FlowVertex
+        FlowGraph semanticCopy = FlowGraph.CreateSimpleFlowGraph(new FlowVertex
         {
             Index = loopSwitchStatement.Index - 1,
             AssociatedStatement = loopSwitchStatement,
             Kind = FlowVertexKind.PurelySemantic,
         });
 
-        List<int> nonFinalEndVertices = new();
-        List<int> finalStartVertices = new();
+        List<int> nonFinalEndVertices = [];
+        List<int> finalStartVertices = [];
 
         foreach (LoopSwitchOptionNode option in loopSwitchStatement.Options)
         {
             FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body);
 
-            flowGraph = flowGraph.AppendToVertex(flowGraph.StartVertex, nestedFlowGraph);
+            flowGraph = flowGraph.AppendToVertex(loopSwitchStatement.Index, nestedFlowGraph);
 
             if (option.Kind != LoopSwitchOptionKind.Final)
             {
                 FlowGraph nestedSemanticCopy = CreateSemanticCopy(nestedFlowGraph);
-                semanticCopy = semanticCopy.AppendToVertex(semanticCopy.StartVertex, nestedSemanticCopy);
+                semanticCopy = semanticCopy.AppendToVertex(loopSwitchStatement.Index - 1, nestedSemanticCopy);
 
                 // redirect final edges as weak edges back up
                 foreach (int vertex in flowGraph.OutgoingEdges.Where(p => p.Value.Contains(FlowGraph.FinalEdge)).Select(p => p.Key))
@@ -187,7 +187,10 @@ public sealed partial class FlowAnalyzer
             }
             else
             {
-                finalStartVertices.Add(nestedFlowGraph.StartVertex);
+                foreach (FlowEdge edge in nestedFlowGraph.StartEdges)
+                {
+                    finalStartVertices.Add(edge.ToVertex);
+                }
             }
         }
 
@@ -274,9 +277,11 @@ public sealed partial class FlowAnalyzer
             = flowGraph.OutgoingEdges.Select(p => KeyValuePair.Create(p.Key - 1, p.Value.Select(e => SemantifyEdge(e)).ToImmutableList()))
                                      .ToImmutableDictionary();
 
+        IEnumerable<FlowEdge> newStartEdges = flowGraph.StartEdges.Select(e => e with { ToVertex = e.ToVertex - 1 });
+
         return flowGraph with
         {
-            StartVertex = flowGraph.StartVertex - 1,
+            StartEdges = [.. newStartEdges],
             Vertices = vertices,
             OutgoingEdges = edges,
         };
@@ -284,7 +289,7 @@ public sealed partial class FlowAnalyzer
 
     private FlowGraph GenerateBranchOnFlowGraph(BranchOnStatementNode branchOnStatement)
     {
-        FlowGraph flowGraph = FlowGraph.Empty.AddVertex(new FlowVertex
+        FlowGraph flowGraph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex
         {
             Index = branchOnStatement.Index,
             AssociatedStatement = branchOnStatement,
@@ -295,7 +300,7 @@ public sealed partial class FlowAnalyzer
         {
             FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body);
 
-            flowGraph = flowGraph.AppendToVertex(flowGraph.StartVertex, nestedFlowGraph);
+            flowGraph = flowGraph.AppendToVertex(branchOnStatement.Index, nestedFlowGraph);
         }
 
         return flowGraph;

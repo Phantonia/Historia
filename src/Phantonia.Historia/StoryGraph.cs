@@ -5,19 +5,13 @@ using System.Linq;
 
 namespace Phantonia.Historia;
 
-public sealed class StoryGraph<TOutput, TOption>
+public sealed class StoryGraph<TOutput, TOption>(IReadOnlyDictionary<int, StoryVertex<TOutput, TOption>> vertices, IReadOnlyList<StoryEdge> startEdges)
 {
     public const int FinalVertex = -1;
 
-    public StoryGraph(IReadOnlyDictionary<int, StoryVertex<TOutput, TOption>> vertices, int startVertex)
-    {
-        Vertices = vertices;
-        StartVertex = startVertex;
-    }
+    public IReadOnlyDictionary<int, StoryVertex<TOutput, TOption>> Vertices { get; } = vertices;
 
-    public IReadOnlyDictionary<int, StoryVertex<TOutput, TOption>> Vertices { get; }
-
-    public int StartVertex { get; }
+    public IReadOnlyList<StoryEdge> StartEdges { get; } = startEdges;
 
     public bool ContainsEdge(int start, int end)
     {
@@ -40,7 +34,7 @@ public sealed class StoryGraph<TOutput, TOption>
     public IEnumerable<int> TopologicalSort()
     {
         // adapted from FlowGraph equivalent
-        Dictionary<int, bool> marked = new();
+        Dictionary<int, bool> marked = [];
 
         foreach (int vertex in Vertices.Keys)
         {
@@ -63,7 +57,7 @@ public sealed class StoryGraph<TOutput, TOption>
         {
             marked[vertex] = true;
 
-            foreach (StoryEdge edge in Vertices[vertex].OutgoingEdges)
+            foreach (StoryEdge edge in Vertices[vertex].OutgoingEdges.Reverse())
             {
                 if (!edge.IsWeak && edge.ToVertex != FinalVertex && !marked[edge.ToVertex])
                 {
@@ -77,14 +71,11 @@ public sealed class StoryGraph<TOutput, TOption>
 
     public T Induce<T>(Func<IEnumerable<T>, T> inductor, T baseValue)
     {
-        Dictionary<int, T> values = new()
-        {
-            [StartVertex] = baseValue,
-        };
+        Dictionary<int, T> values = [];
 
         IEnumerable<int> topologicalSort = TopologicalSort();
 
-        List<T> predecessorValues = new();
+        List<T> predecessorValues = [];
 
         foreach (int vertex in topologicalSort)
         {

@@ -363,11 +363,6 @@ public static class GeneralEmission
                 writer.Write('.');
                 writer.Write(enumOptionExpression.OptionName);
                 return;
-            case SynthesizedEmptyExpressionNode:
-                writer.Write("default(");
-                GenerateType(settings.OutputType, writer);
-                writer.Write(')');
-                return;
         }
 
         Debug.Assert(false);
