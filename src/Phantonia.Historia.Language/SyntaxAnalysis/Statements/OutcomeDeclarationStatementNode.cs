@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
@@ -14,7 +13,7 @@ public record OutcomeDeclarationStatementNode : StatementNode, IOutcomeDeclarati
 
     public required string? DefaultOption { get; init; }
 
-    public override IEnumerable<SyntaxNode> Children => Enumerable.Empty<SyntaxNode>();
+    public override IEnumerable<SyntaxNode> Children => [];
 
     protected internal override string GetDebuggerDisplay() => $"declare outcome {Name} ({string.Join(", ", Options)}) {(DefaultOption is not null ? "default " : "")}{DefaultOption}";
 

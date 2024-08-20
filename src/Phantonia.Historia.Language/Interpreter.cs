@@ -25,7 +25,7 @@ public sealed class Interpreter
 
     public InterpretationResult Interpret()
     {
-        List<Error> errors = new();
+        List<Error> errors = [];
 
         void HandleError(Error error)
         {
@@ -51,7 +51,7 @@ public sealed class Interpreter
         {
             return new InterpretationResult
             {
-                Errors = errors.ToImmutableArray(),
+                Errors = [.. errors],
             };
         }
 
@@ -70,7 +70,7 @@ public sealed class Interpreter
         {
             return new InterpretationResult
             {
-                Errors = errors.ToImmutableArray(),
+                Errors = [.. errors],
             };
         }
 

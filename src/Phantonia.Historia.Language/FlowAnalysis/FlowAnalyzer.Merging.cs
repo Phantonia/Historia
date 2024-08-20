@@ -52,7 +52,7 @@ public sealed partial class FlowAnalyzer
         return (mainFlowGraph, symbolTable);
     }
 
-    private FlowGraph EmbedSingleReferenceScene(FlowGraph mainFlowGraph, FlowGraph sceneFlowGraph, SceneSymbol scene)
+    private static FlowGraph EmbedSingleReferenceScene(FlowGraph mainFlowGraph, FlowGraph sceneFlowGraph, SceneSymbol scene)
     {
         // 1. add all scene vertices
         foreach (int vertex in sceneFlowGraph.Vertices.Keys)
@@ -140,7 +140,7 @@ public sealed partial class FlowAnalyzer
         return mainFlowGraph;
     }
 
-    private FlowGraph EmbedMultiReferenceScene(FlowGraph mainFlowGraph, FlowGraph sceneFlowGraph, SceneSymbol scene, CallerTrackerSymbol tracker)
+    private static FlowGraph EmbedMultiReferenceScene(FlowGraph mainFlowGraph, FlowGraph sceneFlowGraph, SceneSymbol scene, CallerTrackerSymbol tracker)
     {
         // 1. add all scene vertices
         foreach (int vertex in sceneFlowGraph.Vertices.Keys)

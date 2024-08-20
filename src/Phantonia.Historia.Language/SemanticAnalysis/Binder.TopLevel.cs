@@ -60,8 +60,8 @@ public sealed partial class Binder
 
         ImmutableArray<PropertyDeclarationNode>.Builder boundPropertyDeclarations = ImmutableArray.CreateBuilder<PropertyDeclarationNode>(recordDeclaration.Properties.Length);
 
-        string[] bannedMemberNames = new[]
-        {
+        string[] bannedMemberNames =
+        [
             recordDeclaration.Name,
             nameof(Equals),
             nameof(GetHashCode),
@@ -71,9 +71,9 @@ public sealed partial class Binder
             nameof(ToString),
             "op_Equality",
             "op_Inequality",
-        };
+        ];
 
-        HashSet<string> propertyNames = new();
+        HashSet<string> propertyNames = [];
 
         foreach ((PropertyDeclarationNode propertyDeclaration, PropertySymbol propertySymbol) in recordDeclaration.Properties.Zip(recordSymbol.Properties))
         {
@@ -121,8 +121,8 @@ public sealed partial class Binder
 
         UnionTypeSymbol unionSymbol = (UnionTypeSymbol)table[unionDeclaration.Name];
 
-        string[] bannedMemberNames = new[]
-        {
+        string[] bannedMemberNames =
+        [
             unionDeclaration.Name,
             "Discriminator",
             "Run",
@@ -137,7 +137,7 @@ public sealed partial class Binder
             "op_Equality",
             "op_Inequality",
             $"{unionDeclaration.Name}Discriminator",
-        };
+        ];
 
         foreach (TypeNode type in unionDeclaration.Subtypes)
         {
@@ -165,7 +165,7 @@ public sealed partial class Binder
 
     private (SymbolTable, TopLevelNode) BindEnumDeclaration(EnumSymbolDeclarationNode enumDeclaration, SymbolTable table)
     {
-        HashSet<string> options = new();
+        HashSet<string> options = [];
 
         foreach (string option in enumDeclaration.Options)
         {

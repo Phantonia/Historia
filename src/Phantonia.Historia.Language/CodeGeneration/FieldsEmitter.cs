@@ -9,21 +9,8 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
-public sealed class FieldsEmitter
+public sealed class FieldsEmitter(StoryNode boundStory, SymbolTable symbolTable, Settings settings, IndentedTextWriter writer)
 {
-    public FieldsEmitter(StoryNode boundStory, SymbolTable symbolTable, Settings settings, IndentedTextWriter writer)
-    {
-        this.boundStory = boundStory;
-        this.symbolTable = symbolTable;
-        this.settings = settings;
-        this.writer = writer;
-    }
-
-    private readonly StoryNode boundStory;
-    private readonly SymbolTable symbolTable;
-    private readonly Settings settings;
-    private readonly IndentedTextWriter writer;
-
     public void GenerateFieldsStruct()
     {
         int initialIndent = writer.Indent;

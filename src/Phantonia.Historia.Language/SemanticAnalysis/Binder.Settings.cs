@@ -17,7 +17,7 @@ public sealed partial class Binder
 {
     private (SymbolTable, Settings, StoryNode) BindSettingDirectives(StoryNode halfboundStory, SymbolTable table)
     {
-        List<TopLevelNode> topLevelNodes = halfboundStory.TopLevelNodes.ToList();
+        List<TopLevelNode> topLevelNodes = [.. halfboundStory.TopLevelNodes];
 
         for (int i = 0; i < topLevelNodes.Count; i++)
         {
@@ -33,7 +33,7 @@ public sealed partial class Binder
             topLevelNodes[i] = boundDirective;
         }
 
-        halfboundStory = halfboundStory with { TopLevelNodes = topLevelNodes.ToImmutableArray() };
+        halfboundStory = halfboundStory with { TopLevelNodes = [.. topLevelNodes] };
 
         Settings settings = new();
 

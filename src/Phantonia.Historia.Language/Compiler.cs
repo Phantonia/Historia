@@ -29,7 +29,7 @@ public sealed class Compiler
 
     public CompilationResult Compile()
     {
-        List<Error> errors = new();
+        List<Error> errors = [];
 
         void HandleError(Error error)
         {
@@ -55,7 +55,7 @@ public sealed class Compiler
         {
             return new CompilationResult
             {
-                Errors = errors.ToImmutableArray(),
+                Errors = [.. errors],
             };
         }
 
@@ -74,7 +74,7 @@ public sealed class Compiler
         {
             return new CompilationResult
             {
-                Errors = errors.ToImmutableArray(),
+                Errors = [.. errors],
             };
         }
 

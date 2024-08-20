@@ -3,19 +3,8 @@ using System.CodeDom.Compiler;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
-public sealed class HeartEmitter
+public sealed class HeartEmitter(FlowGraph flowGraph, Settings settings, IndentedTextWriter writer)
 {
-    public HeartEmitter(FlowGraph flowGraph, Settings settings, IndentedTextWriter writer)
-    {
-        this.flowGraph = flowGraph;
-        this.settings = settings;
-        this.writer = writer;
-    }
-
-    private readonly FlowGraph flowGraph;
-    private readonly Settings settings;
-    private readonly IndentedTextWriter writer;
-
     public void GenerateHeartClass()
     {
         writer.WriteLine("internal static class Heart");

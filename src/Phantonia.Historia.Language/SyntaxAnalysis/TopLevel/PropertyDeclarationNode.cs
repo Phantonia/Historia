@@ -11,7 +11,7 @@ public record PropertyDeclarationNode : SyntaxNode
 
     public required TypeNode Type { get; init; }
 
-    public override IEnumerable<SyntaxNode> Children => new[] { Type };
+    public override IEnumerable<SyntaxNode> Children => [Type];
 
     protected internal override string GetDebuggerDisplay() => $"property {Name} of type {Type.GetDebuggerDisplay()}";
 }

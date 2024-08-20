@@ -13,7 +13,7 @@ public sealed record LoopSwitchOptionNode : SyntaxNode
 
     public required LoopSwitchOptionKind Kind { get; init; }
 
-    public override IEnumerable<SyntaxNode> Children => new SyntaxNode[] { Expression, Body };
+    public override IEnumerable<SyntaxNode> Children => [Expression, Body];
 
     protected internal override string GetDebuggerDisplay()
         => $"{Kind switch

@@ -9,7 +9,7 @@ public sealed record ExpressionSettingDirectiveNode : SettingDirectiveNode
 
     public required ExpressionNode Expression { get; init; }
 
-    public override IEnumerable<SyntaxNode> Children => new[] { Expression };
+    public override IEnumerable<SyntaxNode> Children => [Expression];
 
     protected internal override string GetDebuggerDisplay() => $"setting {SettingName}: {Expression.GetDebuggerDisplay()}";
 }

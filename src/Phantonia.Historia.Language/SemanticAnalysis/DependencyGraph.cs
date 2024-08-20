@@ -16,7 +16,7 @@ public sealed class DependencyGraph
     public bool IsCyclic([NotNullWhen(returnValue: true)] out IEnumerable<int>? cycle)
     {
         Stack<int>? cycleStack = null;
-        Dictionary<int, VertexData> vertexData = new();
+        Dictionary<int, VertexData> vertexData = [];
 
         foreach (int vertex in Symbols.Keys)
         {
@@ -72,7 +72,7 @@ public sealed class DependencyGraph
     {
         Debug.Assert(!IsCyclic(out _));
 
-        Dictionary<int, bool> marked = new();
+        Dictionary<int, bool> marked = [];
 
         foreach (int vertex in Symbols.Keys)
         {

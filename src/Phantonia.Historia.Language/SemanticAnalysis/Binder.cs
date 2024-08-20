@@ -169,7 +169,7 @@ public sealed partial class Binder
         };
     }
 
-    private PseudoEnumTypeSymbol CreateEnumSymbolFromDeclaration(EnumSymbolDeclarationNode enumDeclaration)
+    private static PseudoEnumTypeSymbol CreateEnumSymbolFromDeclaration(EnumSymbolDeclarationNode enumDeclaration)
     {
         return new PseudoEnumTypeSymbol
         {
@@ -196,7 +196,7 @@ public sealed partial class Binder
     {
         bool error = false;
 
-        HashSet<string> optionNames = new();
+        HashSet<string> optionNames = [];
 
         foreach (string option in outcomeDeclaration.Options)
         {
@@ -222,7 +222,7 @@ public sealed partial class Binder
         return new OutcomeSymbol()
         {
             Name = outcomeDeclaration.Name,
-            OptionNames = optionNames.ToImmutableArray(),
+            OptionNames = [.. optionNames],
             DefaultOption = outcomeDeclaration.DefaultOption,
             AlwaysAssigned = false,
             Public = outcomeDeclaration.Public,
@@ -242,7 +242,7 @@ public sealed partial class Binder
             error = true;
         }
 
-        HashSet<string> optionNames = new();
+        HashSet<string> optionNames = [];
 
         foreach (SpectrumOptionNode option in spectrumDeclaration.Options)
         {

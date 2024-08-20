@@ -11,9 +11,9 @@ public sealed record SymbolTable
 {
     public SymbolTable() { }
 
-    private ImmutableStack<Scope> Table { get; init; } = ImmutableStack<Scope>.Empty;
+    private ImmutableStack<Scope> Table { get; init; } = [];
 
-    public ImmutableList<Symbol> AllSymbols { get; init; } = ImmutableList<Symbol>.Empty;
+    public ImmutableList<Symbol> AllSymbols { get; init; } = [];
 
     public Symbol this[string name]
     {
@@ -21,9 +21,9 @@ public sealed record SymbolTable
         {
             foreach (Scope scope in Table)
             {
-                if (scope.ContainsKey(name))
+                if (scope.TryGetValue(name, out Symbol? symbol))
                 {
-                    return scope[name];
+                    return symbol;
                 }
             }
 

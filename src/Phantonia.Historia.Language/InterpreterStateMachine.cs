@@ -28,8 +28,8 @@ public sealed class InterpreterStateMachine : IStoryStateMachine
     private readonly SymbolTable symbolTable;
 
     private int state = StartState;
-    private readonly Dictionary<string, ulong> fields = new();
-    private readonly List<object> options = new();
+    private readonly Dictionary<string, ulong> fields = [];
+    private readonly List<object> options = [];
 
     public bool NotStartedStory { get; private set; } = true;
 

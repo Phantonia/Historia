@@ -8,15 +8,8 @@ using System.Diagnostics;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis;
 
-public sealed partial class Parser
+public sealed partial class Parser(ImmutableArray<Token> tokens)
 {
-    public Parser(ImmutableArray<Token> tokens)
-    {
-        this.tokens = tokens;
-    }
-
-    private readonly ImmutableArray<Token> tokens;
-
     public event Action<Error>? ErrorFound;
 
     public StoryNode Parse()

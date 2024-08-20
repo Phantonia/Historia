@@ -1052,16 +1052,16 @@ public sealed class FlowAnalyzerTests
 
         FlowAnalyzer analyzer = PrepareFlowAnalyzer(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         analyzer.ErrorFound += errors.Add;
 
         _ = analyzer.PerformFlowAnalysis();
 
         errors.Sort((x, y) => x.Index - y.Index);
 
-        Error firstError = Errors.OutcomeMightBeAssignedMoreThanOnce("X", new[] { "main" }, code.IndexOf("X = A;"));
-        Error secondError = Errors.OutcomeMightBeAssignedMoreThanOnce("X", new[] { "main" }, code.IndexOf("X = B;"));
-        Error thirdError = Errors.OutcomeNotDefinitelyAssigned("X", new[] { "main" }, code.IndexOf("branchon X"));
+        Error firstError = Errors.OutcomeMightBeAssignedMoreThanOnce("X", ["main"], code.IndexOf("X = A;"));
+        Error secondError = Errors.OutcomeMightBeAssignedMoreThanOnce("X", ["main"], code.IndexOf("X = B;"));
+        Error thirdError = Errors.OutcomeNotDefinitelyAssigned("X", ["main"], code.IndexOf("branchon X"));
 
         Assert.AreEqual(3, errors.Count);
         Assert.AreEqual(firstError, errors[0]);

@@ -7,17 +7,8 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
-public sealed class TypeDeclarationsEmitter
+public sealed class TypeDeclarationsEmitter(StoryNode boundStory, IndentedTextWriter writer)
 {
-    public TypeDeclarationsEmitter(StoryNode boundStory, IndentedTextWriter writer)
-    {
-        this.boundStory = boundStory;
-        this.writer = writer;
-    }
-
-    private readonly StoryNode boundStory;
-    private readonly IndentedTextWriter writer;
-
     public void GenerateTypeDeclarations()
     {
         foreach (TopLevelNode topLevelNode in boundStory.TopLevelNodes)

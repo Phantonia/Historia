@@ -14,7 +14,7 @@ public sealed partial class Binder
 {
     private (SymbolTable, StoryNode) BindTree(StoryNode halfboundStory, Settings settings, SymbolTable table)
     {
-        List<TopLevelNode> topLevelNodes = halfboundStory.TopLevelNodes.ToList();
+        List<TopLevelNode> topLevelNodes = [.. halfboundStory.TopLevelNodes];
 
         for (int i = 0; i < topLevelNodes.Count; i++)
         {
@@ -30,7 +30,7 @@ public sealed partial class Binder
             topLevelNodes[i] = boundDeclaration;
         }
 
-        StoryNode boundStory = halfboundStory with { TopLevelNodes = topLevelNodes.ToImmutableArray() };
+        StoryNode boundStory = halfboundStory with { TopLevelNodes = [.. topLevelNodes] };
         return (table, boundStory);
     }
 

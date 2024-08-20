@@ -7,22 +7,9 @@ using System.IO;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
-public sealed class Emitter
+public sealed class Emitter(StoryNode boundStory, Settings settings, FlowGraph flowGraph, SymbolTable symbolTable, TextWriter outputWriter)
 {
-    public Emitter(StoryNode boundStory, Settings settings, FlowGraph flowGraph, SymbolTable symbolTable, TextWriter outputWriter)
-    {
-        this.boundStory = boundStory;
-        this.settings = settings;
-        this.flowGraph = flowGraph;
-        this.symbolTable = symbolTable;
-        writer = new IndentedTextWriter(outputWriter);
-    }
-
-    private readonly StoryNode boundStory;
-    private readonly Settings settings;
-    private readonly FlowGraph flowGraph;
-    private readonly SymbolTable symbolTable;
-    private readonly IndentedTextWriter writer;
+    private readonly IndentedTextWriter writer = new(outputWriter);
 
     public void GenerateOutputCode()
     {

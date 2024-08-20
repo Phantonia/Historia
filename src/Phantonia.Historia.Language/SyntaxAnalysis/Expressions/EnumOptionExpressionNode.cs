@@ -11,7 +11,7 @@ public record EnumOptionExpressionNode : ExpressionNode
 
     public required string OptionName { get; init; }
 
-    public override IEnumerable<SyntaxNode> Children => Enumerable.Empty<SyntaxNode>();
+    public override IEnumerable<SyntaxNode> Children => [];
 
     protected internal override string GetDebuggerDisplay() => $"enum option {EnumName}.{OptionName}";
 }

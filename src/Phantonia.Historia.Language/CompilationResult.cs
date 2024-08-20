@@ -6,7 +6,7 @@ public readonly record struct CompilationResult
 {
     public CompilationResult() { }
 
-    public ImmutableArray<Error> Errors { get; init; } = ImmutableArray<Error>.Empty;
+    public ImmutableArray<Error> Errors { get; init; } = [];
 
     public bool IsValid => Errors.Length == 0;
 }

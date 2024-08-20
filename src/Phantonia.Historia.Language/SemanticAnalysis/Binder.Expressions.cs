@@ -93,7 +93,7 @@ public sealed partial class Binder
             return (table, incompleteTypedExpression);
         }
 
-        List<ArgumentNode> boundArguments = recordCreation.Arguments.ToList();
+        List<ArgumentNode> boundArguments = [.. recordCreation.Arguments];
 
         for (int i = 0; i < recordCreation.Arguments.Length; i++)
         {

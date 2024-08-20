@@ -8,7 +8,7 @@ public readonly record struct InterpretationResult
 {
     public InterpretationResult() { }
 
-    public ImmutableArray<Error> Errors { get; init; } = ImmutableArray<Error>.Empty;
+    public ImmutableArray<Error> Errors { get; init; } = [];
 
     public InterpreterStateMachine? StateMachine { get; init; }
 

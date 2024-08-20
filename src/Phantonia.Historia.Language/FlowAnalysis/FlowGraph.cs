@@ -149,6 +149,7 @@ public sealed record FlowGraph
         MutEdges tempEdges = OutgoingEdges.ToDictionary(p => p.Key, p => p.Value.ToList());
         Dictionary<int, FlowVertex> tempVertices = Vertices.ToDictionary(p => p.Key, p => p.Value);
 
+        // add 'graph' into this graph
         foreach ((int currentVertex, ImmutableList<FlowEdge> edges) in graph.OutgoingEdges)
         {
             if (tempEdges.ContainsKey(currentVertex))
@@ -159,6 +160,8 @@ public sealed record FlowGraph
             tempEdges[currentVertex] = [.. edges];
             tempVertices[currentVertex] = graph.Vertices[currentVertex];
         }
+
+        tempEdges[vertex].RemoveAll(e => e.ToVertex == FinalVertex);
 
         foreach (FlowEdge edge in graph.StartEdges)
         {

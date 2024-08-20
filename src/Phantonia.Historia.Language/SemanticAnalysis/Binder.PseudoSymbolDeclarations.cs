@@ -2,7 +2,6 @@
 using Phantonia.Historia.Language.SyntaxAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using Phantonia.Historia.Language.SyntaxAnalysis.Types;
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -67,7 +66,7 @@ public sealed partial class Binder
             Name = recordDeclaration.Name,
             Declaration = recordDeclaration with
             {
-                Properties = properties.ToImmutableArray(),
+                Properties = [.. properties],
             },
             Symbol = table[recordDeclaration.Name],
             Index = recordDeclaration.Index,
@@ -78,7 +77,7 @@ public sealed partial class Binder
 
     private (SymbolTable, TopLevelNode) BindPseudoUnionDeclaration(UnionSymbolDeclarationNode unionDeclaration, SymbolTable table)
     {
-        List<TypeNode> subtypes = unionDeclaration.Subtypes.ToList();
+        List<TypeNode> subtypes = [.. unionDeclaration.Subtypes];
 
         for (int i = 0; i < subtypes.Count; i++)
         {
@@ -91,7 +90,7 @@ public sealed partial class Binder
             Name = unionDeclaration.Name,
             Declaration = unionDeclaration with
             {
-                Subtypes = subtypes.ToImmutableArray(),
+                Subtypes = [.. subtypes],
             },
             Symbol = table[unionDeclaration.Name],
             Index = unionDeclaration.Index,
@@ -100,7 +99,7 @@ public sealed partial class Binder
         return (table, boundDeclaration);
     }
 
-    private (SymbolTable, TopLevelNode) BindPseudoEnumDeclaration(EnumSymbolDeclarationNode enumDeclaration, SymbolTable table)
+    private static (SymbolTable, TopLevelNode) BindPseudoEnumDeclaration(EnumSymbolDeclarationNode enumDeclaration, SymbolTable table)
     {
         BoundSymbolDeclarationNode boundDeclaration = new()
         {

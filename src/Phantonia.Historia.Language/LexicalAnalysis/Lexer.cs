@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using System.Reflection.PortableExecutable;
 
 namespace Phantonia.Historia.Language.LexicalAnalysis;
 
@@ -179,7 +177,7 @@ public sealed class Lexer
     {
         int startIndex = currentIndex;
 
-        List<char> characters = new();
+        List<char> characters = [];
 
         while (inputReader.Peek() is >= '0' and <= '9')
         {
@@ -225,7 +223,7 @@ public sealed class Lexer
         // whenever the delimiter is seen again (unless escaped), we reduce this countdown to see if it reaches 0 (i.e. the string is terminated)
         // else we reset it for possible later termination
         int delimiterCountdown = delimiterCount;
-        List<char> characters = new();
+        List<char> characters = [];
 
         bool TryParseNextChar(out char result)
         {
@@ -439,7 +437,7 @@ public sealed class Lexer
     {
         int startIndex = currentIndex;
 
-        List<char> characters = new();
+        List<char> characters = [];
 
         while (inputReader.Peek() is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or >= '0' and <= '9' or '_')
         {

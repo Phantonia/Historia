@@ -15,7 +15,7 @@ public sealed record SpectrumOptionNode : SyntaxNode
 
     public required int Denominator { get; init; }
 
-    public override IEnumerable<SyntaxNode> Children => Enumerable.Empty<SyntaxNode>();
+    public override IEnumerable<SyntaxNode> Children => [];
 
     protected internal override string GetDebuggerDisplay() => $"spectrum option {Name} <{(Inclusive ? "=" : "")} {Numerator}/{Denominator}";
 }

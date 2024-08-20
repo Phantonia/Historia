@@ -10,19 +10,8 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
-public sealed class StateTransitionEmitter
+public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings settings, IndentedTextWriter writer)
 {
-    public StateTransitionEmitter(FlowGraph flowGraph, Settings settings, IndentedTextWriter writer)
-    {
-        this.flowGraph = flowGraph;
-        this.settings = settings;
-        this.writer = writer;
-    }
-
-    private readonly FlowGraph flowGraph;
-    private readonly Settings settings;
-    private readonly IndentedTextWriter writer;
-
     public void GenerateStateTransitionMethod()
     {
         writer.WriteLine("public static void StateTransition(ref Fields fields, int option)");

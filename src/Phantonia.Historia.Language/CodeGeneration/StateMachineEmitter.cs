@@ -4,21 +4,8 @@ using System.CodeDom.Compiler;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
-public sealed class StateMachineEmitter
+public sealed class StateMachineEmitter(StoryNode boundStory, Settings settings, SymbolTable symbolTable, IndentedTextWriter writer)
 {
-    public StateMachineEmitter(StoryNode boundStory, Settings settings, SymbolTable symbolTable, IndentedTextWriter writer)
-    {
-        this.boundStory = boundStory;
-        this.settings = settings;
-        this.symbolTable = symbolTable;
-        this.writer = writer;
-    }
-
-    private readonly StoryNode boundStory;
-    private readonly Settings settings;
-    private readonly SymbolTable symbolTable;
-    private readonly IndentedTextWriter writer;
-
     public void GenerateStateMachineClass()
     {
         GeneralEmission.GenerateClassHeader("StateMachine", settings, writer);

@@ -13,7 +13,7 @@ public sealed record SwitchOptionNode : SyntaxNode
 
     public required StatementBodyNode Body { get; init; }
 
-    public override IEnumerable<SyntaxNode> Children => new SyntaxNode[] { Expression, Body };
+    public override IEnumerable<SyntaxNode> Children => [Expression, Body];
 
     protected internal override string GetDebuggerDisplay() => $"option {Name}{(Name is not null ? " " : "")} ({Expression.GetDebuggerDisplay()}) w/ {Body.Statements.Length} statements";
 }

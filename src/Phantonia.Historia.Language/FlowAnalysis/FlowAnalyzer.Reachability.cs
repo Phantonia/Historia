@@ -13,7 +13,7 @@ public sealed partial class FlowAnalyzer
     {
         SceneSymbol mainScene = (SceneSymbol)symbolTable["main"];
         VertexData defaultVertexData = GetDefaultData();
-        _ = ProcessScene(sceneFlowGraphs[mainScene], defaultVertexData, sceneFlowGraphs, ImmutableStack.Create(mainScene));
+        _ = ProcessScene(sceneFlowGraphs[mainScene], defaultVertexData, sceneFlowGraphs, [mainScene]);
     }
 
     private VertexData GetDefaultData()
@@ -69,10 +69,10 @@ public sealed partial class FlowAnalyzer
             return defaultVertexData;
         }
 
-        Dictionary<int, VertexData> data = new();
+        Dictionary<int, VertexData> data = [];
 
         int firstVertex = order.First();
-        data[firstVertex] = ProcessVertex(sceneFlowGraph, firstVertex, previousData: new[] { defaultVertexData }, defaultVertexData, sceneFlowGraphs, callStack);
+        data[firstVertex] = ProcessVertex(sceneFlowGraph, firstVertex, previousData: [defaultVertexData], defaultVertexData, sceneFlowGraphs, callStack);
 
         foreach (int vertex in order.Skip(1))
         {
@@ -121,7 +121,7 @@ public sealed partial class FlowAnalyzer
             switch (statement)
             {
                 case BoundOutcomeAssignmentStatementNode boundAssignment when boundAssignment.Outcome == outcome:
-                    if (possiblyAssigned)
+                    if (possiblyAssigned && flowGraph.Vertices[vertex].IsStory)
                     {
                         ErrorFound?.Invoke(Errors.OutcomeMightBeAssignedMoreThanOnce(outcome.Name, callStack.Select(s => s.Name), boundAssignment.Index));
                     }
@@ -133,7 +133,7 @@ public sealed partial class FlowAnalyzer
                     definitelyAssigned = true;
                     break;
                 case BoundBranchOnStatementNode boundBranchOn when boundBranchOn.Outcome == outcome:
-                    if (!definitelyAssigned)
+                    if (!definitelyAssigned && flowGraph.Vertices[vertex].IsStory)
                     {
                         if (outcome is SpectrumSymbol)
                         {
@@ -151,7 +151,7 @@ public sealed partial class FlowAnalyzer
             {
                 Outcomes = thisVertexData.Outcomes.SetItem(outcome, new OutcomeData
                 {
-                    DefinitelyAssigned = definitelyAssigned,
+                    DefinitelyAssigned = (vertex == FlowGraph.FinalVertex || flowGraph.Vertices[vertex].IsStory) && definitelyAssigned,
                     PossiblyAssigned = possiblyAssigned,
                 }),
             };

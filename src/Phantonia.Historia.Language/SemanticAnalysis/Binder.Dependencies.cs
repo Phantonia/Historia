@@ -15,8 +15,8 @@ public sealed partial class Binder
 {
     private DependencyGraph? BuildTypeDependencyGraph(StoryNode story, SymbolTable table)
     {
-        Dictionary<int, Symbol> symbols = new();
-        Dictionary<int, IReadOnlyList<int>> dependencies = new();
+        Dictionary<int, Symbol> symbols = [];
+        Dictionary<int, IReadOnlyList<int>> dependencies = [];
 
         foreach (TopLevelNode declaration in story.TopLevelNodes)
         {
@@ -48,7 +48,7 @@ public sealed partial class Binder
 
     private static IReadOnlyList<int> GetDependencies(TypeSymbolDeclarationNode declaration, SymbolTable table)
     {
-        List<int> dependencies = new();
+        List<int> dependencies = [];
 
         switch (declaration)
         {
@@ -164,7 +164,7 @@ public sealed partial class Binder
 
     private UnionTypeSymbol TurnIntoTrueUnionSymbol(PseudoUnionTypeSymbol pseudoUnion, SymbolTable table)
     {
-        HashSet<TypeSymbol> listedSubtypes = new();
+        HashSet<TypeSymbol> listedSubtypes = [];
 
         foreach (TypeNode subtype in pseudoUnion.Subtypes)
         {
@@ -180,7 +180,7 @@ public sealed partial class Binder
         // let U be the union of A and B, where B is the union of C and D
         // then U really is the union of A, C and D
         Queue<TypeSymbol> subtypeQueue = new(listedSubtypes);
-        HashSet<TypeSymbol> trueSubtypes = new();
+        HashSet<TypeSymbol> trueSubtypes = [];
 
         while (subtypeQueue.TryDequeue(out TypeSymbol? subtype))
         {
@@ -200,7 +200,7 @@ public sealed partial class Binder
         return new UnionTypeSymbol
         {
             Name = pseudoUnion.Name,
-            Subtypes = trueSubtypes.ToImmutableArray(),
+            Subtypes = [.. trueSubtypes],
             Index = pseudoUnion.Index,
         };
     }

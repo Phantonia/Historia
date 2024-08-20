@@ -19,17 +19,17 @@ public sealed record Settings
 
     public static ImmutableHashSet<string> AllSettings { get; }
 
-    public static ImmutableHashSet<string> TypeSettings { get; } = new[]
-    {
+    public static ImmutableHashSet<string> TypeSettings { get; } =
+    [
         nameof(OutputType),
         nameof(OptionType),
-    }.ToImmutableHashSet();
+    ];
 
-    public static ImmutableHashSet<string> ExpressionSettings { get; } = new[]
-    {
+    public static ImmutableHashSet<string> ExpressionSettings { get; } =
+    [
         nameof(Namespace),
         nameof(StoryName),
-    }.ToImmutableHashSet();
+    ];
 
     public Settings() { }
 

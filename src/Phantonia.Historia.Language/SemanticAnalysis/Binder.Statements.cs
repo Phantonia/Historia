@@ -118,7 +118,7 @@ public sealed partial class Binder
             }
             else
             {
-                HashSet<string> optionNames = new();
+                HashSet<string> optionNames = [];
 
                 foreach (SwitchOptionNode option in switchStatement.Options)
                 {
@@ -131,7 +131,7 @@ public sealed partial class Binder
                 OutcomeSymbol symbol = new()
                 {
                     Name = switchStatement.Name,
-                    OptionNames = optionNames.ToImmutableArray(),
+                    OptionNames = [.. optionNames],
                     AlwaysAssigned = true,
                     Public = false,
                     Index = switchStatement.Index,
@@ -148,7 +148,7 @@ public sealed partial class Binder
             }
         }
 
-        List<SwitchOptionNode> boundOptions = switchStatement.Options.ToList();
+        List<SwitchOptionNode> boundOptions = [.. switchStatement.Options];
 
         for (int i = 0; i < boundOptions.Count; i++)
         {
@@ -180,15 +180,13 @@ public sealed partial class Binder
 
         SwitchStatementNode boundStatement;
 
-        if (switchStatement.Name is not null && table.IsDeclared(switchStatement.Name) && table[switchStatement.Name] is OutcomeSymbol)
+        if (switchStatement.Name is not null && table.IsDeclared(switchStatement.Name) && table[switchStatement.Name] is OutcomeSymbol outcome)
         {
-            OutcomeSymbol outcome = (OutcomeSymbol)table[switchStatement.Name];
-
             boundStatement = new BoundNamedSwitchStatementNode
             {
                 Name = switchStatement.Name,
                 OutputExpression = outputExpression,
-                Options = boundOptions.ToImmutableArray(),
+                Options = [.. boundOptions],
                 Outcome = outcome,
                 Index = switchStatement.Index,
             };
@@ -198,7 +196,7 @@ public sealed partial class Binder
             boundStatement = switchStatement with
             {
                 OutputExpression = outputExpression,
-                Options = boundOptions.ToImmutableArray(),
+                Options = [.. boundOptions],
             };
         }
 
@@ -226,7 +224,7 @@ public sealed partial class Binder
             }
         }
 
-        List<LoopSwitchOptionNode> boundOptions = loopSwitchStatement.Options.ToList();
+        List<LoopSwitchOptionNode> boundOptions = [.. loopSwitchStatement.Options];
 
         for (int i = 0; i < boundOptions.Count; i++)
         {
@@ -273,7 +271,7 @@ public sealed partial class Binder
         boundStatement = loopSwitchStatement with
         {
             OutputExpression = outputExpression,
-            Options = boundOptions.ToImmutableArray(),
+            Options = [.. boundOptions],
         };
 
         return (table, boundStatement);
@@ -422,8 +420,8 @@ public sealed partial class Binder
             return (table, branchOnStatement);
         }
 
-        HashSet<string> uniqueOptionNames = new();
-        List<BranchOnOptionNode> boundOptions = new();
+        HashSet<string> uniqueOptionNames = [];
+        List<BranchOnOptionNode> boundOptions = [];
 
         bool errorWithOptions = false;
 
@@ -475,7 +473,7 @@ public sealed partial class Binder
         {
             Outcome = outcomeSymbol,
             OutcomeName = outcomeSymbol.Name,
-            Options = boundOptions.ToImmutableArray(),
+            Options = [.. boundOptions],
             Index = branchOnStatement.Index,
         };
 

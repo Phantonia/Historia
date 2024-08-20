@@ -204,7 +204,7 @@ public sealed class StoryGraphEmitter(FlowGraph flowGraph, Settings settings, In
         void WrapInReadOnlyList(Action listGenerator, Action typeGenerator)
         {
             writer.Write("new global::");
-            writer.Write(typeof(ReadOnlyList<>).FullName?[..typeof(ReadOnlyList<>).FullName!.IndexOf("`")]);
+            writer.Write(typeof(ReadOnlyList<>).FullName?[..typeof(ReadOnlyList<>).FullName!.IndexOf('`')]);
             writer.Write('<');
             typeGenerator();
             writer.Write(">(");

@@ -9,7 +9,7 @@ public sealed record SceneSymbolDeclarationNode : SymbolDeclarationNode
 
     public required StatementBodyNode Body { get; init; }
 
-    public override IEnumerable<SyntaxNode> Children => new[] { Body };
+    public override IEnumerable<SyntaxNode> Children => [Body];
 
     protected internal override string GetDebuggerDisplay() => $"scene {Name} w/ {Body.Statements.Length} statements";
 }
