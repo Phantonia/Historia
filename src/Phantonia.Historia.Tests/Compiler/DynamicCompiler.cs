@@ -23,19 +23,19 @@ internal static class DynamicCompiler
 
         // define other necessary objects for compilation
         string assemblyName = Path.GetRandomFileName();
-        MetadataReference[] references = new[]
-        {
+        MetadataReference[] references =
+        [
             MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
             MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location),
             MetadataReference.CreateFromFile(runtimePath),
             MetadataReference.CreateFromFile(typeof(ImmutableArray).Assembly.Location),
             MetadataReference.CreateFromFile(typeof(IStoryStateMachine).Assembly.Location),
-        };
+        ];
 
         // analyse and generate IL code from syntax tree
         CSharpCompilation compilation = CSharpCompilation.Create(
             assemblyName,
-            syntaxTrees: new[] { syntaxTree },
+            syntaxTrees: [syntaxTree],
             references: references,
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 

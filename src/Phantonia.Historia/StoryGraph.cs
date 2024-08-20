@@ -7,6 +7,7 @@ namespace Phantonia.Historia;
 
 public sealed class StoryGraph<TOutput, TOption>(IReadOnlyDictionary<int, StoryVertex<TOutput, TOption>> vertices, IReadOnlyList<StoryEdge> startEdges)
 {
+    public const int StartVertex = -2;
     public const int FinalVertex = -1;
 
     public IReadOnlyDictionary<int, StoryVertex<TOutput, TOption>> Vertices { get; } = vertices;

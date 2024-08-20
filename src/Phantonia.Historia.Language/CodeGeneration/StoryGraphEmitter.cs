@@ -43,16 +43,11 @@ public sealed class StoryGraphEmitter(FlowGraph flowGraph, Settings settings, In
             GenerateVertex(vertex, reverseGraph);
         }
 
-        // i know this is wrong
-        // but a test will yell at me anyway, so now let's just do it this way
-        Debug.Assert(flowGraph.IsConformable);
-        int startVertex = flowGraph.GetStoryStartVertex();
+        GenerateStartEdges();
 
         writer.Write("return new ");
         GeneralEmission.GenerateGenericStoryType(typeof(StoryGraph<,>), settings, writer);
-        writer.Write("(vertices, ");
-        writer.Write(startVertex);
-        writer.WriteLine(");");
+        writer.WriteLine("(vertices, startEdges);");
 
         writer.EndBlock(); // method
     }
@@ -235,5 +230,40 @@ public sealed class StoryGraphEmitter(FlowGraph flowGraph, Settings settings, In
         WrapInReadOnlyList(() => writer.Write("incomingEdges"), () => writer.Write(typeof(StoryEdge).FullName));
 
         writer.WriteLine(");");
+    }
+
+    private void GenerateStartEdges()
+    {
+        writer.Write("global::");
+        writer.Write(typeof(StoryEdge).FullName);
+        writer.Write("[] startEdges = new global::");
+        writer.Write(typeof(StoryEdge).FullName);
+        writer.Write('[');
+        writer.Write(flowGraph.StartEdges.Length);
+        writer.WriteLine("];");
+
+        int i = 0;
+
+        foreach (FlowEdge edge in flowGraph.StartEdges)
+        {
+            if (!edge.IsStory)
+            {
+                continue;
+            }
+       
+            writer.Write("startEdges[");
+            writer.Write(i);
+            writer.Write("] = new global::");
+            writer.Write(typeof(StoryEdge).FullName);
+            writer.Write('(');
+            writer.Write(Constants.StartState);
+            writer.Write(", ");
+            writer.Write(edge.ToVertex);
+            writer.Write(", ");
+            writer.Write(edge.IsWeak ? "true" : "false");
+            writer.WriteLine(");");
+
+            i++;
+        }
     }
 }
