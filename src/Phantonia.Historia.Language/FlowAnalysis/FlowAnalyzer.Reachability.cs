@@ -33,14 +33,6 @@ public sealed partial class FlowAnalyzer
                             PossiblyAssigned = true,
                         });
                     }
-                    else if (outcomeSymbol.DefaultOption is not null)
-                    {
-                        outcomes.Add(outcomeSymbol, new OutcomeData
-                        {
-                            DefinitelyAssigned = true,
-                            PossiblyAssigned = false,
-                        });
-                    }
                     else
                     {
                         outcomes.Add(outcomeSymbol, new OutcomeData());
@@ -133,7 +125,7 @@ public sealed partial class FlowAnalyzer
                     definitelyAssigned = true;
                     break;
                 case BoundBranchOnStatementNode boundBranchOn when boundBranchOn.Outcome == outcome:
-                    if (!definitelyAssigned && flowGraph.Vertices[vertex].IsStory)
+                    if (!definitelyAssigned && boundBranchOn.Outcome.DefaultOption is null && flowGraph.Vertices[vertex].IsStory)
                     {
                         if (outcome is SpectrumSymbol)
                         {
