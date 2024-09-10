@@ -3,6 +3,7 @@ using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
@@ -147,35 +148,40 @@ public sealed class StoryGraphEmitter(FlowGraph flowGraph, Settings settings, In
         writer.Write(typeof(StoryEdge).FullName);
         writer.Write("[] incomingEdges = ");
 
-        // again, wrong, but me no care right now
-        Debug.Assert(flowGraph.IsConformable);
-        int startVertex = flowGraph.GetStoryStartVertex();
-
-        if (vertex.Index == startVertex)
-        {
-            writer.Write("global::");
-            writer.Write(typeof(Array).FullName);
-            writer.Write(".Empty<global::");
-            writer.Write(typeof(StoryEdge).FullName);
-            writer.Write(">();");
-            return;
-        }
-
         writer.WriteLine();
         writer.WriteLine('{');
         writer.Indent++;
 
-        foreach (FlowEdge edge in reverseGraph.OutgoingEdges[vertex.Index])
+        foreach (FlowEdge edge in flowGraph.StartEdges)
         {
-            writer.Write("new global::");
-            writer.Write(typeof(StoryEdge).FullName);
-            writer.Write('(');
-            writer.Write(vertex.Index); // toVertex
-            writer.Write(", ");
-            writer.Write(edge.ToVertex); // fromVertex
-            writer.Write(", ");
-            writer.Write(edge.IsWeak ? "true" : "false");
-            writer.WriteLine("),");
+            if (edge.ToVertex == vertex.Index)
+            {
+                writer.Write("new global::");
+                writer.Write(typeof(StoryEdge).FullName);
+                writer.Write('(');
+                writer.Write(vertex.Index); // toVertex
+                writer.Write(", ");
+                writer.Write(Constants.StartState); // fromVertex
+                writer.Write(", ");
+                writer.Write(edge.IsWeak ? "true" : "false");
+                writer.WriteLine("),");
+            }
+        }
+
+        if (reverseGraph.OutgoingEdges.TryGetValue(vertex.Index, out ImmutableList<FlowEdge>? edges))
+        {
+            foreach (FlowEdge edge in edges)
+            {
+                writer.Write("new global::");
+                writer.Write(typeof(StoryEdge).FullName);
+                writer.Write('(');
+                writer.Write(vertex.Index); // toVertex
+                writer.Write(", ");
+                writer.Write(edge.ToVertex); // fromVertex
+                writer.Write(", ");
+                writer.Write(edge.IsWeak ? "true" : "false");
+                writer.WriteLine("),");
+            }
         }
 
         writer.Indent--;
@@ -256,9 +262,9 @@ public sealed class StoryGraphEmitter(FlowGraph flowGraph, Settings settings, In
             writer.Write("] = new global::");
             writer.Write(typeof(StoryEdge).FullName);
             writer.Write('(');
-            writer.Write(Constants.StartState);
-            writer.Write(", ");
             writer.Write(edge.ToVertex);
+            writer.Write(", ");
+            writer.Write(Constants.StartState);
             writer.Write(", ");
             writer.Write(edge.IsWeak ? "true" : "false");
             writer.WriteLine(");");

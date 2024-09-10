@@ -1091,7 +1091,8 @@ public sealed class EmitterTests
         }
 
         AssertOutgoingEdgesAre(expectedVertices[0], expectedVertices[1]);
-        Assert.AreEqual(0, storyGraph.Vertices[expectedVertices[0]].IncomingEdges.Count);
+        Assert.AreEqual(1, storyGraph.Vertices[expectedVertices[0]].IncomingEdges.Count);
+        Assert.AreEqual(-2, storyGraph.Vertices[expectedVertices[0]].IncomingEdges[0].FromVertex);
 
         AssertOutgoingEdgesAre(expectedVertices[1], expectedVertices[2], expectedVertices[3]);
         AssertIncomingEdgesAre(expectedVertices[1], expectedVertices[0]);
@@ -1188,7 +1189,7 @@ public sealed class EmitterTests
         MethodInfo? createMethod = storyGraphType.GetMethod("CreateStoryGraph");
         Assert.IsNotNull(createMethod);
 
-        StoryGraph<int, int>? storyGraph = createMethod.Invoke(null, Array.Empty<object?>()) as StoryGraph<int, int>;
+        StoryGraph<int, int>? storyGraph = createMethod.Invoke(null, []) as StoryGraph<int, int>;
         Assert.IsNotNull(storyGraph);
 
         Assert.IsFalse(storyGraph.Vertices.ContainsKey(code.IndexOf("branchon X")));
