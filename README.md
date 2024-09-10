@@ -13,13 +13,14 @@ Historia is a special kind of language to express branching stories for games in
 - [x] `enum` types
 - [x] Scenes other than `main` scene
 - [x] Global `outcome`s
-- [ ] Build
+- [ ] Checkpoints
+- [ ] Sets
 - [ ] Splitting Historia code across multiple files
 
 ### Framework features
 - [ ] Visual Studio language extension
-- [ ] Immutable story classes
-- [ ] Generating flow graphs
+- [x] Immutable story classes
+- [x] Generating flow graphs
 - [ ] Dynamic compilation
 - [ ] Analysis features
 
@@ -29,4 +30,4 @@ Historia is a special kind of language to express branching stories for games in
 - [ ] `branchon` with more than one outcome and more than one option per case
 
 ### More
-- [ ] Inputs
+- [ ] Finish speccing
