@@ -7,6 +7,7 @@ using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Phantonia.Historia.Language.FlowAnalysis;
@@ -148,7 +149,7 @@ public sealed partial class FlowAnalyzer
             Kind = FlowVertexKind.Visible,
         });
 
-        FlowGraph semanticCopy = FlowGraph.CreateSimpleFlowGraph(new FlowVertex
+        FlowGraph semanticCopy = FlowGraph.CreateSimpleSemanticFlowGraph(new FlowVertex
         {
             Index = loopSwitchStatement.Index - 1,
             AssociatedStatement = loopSwitchStatement,
@@ -235,7 +236,14 @@ public sealed partial class FlowAnalyzer
             };
         }
 
+        Debug.Assert(flowGraph.IsConformable);
+        int startVertex = flowGraph.GetStoryStartVertex();
+
         flowGraph = semanticCopy.Append(flowGraph);
+        flowGraph = flowGraph with
+        {
+            StartEdges = flowGraph.StartEdges.Add(FlowEdge.CreateWeakTo(startVertex)),
+        };
 
         return flowGraph;
     }

@@ -27,6 +27,13 @@ public sealed record FlowGraph
         Vertices = Empty.Vertices.Add(vertex.Index, vertex),
     };
 
+    public static FlowGraph CreateSimpleSemanticFlowGraph(FlowVertex vertex) => Empty with
+    {
+        StartEdges = [FlowEdge.CreatePurelySemanticTo(vertex.Index)],
+        OutgoingEdges = Empty.OutgoingEdges.Add(vertex.Index, [FlowEdge.CreatePurelySemanticTo(FinalVertex)]),
+        Vertices = Empty.Vertices.Add(vertex.Index, vertex),
+    };
+
     private FlowGraph() { }
 
     public Edges OutgoingEdges { get; init; } = Edges.Empty;

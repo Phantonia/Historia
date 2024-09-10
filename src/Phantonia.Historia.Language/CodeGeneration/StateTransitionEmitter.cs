@@ -113,7 +113,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
     private void GenerateOutputTransition(int index, ImmutableList<FlowEdge> edges)
     {
         Debug.Assert(flowGraph.OutgoingEdges[index].Count(o => o.IsStory) == 1);
-        GenerateTransitionTo(edges[0].ToVertex);
+        GenerateTransitionTo(edges.First(e => e.IsStory).ToVertex);
     }
 
     private void GenerateSwitchTransition(SwitchStatementNode switchStatement, ImmutableList<FlowEdge> edges)
@@ -389,7 +389,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
 
         Debug.Assert(edges.Count == 1);
 
-        GenerateTransitionTo(edges[0].ToVertex);
+        GenerateTransitionTo(edges.First(e => e.IsStory).ToVertex);
     }
 
     private void GenerateSpectrumAdjustmentTransition(BoundSpectrumAdjustmentStatementNode spectrumAdjustment, ImmutableList<FlowEdge> edges)
@@ -413,7 +413,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
 
         Debug.WriteLine(edges.Count == 1);
 
-        GenerateTransitionTo(edges[0].ToVertex);
+        GenerateTransitionTo(edges.First(e => e.IsStory).ToVertex);
     }
 
     private void GenerateCallerTrackerTransition(CallerTrackerStatementNode trackerStatement, ImmutableList<FlowEdge> edges)
@@ -424,7 +424,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
         writer.Write(trackerStatement.CallSiteIndex);
         writer.WriteLine(';');
 
-        GenerateTransitionTo(edges[0].ToVertex);
+        GenerateTransitionTo(edges.First(e => e.IsStory).ToVertex);
     }
 
     private void GenerateCallerResolutionTransition(CallerResolutionStatementNode resolutionStatement, ImmutableList<FlowEdge> edges)
