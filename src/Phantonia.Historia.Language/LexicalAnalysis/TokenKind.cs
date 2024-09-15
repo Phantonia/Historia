@@ -42,6 +42,7 @@ public enum TokenKind
     WeakenKeyword,
     ByKeyword,
     CallKeyword,
+    CheckpointKeyword,
 
     // literals
     Identifier,

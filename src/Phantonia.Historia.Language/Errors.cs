@@ -67,6 +67,16 @@ public static class Errors
         };
     }
 
+    public static Error ExpectedVisibleStatementAsCheckpoint(Token unexpectedToken)
+    {
+        return new Error
+        {
+            ErrorMessage = $"The 'checkpoint' keyword is only valid for visible statements, so expected one of the following keywords: " +
+                $"'output', 'switch', 'loop switch', instead got '{unexpectedToken.Text}'",
+            Index = unexpectedToken.Index,
+        };
+    }
+
     public static Error SettingDoesNotExist(Token identifierToken)
     {
         Debug.Assert(identifierToken is { Kind: TokenKind.Identifier });

@@ -15,6 +15,8 @@ public record SwitchStatementNode : StatementNode, IOutputStatementNode
 
     public required ImmutableArray<SwitchOptionNode> Options { get; init; }
 
+    public required bool IsCheckpoint { get; init; }
+
     public override IEnumerable<SyntaxNode> Children
     {
         get

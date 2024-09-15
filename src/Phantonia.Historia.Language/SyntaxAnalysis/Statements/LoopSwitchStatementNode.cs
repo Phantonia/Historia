@@ -13,6 +13,8 @@ public sealed record LoopSwitchStatementNode : StatementNode, IOutputStatementNo
 
     public required ImmutableArray<LoopSwitchOptionNode> Options { get; init; }
 
+    public required bool IsCheckpoint { get; init; }
+
     public override IEnumerable<SyntaxNode> Children
     {
         get

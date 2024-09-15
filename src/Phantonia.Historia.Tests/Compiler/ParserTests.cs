@@ -1034,4 +1034,86 @@ public sealed class ParserTests
         Assert.AreEqual(LoopSwitchOptionKind.Loop, loopSwitch.Options[1].Kind);
         Assert.AreEqual(LoopSwitchOptionKind.Final, loopSwitch.Options[2].Kind);
     }
+
+    [TestMethod]
+    public void TestValidCheckpoints()
+    {
+        string code =
+            """
+            scene main
+            {
+                checkpoint output 0;
+            
+                checkpoint switch (1)
+                {
+                    option (1) { }
+                    option (1) { }
+                }
+            
+                checkpoint loop switch (2)
+                {
+                    option (2) { }
+                    final option (2) { }
+                }
+
+                output 3;
+            
+                switch (4)
+                {
+                    option (4) { }
+                    option (4) { }
+                }
+            
+                loop switch (5)
+                {
+                    option (5) { }
+                    final option (5) { }
+                }
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = parser.Parse();
+        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[0];
+
+        Assert.AreEqual(6, mainScene.Body.Statements.Length);
+
+        Assert.IsTrue(mainScene.Body.Statements[0] is OutputStatementNode { IsCheckpoint: true });
+        Assert.IsTrue(mainScene.Body.Statements[1] is SwitchStatementNode { IsCheckpoint: true });
+        Assert.IsTrue(mainScene.Body.Statements[2] is LoopSwitchStatementNode { IsCheckpoint: true });
+        Assert.IsTrue(mainScene.Body.Statements[3] is OutputStatementNode { IsCheckpoint: false });
+        Assert.IsTrue(mainScene.Body.Statements[4] is SwitchStatementNode { IsCheckpoint: false });
+        Assert.IsTrue(mainScene.Body.Statements[5] is LoopSwitchStatementNode { IsCheckpoint: false });
+    }
+
+    [TestMethod]
+    public void TestInvalidCheckpoints()
+    {
+        string code =
+            """
+            scene main
+            {
+                checkpoint outcome X(A, B); // error: can't have outcome after checkpoint
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+
+        List<Error> errors = [];
+        parser.ErrorFound += errors.Add;
+
+        _ = parser.Parse();
+
+        Assert.AreEqual(1, errors.Count);
+        Assert.AreEqual(Errors.ExpectedVisibleStatementAsCheckpoint(new Token
+        {
+            Index = code.IndexOf("outcome"),
+            Kind = TokenKind.OutcomeKeyword,
+            Text = "outcome",
+        }), errors[0]);
+    }
 }

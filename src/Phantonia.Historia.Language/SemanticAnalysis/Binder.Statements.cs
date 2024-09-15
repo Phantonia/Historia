@@ -188,6 +188,7 @@ public sealed partial class Binder
                 OutputExpression = outputExpression,
                 Options = [.. boundOptions],
                 Outcome = outcome,
+                IsCheckpoint = switchStatement.IsCheckpoint,
                 Index = switchStatement.Index,
             };
         }

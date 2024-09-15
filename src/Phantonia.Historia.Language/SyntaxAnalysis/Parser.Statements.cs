@@ -43,11 +43,13 @@ public sealed partial class Parser
         switch (tokens[index])
         {
             case { Kind: TokenKind.OutputKeyword }:
-                return ParseOutputStatement(ref index);
+                return ParseOutputStatement(ref index, isCheckpoint: false);
             case { Kind: TokenKind.SwitchKeyword }:
-                return ParseSwitchStatement(ref index);
+                return ParseSwitchStatement(ref index, isCheckpoint: false);
             case { Kind: TokenKind.LoopKeyword }:
-                return ParseLoopSwitchStatement(ref index);
+                return ParseLoopSwitchStatement(ref index, isCheckpoint: false);
+            case { Kind: TokenKind.CheckpointKeyword }:
+                return ParseCheckpointStatement(ref index);
             case { Kind: TokenKind.BranchOnKeyword }:
                 return ParseBranchOnStatement(ref index);
             case { Kind: TokenKind.CallKeyword }:
@@ -92,7 +94,7 @@ public sealed partial class Parser
         }
     }
 
-    private OutputStatementNode? ParseOutputStatement(ref int index)
+    private OutputStatementNode? ParseOutputStatement(ref int index, bool isCheckpoint)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.OutputKeyword);
 
@@ -111,11 +113,12 @@ public sealed partial class Parser
         return new OutputStatementNode
         {
             OutputExpression = outputExpression,
+            IsCheckpoint = isCheckpoint,
             Index = nodeIndex,
         };
     }
 
-    private SwitchStatementNode? ParseSwitchStatement(ref int index)
+    private SwitchStatementNode? ParseSwitchStatement(ref int index, bool isCheckpoint)
     {
         int nodeIndex = tokens[index].Index;
 
@@ -156,6 +159,7 @@ public sealed partial class Parser
             Name = name,
             OutputExpression = expression,
             Options = (ImmutableArray<SwitchOptionNode>)optionNodes,
+            IsCheckpoint = isCheckpoint,
             Index = nodeIndex,
         };
     }
@@ -210,7 +214,7 @@ public sealed partial class Parser
         return optionBuilder.ToImmutable();
     }
 
-    private LoopSwitchStatementNode? ParseLoopSwitchStatement(ref int index)
+    private LoopSwitchStatementNode? ParseLoopSwitchStatement(ref int index, bool isCheckpoint)
     {
         int nodeIndex = tokens[index].Index;
 
@@ -243,6 +247,7 @@ public sealed partial class Parser
         {
             OutputExpression = expression,
             Options = (ImmutableArray<LoopSwitchOptionNode>)optionNodes,
+            IsCheckpoint = isCheckpoint,
             Index = nodeIndex,
         };
     }
@@ -307,6 +312,59 @@ public sealed partial class Parser
         }
 
         return optionBuilder.ToImmutable();
+    }
+
+    private StatementNode? ParseCheckpointStatement(ref int index)
+    {
+        Debug.Assert(tokens[index].Kind == TokenKind.CheckpointKeyword);
+
+        int nodeIndex = tokens[index].Index;
+        index++;
+
+        switch (tokens[index])
+        {
+            case { Kind: TokenKind.OutputKeyword }:
+                OutputStatementNode? outputStatement = ParseOutputStatement(ref index, isCheckpoint: true);
+
+                if (outputStatement is not null)
+                {
+                    outputStatement = outputStatement with
+                    {
+                        Index = nodeIndex,
+                    };
+                }
+
+                return outputStatement;
+            case { Kind: TokenKind.SwitchKeyword }:
+                SwitchStatementNode? switchStatement = ParseSwitchStatement(ref index, isCheckpoint: true);
+
+                if (switchStatement is not null)
+                {
+                    switchStatement = switchStatement with
+                    {
+                        Index = nodeIndex,
+                    };
+                }
+
+                return switchStatement;
+            case { Kind: TokenKind.LoopKeyword }:
+                LoopSwitchStatementNode? loopSwitchStatement = ParseLoopSwitchStatement(ref index, isCheckpoint: true);
+
+                if (loopSwitchStatement is not null)
+                {
+                    loopSwitchStatement = loopSwitchStatement with
+                    {
+                        Index = nodeIndex,
+                    };
+                }
+
+                return loopSwitchStatement;
+            default:
+                ErrorFound?.Invoke(Errors.ExpectedVisibleStatementAsCheckpoint(tokens[index]));
+                
+                // ignore that we found a 'checkpoint' keyword and just try again
+                return ParseStatement(ref index);
+        }
     }
 
     private BranchOnStatementNode? ParseBranchOnStatement(ref int index)
