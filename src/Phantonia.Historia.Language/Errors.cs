@@ -412,6 +412,28 @@ public static class Errors
         };
     }
 
+    public static Error OutcomeIsLocked(string outcomeName, IEnumerable<string> callStack, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"The outcome '{outcomeName}' cannot be used anymore because it is locked through the following scene calls: {string.Join(", ", callStack.Reverse())}. " +
+                $"Outcomes get locked when they are not public and their value might pass a checkpoint threshold. " +
+                $"To fix this problem, consider turning this outcome into a public outcome",
+            Index = index,
+        };
+    }
+
+    public static Error SpectrumIsLocked(string spectrumName, IEnumerable<string> callStack, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"The spectrum '{spectrumName}' cannot be used anymore because it is locked through the following scene calls: {string.Join(", ", callStack.Reverse())}. " +
+                $"Spectrums get locked when they are not public and their value might pass a checkpoint threshold. " +
+                $"To fix this problem, consider turning this spectrum into a public spectrum",
+            Index = index,
+        };
+    }
+
     public static Error UnionHasDuplicateSubtype(string unionName, string typeName, int index)
     {
         return new Error

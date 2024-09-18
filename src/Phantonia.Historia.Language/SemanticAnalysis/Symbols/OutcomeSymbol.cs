@@ -10,7 +10,7 @@ public record OutcomeSymbol : Symbol
 
     public required bool AlwaysAssigned { get; init; }
 
-    public required bool Public { get; init; }
+    public required bool IsPublic { get; init; }
 
     public string? DefaultOption { get; init; }
 

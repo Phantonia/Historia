@@ -9,11 +9,12 @@ namespace Phantonia.Historia.Language.FlowAnalysis;
 
 public sealed partial class FlowAnalyzer
 {
-    private void PerformReachabilityAnalysis(IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs)
+    private ImmutableDictionary<int, IEnumerable<OutcomeSymbol>> PerformReachabilityAnalysis(IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs)
     {
         SceneSymbol mainScene = (SceneSymbol)symbolTable["main"];
         VertexData defaultVertexData = GetDefaultData();
-        _ = ProcessScene(sceneFlowGraphs[mainScene], defaultVertexData, sceneFlowGraphs, [mainScene]);
+        VertexData finalVertexData = ProcessScene(sceneFlowGraphs[mainScene], defaultVertexData, sceneFlowGraphs, [mainScene]);
+        return finalVertexData.DefinitelyAssignedOutcomesAtCheckpoints;
     }
 
     private VertexData GetDefaultData()
@@ -29,8 +30,8 @@ public sealed partial class FlowAnalyzer
                     {
                         outcomes.Add(outcomeSymbol, new OutcomeData
                         {
-                            DefinitelyAssigned = true,
-                            PossiblyAssigned = true,
+                            IsDefinitelyAssigned = true,
+                            IsPossiblyAssigned = true,
                         });
                     }
                     else
@@ -45,6 +46,7 @@ public sealed partial class FlowAnalyzer
         return new VertexData
         {
             Outcomes = outcomes.ToImmutable(),
+            DefinitelyAssignedOutcomesAtCheckpoints = ImmutableDictionary<int, IEnumerable<OutcomeSymbol>>.Empty,
         };
     }
 
@@ -96,17 +98,38 @@ public sealed partial class FlowAnalyzer
         {
             bool definitelyAssigned = true;
             bool possiblyAssigned = false;
+            bool locked = false;
 
             foreach (VertexData data in previousData)
             {
-                if (!data.Outcomes[outcome].DefinitelyAssigned)
+                if (!data.Outcomes[outcome].IsDefinitelyAssigned)
                 {
                     definitelyAssigned = false;
                 }
 
-                if (data.Outcomes[outcome].PossiblyAssigned)
+                if (data.Outcomes[outcome].IsPossiblyAssigned)
                 {
                     possiblyAssigned = true;
+                }
+
+                if (data.Outcomes[outcome].IsLocked)
+                {
+                    locked = true;
+                }
+            }
+
+            void ErrorOnLocked(int index)
+            {
+                if (locked)
+                {
+                    if (outcome is SpectrumSymbol)
+                    {
+                        ErrorFound?.Invoke(Errors.SpectrumIsLocked(outcome.Name, callStack.Select(s => s.Name), index));
+                    }
+                    else
+                    {
+                        ErrorFound?.Invoke(Errors.OutcomeIsLocked(outcome.Name, callStack.Select(s => s.Name), index));
+                    }
                 }
             }
 
@@ -118,10 +141,13 @@ public sealed partial class FlowAnalyzer
                         ErrorFound?.Invoke(Errors.OutcomeMightBeAssignedMoreThanOnce(outcome.Name, callStack.Select(s => s.Name), boundAssignment.Index));
                     }
 
+                    ErrorOnLocked(boundAssignment.Index);
+
                     definitelyAssigned = true;
                     possiblyAssigned = true;
                     break;
                 case BoundSpectrumAdjustmentStatementNode boundAdjustment when boundAdjustment.Spectrum == outcome:
+                    ErrorOnLocked(boundAdjustment.Index);
                     definitelyAssigned = true;
                     break;
                 case BoundBranchOnStatementNode boundBranchOn when boundBranchOn.Outcome == outcome:
@@ -136,6 +162,9 @@ public sealed partial class FlowAnalyzer
                             ErrorFound?.Invoke(Errors.OutcomeNotDefinitelyAssigned(outcome.Name, callStack.Select(s => s.Name), boundBranchOn.Index));
                         }
                     }
+
+                    ErrorOnLocked(boundBranchOn.Index);
+
                     break;
             }
 
@@ -143,10 +172,55 @@ public sealed partial class FlowAnalyzer
             {
                 Outcomes = thisVertexData.Outcomes.SetItem(outcome, new OutcomeData
                 {
-                    DefinitelyAssigned = (vertex == FlowGraph.FinalVertex || flowGraph.Vertices[vertex].IsStory) && definitelyAssigned,
-                    PossiblyAssigned = possiblyAssigned,
+                    IsDefinitelyAssigned = (vertex == FlowGraph.FinalVertex || flowGraph.Vertices[vertex].IsStory) && definitelyAssigned,
+                    IsPossiblyAssigned = possiblyAssigned,
+                    IsLocked = locked,
                 }),
             };
+        }
+
+        thisVertexData = thisVertexData with
+        {
+            DefinitelyAssignedOutcomesAtCheckpoints = previousData.First().DefinitelyAssignedOutcomesAtCheckpoints,
+        };
+
+        foreach (VertexData previousVertexData in previousData.Skip(1))
+        {
+            thisVertexData = thisVertexData with
+            {
+                DefinitelyAssignedOutcomesAtCheckpoints = thisVertexData.DefinitelyAssignedOutcomesAtCheckpoints.AddRange(previousVertexData.DefinitelyAssignedOutcomesAtCheckpoints),
+            };
+        }
+
+        if (statement is IOutputStatementNode { IsCheckpoint: true })
+        {
+            thisVertexData = thisVertexData with
+            {
+                DefinitelyAssignedOutcomesAtCheckpoints
+                    = thisVertexData.DefinitelyAssignedOutcomesAtCheckpoints
+                                    .SetItem(vertex, thisVertexData.Outcomes.Keys.Where(o => thisVertexData.Outcomes[o].IsDefinitelyAssigned)),
+            };
+
+            foreach (OutcomeSymbol definitelyAssignedOutcome in thisVertexData.DefinitelyAssignedOutcomesAtCheckpoints[vertex])
+            {
+                if (definitelyAssignedOutcome.IsPublic)
+                {
+                    continue;
+                }
+
+                OutcomeData updatedOutcomeData = thisVertexData.Outcomes[definitelyAssignedOutcome] with
+                {
+                    IsLocked = true,
+                };
+
+                ImmutableDictionary<OutcomeSymbol, OutcomeData> updatedOutcomeTable
+                    = thisVertexData.Outcomes.SetItem(definitelyAssignedOutcome, updatedOutcomeData);
+
+                thisVertexData = thisVertexData with
+                {
+                    Outcomes = updatedOutcomeTable,
+                };
+            }
         }
 
         if (statement is BoundCallStatementNode { Scene: SceneSymbol calledScene })
@@ -164,12 +238,16 @@ public sealed partial class FlowAnalyzer
     private readonly record struct VertexData
     {
         public ImmutableDictionary<OutcomeSymbol, OutcomeData> Outcomes { get; init; }
+
+        public ImmutableDictionary<int, IEnumerable<OutcomeSymbol>> DefinitelyAssignedOutcomesAtCheckpoints { get; init; }
     }
 
     private readonly record struct OutcomeData
     {
-        public bool DefinitelyAssigned { get; init; }
+        public bool IsDefinitelyAssigned { get; init; }
 
-        public bool PossiblyAssigned { get; init; }
+        public bool IsPossiblyAssigned { get; init; }
+
+        public bool IsLocked { get; init; }
     }
 }

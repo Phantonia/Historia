@@ -32,7 +32,7 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, IndentedTextWr
                 case EnumTypeSymbol enumSymbol:
                     GenerateEnumDeclaration(enumSymbol);
                     break;
-                case OutcomeSymbol { Public: true } outcomeSymbol:
+                case OutcomeSymbol { IsPublic: true } outcomeSymbol:
                     GenerateOutcomeEnum(outcomeSymbol);
                     break;
                 default:

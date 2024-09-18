@@ -1071,4 +1071,96 @@ public sealed class FlowAnalyzerTests
         Assert.AreEqual(secondError, errors[1]);
         Assert.AreEqual(thirdError, errors[2]);
     }
+
+    [TestMethod]
+    public void TestCheckpointLocking()
+    {
+        string code =
+            """
+            scene main
+            {
+                outcome X(A, B);
+                outcome Y(A, B);
+                outcome Z(A, B);
+
+                checkpoint output 0;
+            
+                X = A;
+            
+                branchon X // #0 => okay
+                {
+                    option A { }
+                    option B { }
+                }
+            
+                checkpoint output 1;
+
+                branchon X // #1 => not okay, X got locked by checkpoint output 1
+                {
+                    option A { }
+                    option B { }
+                }
+            }
+            """;
+
+        FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
+
+        List<Error> errors = [];
+        flowAnalyzer.ErrorFound += errors.Add;
+
+        _ = flowAnalyzer.PerformFlowAnalysis();
+
+        Error expectedError = Errors.OutcomeIsLocked("X", ["main"], code.IndexOf("branchon X // #1"));
+
+        Assert.AreEqual(1, errors.Count);
+        Assert.AreEqual(expectedError, errors[0]);
+    }
+
+    [TestMethod]
+    public void TestCheckpointsAndLoopSwitches()
+    {
+        string code =
+            """
+            scene main
+            {
+                outcome X(A, B);
+
+                X = A;
+
+                loop switch (0)
+                {
+                    option (100)
+                    {
+                        branchon X
+                        {
+                            option A { }
+                            option B { }
+                        }
+                    }
+
+                    option (101)
+                    {
+                        // checkpoint output 2;
+                    }
+
+                    final option (102)
+                    {
+                        // do nothing
+                    }
+                }
+            }
+            """;
+
+        FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
+
+        List<Error> errors = [];
+        flowAnalyzer.ErrorFound += errors.Add;
+
+        _ = flowAnalyzer.PerformFlowAnalysis();
+
+        Error expectedError = Errors.OutcomeIsLocked("X", ["main"], code.IndexOf("branchon X"));
+
+        Assert.AreEqual(1, errors.Count);
+        Assert.AreEqual(expectedError, errors[0]);
+    }
 }

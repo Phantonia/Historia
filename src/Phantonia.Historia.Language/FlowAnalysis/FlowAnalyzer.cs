@@ -58,7 +58,7 @@ public sealed partial class FlowAnalyzer
             };
         }
 
-        PerformReachabilityAnalysis(sceneFlowGraphs);
+        _ = PerformReachabilityAnalysis(sceneFlowGraphs);
 
         (FlowGraph mainFlowGraph, SymbolTable updatedSymbolTable) = MergeFlowGraphs(topologicalOrder, sceneFlowGraphs, referenceCounts);
 

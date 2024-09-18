@@ -118,7 +118,7 @@ public static class GeneralEmission
         // TODO: why is 'readOnly' unused?
         foreach (Symbol symbol in symbolTable.AllSymbols)
         {
-            if (symbol is not OutcomeSymbol { Public: true } outcome)
+            if (symbol is not OutcomeSymbol { IsPublic: true } outcome)
             {
                 continue;
             }
