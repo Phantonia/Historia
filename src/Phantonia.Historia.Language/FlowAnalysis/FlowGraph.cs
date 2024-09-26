@@ -112,8 +112,8 @@ public sealed record FlowGraph
 
             foreach (FlowEdge startEdge in graph.StartEdges)
             {
-                // the old edge kind overrides the startEdge kind - is that correct?
-                edges.Add(startEdge with { Kind = kind });
+                // we keep the old start edge kind - i think that's correct?
+                edges.Add(startEdge);
             }
         }
 

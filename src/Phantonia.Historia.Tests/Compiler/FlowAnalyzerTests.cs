@@ -1140,7 +1140,7 @@ public sealed class FlowAnalyzerTests
 
                     option (101)
                     {
-                        // checkpoint output 2;
+                        checkpoint output 2;
                     }
 
                     final option (102)

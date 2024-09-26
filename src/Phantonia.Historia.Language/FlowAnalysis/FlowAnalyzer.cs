@@ -253,7 +253,7 @@ public sealed partial class FlowAnalyzer
         static FlowVertex SemantifyVertex(FlowVertex vertex) => vertex with
         {
             Kind = FlowVertexKind.PurelySemantic,
-            Index = vertex.Index - 1,
+            Index = vertex.Index != FlowGraph.FinalVertex ? vertex.Index - 1 : FlowGraph.FinalVertex,
         };
 
         ImmutableDictionary<int, FlowVertex> vertices
@@ -276,7 +276,7 @@ public sealed partial class FlowAnalyzer
                 return edge with
                 {
                     Kind = kind,
-                    ToVertex = edge.ToVertex - 1,
+                    ToVertex = edge.ToVertex != FlowGraph.FinalVertex ? edge.ToVertex - 1 : FlowGraph.FinalVertex,
                 };
             }
         }
@@ -285,7 +285,7 @@ public sealed partial class FlowAnalyzer
             = flowGraph.OutgoingEdges.Select(p => KeyValuePair.Create(p.Key - 1, p.Value.Select(e => SemantifyEdge(e)).ToImmutableList()))
                                      .ToImmutableDictionary();
 
-        IEnumerable<FlowEdge> newStartEdges = flowGraph.StartEdges.Select(e => e with { ToVertex = e.ToVertex - 1 });
+        IEnumerable<FlowEdge> newStartEdges = flowGraph.StartEdges.Select(e => e with { ToVertex = e.ToVertex != FlowGraph.FinalVertex ? e.ToVertex - 1 : FlowGraph.FinalVertex });
 
         return flowGraph with
         {

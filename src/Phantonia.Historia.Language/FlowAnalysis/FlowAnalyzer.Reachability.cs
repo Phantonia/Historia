@@ -70,6 +70,7 @@ public sealed partial class FlowAnalyzer
 
         foreach (int vertex in order.Skip(1))
         {
+            var x = reversedFlowGraph.OutgoingEdges[vertex].Where(e => e.IsSemantic);
             IEnumerable<VertexData> previousData = reversedFlowGraph.OutgoingEdges[vertex]
                                                                     .Where(e => e.IsSemantic)
                                                                     .Select(e => data[e.ToVertex]);
@@ -172,7 +173,9 @@ public sealed partial class FlowAnalyzer
             {
                 Outcomes = thisVertexData.Outcomes.SetItem(outcome, new OutcomeData
                 {
-                    IsDefinitelyAssigned = (vertex == FlowGraph.FinalVertex || flowGraph.Vertices[vertex].IsStory) && definitelyAssigned,
+                    // this was here for a reason but it's wrong
+                    // investigate further
+                    IsDefinitelyAssigned = /*(vertex == FlowGraph.FinalVertex || flowGraph.Vertices[vertex].IsStory) &&*/ definitelyAssigned,
                     IsPossiblyAssigned = possiblyAssigned,
                     IsLocked = locked,
                 }),
