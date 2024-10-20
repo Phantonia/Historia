@@ -12,8 +12,6 @@ public sealed partial class FlowAnalyzer
 {
     private (FlowGraph, SymbolTable) MergeFlowGraphs(IEnumerable<SceneSymbol> topologicalOrder, IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs, IReadOnlyDictionary<SceneSymbol, int> referenceCounts)
     {
-        SymbolTable symbolTable = this.symbolTable;
-
         Debug.Assert(topologicalOrder.First().Name == "main");
 
         FlowGraph mainFlowGraph = sceneFlowGraphs[topologicalOrder.First()];

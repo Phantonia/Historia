@@ -14,17 +14,8 @@ namespace Phantonia.Historia.Language.FlowAnalysis;
 
 // there is no abbreviation for this thing
 // always use its full name, i'm serious
-public sealed partial class FlowAnalyzer
+public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTable)
 {
-    public FlowAnalyzer(StoryNode story, SymbolTable symbolTable)
-    {
-        this.story = story;
-        this.symbolTable = symbolTable;
-    }
-
-    private readonly StoryNode story;
-    private readonly SymbolTable symbolTable;
-
     public event Action<Error>? ErrorFound;
 
     public FlowAnalysisResult PerformFlowAnalysis()
@@ -165,11 +156,11 @@ public sealed partial class FlowAnalyzer
 
             flowGraph = flowGraph.AppendToVertex(loopSwitchStatement.Index, nestedFlowGraph);
 
+            FlowGraph nestedSemanticCopy = CreateSemanticCopy(nestedFlowGraph);
+            semanticCopy = semanticCopy.AppendToVertex(loopSwitchStatement.Index - 1, nestedSemanticCopy);
+
             if (option.Kind != LoopSwitchOptionKind.Final)
             {
-                FlowGraph nestedSemanticCopy = CreateSemanticCopy(nestedFlowGraph);
-                semanticCopy = semanticCopy.AppendToVertex(loopSwitchStatement.Index - 1, nestedSemanticCopy);
-
                 // redirect final edges as weak edges back up
                 foreach (int vertex in flowGraph.OutgoingEdges.Where(p => p.Value.Contains(FlowGraph.FinalEdge)).Select(p => p.Key))
                 {

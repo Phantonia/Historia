@@ -91,13 +91,13 @@ public sealed record FlowGraph
 
         foreach ((int currentVertex, List<FlowEdge> edges) in tempEdges)
         {
-            FlowEdgeKind kind = FlowEdgeKind.None;
+            FlowEdgeKind outgoingKind = FlowEdgeKind.None;
 
             for (int i = 0; i < edges.Count; i++)
             {
                 if (edges[i].ToVertex == FinalVertex)
                 {
-                    kind = edges[i].Kind;
+                    outgoingKind = edges[i].Kind;
                     edges.RemoveAt(i);
                     break;
                 }
@@ -105,15 +105,26 @@ public sealed record FlowGraph
 
             Debug.Assert(edges.All(e => e.ToVertex != FinalVertex));
 
-            if (kind == FlowEdgeKind.None)
+            if (outgoingKind == FlowEdgeKind.None)
             {
                 continue;
             }
 
             foreach (FlowEdge startEdge in graph.StartEdges)
             {
+                // if any of the two kinds is semantic, it's probably for a reason, so our new combined edge is also semantic
+                // else we keep the outgoing kind
+                // purely empirically, this seems to work but we might have to come back to this, idk
+                FlowEdgeKind incomingKind = startEdge.Kind;
+                FlowEdgeKind newKind = (outgoingKind, incomingKind) switch
+                {
+                    (FlowEdgeKind.Semantic, _) => FlowEdgeKind.Semantic,
+                    (_, FlowEdgeKind.Semantic) => FlowEdgeKind.Semantic,
+                    _ => outgoingKind,
+                };
+
                 // we keep the old start edge kind - i think that's correct?
-                edges.Add(startEdge);
+                edges.Add(startEdge with { Kind = newKind });
             }
         }
 
