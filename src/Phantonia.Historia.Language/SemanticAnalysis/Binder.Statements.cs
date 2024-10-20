@@ -2,9 +2,7 @@
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
-using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 
@@ -16,7 +14,7 @@ public sealed partial class Binder
     {
         table = table.OpenScope();
 
-        List<StatementNode> statements = body.Statements.ToList();
+        List<StatementNode> statements = [.. body.Statements];
 
         for (int i = 0; i < statements.Count; i++)
         {
@@ -29,7 +27,7 @@ public sealed partial class Binder
 
         return (table, body with
         {
-            Statements = statements.ToImmutableArray(),
+            Statements = [.. statements],
         });
     }
 
