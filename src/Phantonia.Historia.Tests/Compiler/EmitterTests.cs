@@ -1240,14 +1240,14 @@ public sealed class EmitterTests
 
             Assert.IsNotNull(checkpoint0);
 
-            object? outcomeX = checkpointType.GetProperty("X", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint0);
+            object? outcomeX = checkpointType.GetProperty("OutcomeX", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint0);
             Assert.IsNotNull(outcomeX);
             CheckpointOutcomeKind? outcomeKind = (CheckpointOutcomeKind?)outcomeX.GetType().GetProperty("Kind", BindingFlags.Public | BindingFlags.Instance)?.GetValue(outcomeX);
             Assert.AreEqual(CheckpointOutcomeKind.Required, outcomeKind);
             object? value = outcomeX.GetType().GetProperty("Option", BindingFlags.Public | BindingFlags.Instance)?.GetValue(outcomeX);
             Assert.AreEqual(0, (int)value!); // unset
 
-            object? spectrumY = checkpointType.GetProperty("Y", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint0);
+            object? spectrumY = checkpointType.GetProperty("SpectrumY", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint0);
             Assert.IsNotNull(spectrumY);
             outcomeKind = (CheckpointOutcomeKind?)spectrumY.GetType().GetProperty("Kind", BindingFlags.Public | BindingFlags.Instance)?.GetValue(spectrumY);
             Assert.IsNotNull(outcomeKind);
@@ -1263,14 +1263,14 @@ public sealed class EmitterTests
 
             Assert.IsNotNull(checkpoint1);
 
-            object? outcomeX = checkpointType.GetProperty("X", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint1);
+            object? outcomeX = checkpointType.GetProperty("OutcomeX", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint1);
             Assert.IsNotNull(outcomeX);
             CheckpointOutcomeKind? outcomeKind = (CheckpointOutcomeKind?)outcomeX.GetType().GetProperty("Kind", BindingFlags.Public | BindingFlags.Instance)?.GetValue(outcomeX);
             Assert.AreEqual(CheckpointOutcomeKind.Required, outcomeKind);
             object? value = outcomeX.GetType().GetProperty("Option", BindingFlags.Public | BindingFlags.Instance)?.GetValue(outcomeX);
             Assert.AreEqual(0, (int)value!); // unset
 
-            object? spectrumY = checkpointType.GetProperty("Y", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint1);
+            object? spectrumY = checkpointType.GetProperty("SpectrumY", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint1);
             Assert.IsNotNull(spectrumY);
             outcomeKind = (CheckpointOutcomeKind?)spectrumY.GetType().GetProperty("Kind", BindingFlags.Public | BindingFlags.Instance)?.GetValue(spectrumY);
             Assert.IsNotNull(outcomeKind);

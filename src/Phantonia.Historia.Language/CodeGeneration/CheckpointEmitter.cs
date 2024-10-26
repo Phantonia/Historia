@@ -46,7 +46,7 @@ public sealed class CheckpointEmitter(
 
             if (symbol is SpectrumSymbol)
             {
-                writer.Write("public global::Phantonia.Historia.CheckpointSpectrum ");
+                writer.Write("public global::Phantonia.Historia.CheckpointSpectrum Spectrum");
                 writer.Write(symbol.Name);
                 writer.WriteLine(" { get; set; }");
 
@@ -56,9 +56,9 @@ public sealed class CheckpointEmitter(
             }
 
             writer.Write("public global::Phantonia.Historia.CheckpointOutcome<");
-            writer.Write(symbol is SpectrumSymbol ? "Spectrum" : "Outcome");
+            writer.Write("Outcome");
             writer.Write(symbol.Name);
-            writer.Write("> ");
+            writer.Write("> Outcome");
             writer.Write(symbol.Name);
             writer.WriteLine(" { get; set; }");
 
@@ -105,6 +105,7 @@ public sealed class CheckpointEmitter(
                 }
 
                 writer.Write("instance.");
+                writer.Write(symbol is SpectrumSymbol ? "Spectrum" : "Outcome");
                 writer.Write(symbol.Name);
                 writer.Write(" = ");
 
