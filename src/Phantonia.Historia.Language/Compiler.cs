@@ -80,7 +80,13 @@ public sealed class Compiler
 
         Debug.Assert(flowAnalysisResult.IsValid);
 
-        Emitter emitter = new(boundStory, settings, flowAnalysisResult.MainFlowGraph, flowAnalysisResult.SymbolTable, outputWriter);
+        Emitter emitter = new(
+            boundStory,
+            settings,
+            flowAnalysisResult.MainFlowGraph,
+            flowAnalysisResult.SymbolTable,
+            flowAnalysisResult.DefinitelyAssignedOutcomesAtCheckpoints,
+            outputWriter);
 
         emitter.GenerateOutputCode();
 

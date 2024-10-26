@@ -9,12 +9,12 @@ namespace Phantonia.Historia.Language.FlowAnalysis;
 
 public sealed partial class FlowAnalyzer
 {
-    private ImmutableDictionary<int, IEnumerable<OutcomeSymbol>> PerformReachabilityAnalysis(IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs)
+    private void PerformReachabilityAnalysis(IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs, out ImmutableDictionary<int, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtCheckpoints)
     {
         SceneSymbol mainScene = (SceneSymbol)symbolTable["main"];
         VertexData defaultVertexData = GetDefaultData();
         VertexData finalVertexData = ProcessScene(sceneFlowGraphs[mainScene], defaultVertexData, sceneFlowGraphs, [mainScene]);
-        return finalVertexData.DefinitelyAssignedOutcomesAtCheckpoints;
+        definitelyAssignedOutcomesAtCheckpoints = finalVertexData.DefinitelyAssignedOutcomesAtCheckpoints;
     }
 
     private VertexData GetDefaultData()

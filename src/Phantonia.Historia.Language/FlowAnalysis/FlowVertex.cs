@@ -14,6 +14,8 @@ public readonly record struct FlowVertex
 
     public bool IsStory => Kind is FlowVertexKind.Visible or FlowVertexKind.Invisible;
 
+    public bool IsCheckpoint => AssociatedStatement is IOutputStatementNode { IsCheckpoint: true };
+
     public required FlowVertexKind Kind { get; init; }
 
     private string GetDebuggerDisplay()

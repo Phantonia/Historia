@@ -1080,8 +1080,6 @@ public sealed class FlowAnalyzerTests
             scene main
             {
                 outcome X(A, B);
-                outcome Y(A, B);
-                outcome Z(A, B);
 
                 checkpoint output 0;
             

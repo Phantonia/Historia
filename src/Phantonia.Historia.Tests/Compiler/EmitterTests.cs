@@ -1202,4 +1202,83 @@ public sealed class EmitterTests
         Assert.IsTrue(storyGraph.ContainsEdge(code.IndexOf("output 11"), code.IndexOf("output 12")));
         Assert.IsTrue(storyGraph.ContainsEdge(code.IndexOf("output 11"), code.IndexOf("output 13")));
     }
+
+    [TestMethod]
+    public void TestCheckpointEmission()
+    {
+        string code =
+            """
+            public outcome X(A, B);
+            public spectrum Y(A <= 1/2, B);
+
+            scene main
+            {
+                X = A;
+
+                checkpoint output 0;
+
+                strengthen Y by 2;
+
+                checkpoint output 1;
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        Type checkpointType = DynamicCompiler.CompileAndGetType(resultCode, "HistoriaStoryCheckpoint");
+
+        MethodInfo? getForIndexMethod = checkpointType.GetMethod("GetForIndex");
+
+        {
+            object? checkpoint0 = getForIndexMethod?.Invoke(null, [code.IndexOf("checkpoint output 0")]);
+
+            Assert.IsNotNull(checkpoint0);
+
+            object? outcomeX = checkpointType.GetProperty("X", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint0);
+            Assert.IsNotNull(outcomeX);
+            CheckpointOutcomeKind? outcomeKind = (CheckpointOutcomeKind?)outcomeX.GetType().GetProperty("Kind", BindingFlags.Public | BindingFlags.Instance)?.GetValue(outcomeX);
+            Assert.AreEqual(CheckpointOutcomeKind.Required, outcomeKind);
+            object? value = outcomeX.GetType().GetProperty("Option", BindingFlags.Public | BindingFlags.Instance)?.GetValue(outcomeX);
+            Assert.AreEqual(0, (int)value!); // unset
+
+            object? spectrumY = checkpointType.GetProperty("Y", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint0);
+            Assert.IsNotNull(spectrumY);
+            outcomeKind = (CheckpointOutcomeKind?)spectrumY.GetType().GetProperty("Kind", BindingFlags.Public | BindingFlags.Instance)?.GetValue(spectrumY);
+            Assert.IsNotNull(outcomeKind);
+            Assert.AreEqual(CheckpointOutcomeKind.NotRequired, outcomeKind);
+            int? positiveCount = (int?)spectrumY.GetType().GetProperty("PositiveCount", BindingFlags.Public | BindingFlags.Instance)?.GetValue(spectrumY);
+            Assert.AreEqual(0, positiveCount);
+            int? totalCount = (int?)spectrumY.GetType().GetProperty("TotalCount", BindingFlags.Public | BindingFlags.Instance)?.GetValue(spectrumY);
+            Assert.AreEqual(0, totalCount);
+        }
+
+        {
+            object? checkpoint1 = getForIndexMethod?.Invoke(null, [code.IndexOf("checkpoint output 1")]);
+
+            Assert.IsNotNull(checkpoint1);
+
+            object? outcomeX = checkpointType.GetProperty("X", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint1);
+            Assert.IsNotNull(outcomeX);
+            CheckpointOutcomeKind? outcomeKind = (CheckpointOutcomeKind?)outcomeX.GetType().GetProperty("Kind", BindingFlags.Public | BindingFlags.Instance)?.GetValue(outcomeX);
+            Assert.AreEqual(CheckpointOutcomeKind.Required, outcomeKind);
+            object? value = outcomeX.GetType().GetProperty("Option", BindingFlags.Public | BindingFlags.Instance)?.GetValue(outcomeX);
+            Assert.AreEqual(0, (int)value!); // unset
+
+            object? spectrumY = checkpointType.GetProperty("Y", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint1);
+            Assert.IsNotNull(spectrumY);
+            outcomeKind = (CheckpointOutcomeKind?)spectrumY.GetType().GetProperty("Kind", BindingFlags.Public | BindingFlags.Instance)?.GetValue(spectrumY);
+            Assert.IsNotNull(outcomeKind);
+            Assert.AreEqual(CheckpointOutcomeKind.Required, outcomeKind);
+            int? positiveCount = (int?)spectrumY.GetType().GetProperty("PositiveCount", BindingFlags.Public | BindingFlags.Instance)?.GetValue(spectrumY);
+            Assert.AreEqual(0, positiveCount);
+            int? totalCount = (int?)spectrumY.GetType().GetProperty("TotalCount", BindingFlags.Public | BindingFlags.Instance)?.GetValue(spectrumY);
+            Assert.AreEqual(0, totalCount);
+        }
+    }
 }

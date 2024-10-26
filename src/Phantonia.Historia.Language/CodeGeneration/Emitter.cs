@@ -1,13 +1,22 @@
 ﻿using Phantonia.Historia.Language.FlowAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis;
 using System.CodeDom.Compiler;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
-public sealed class Emitter(StoryNode boundStory, Settings settings, FlowGraph flowGraph, SymbolTable symbolTable, TextWriter outputWriter)
+public sealed class Emitter(
+    StoryNode boundStory,
+    Settings settings,
+    FlowGraph flowGraph,
+    SymbolTable symbolTable,
+    ImmutableDictionary<int, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtCheckpoints,
+    TextWriter outputWriter)
 {
     private readonly IndentedTextWriter writer = new(outputWriter);
 
@@ -49,6 +58,9 @@ public sealed class Emitter(StoryNode boundStory, Settings settings, FlowGraph f
 
         StoryGraphEmitter storyGraphEmitter = new(flowGraph, settings, writer);
         storyGraphEmitter.GenerateStoryGraphClass();
+
+        CheckpointEmitter checkpointEmitter = new(flowGraph, symbolTable, settings, definitelyAssignedOutcomesAtCheckpoints, writer);
+        checkpointEmitter.GenerateCheckpointType();
 
         if (settings.Namespace != "")
         {
