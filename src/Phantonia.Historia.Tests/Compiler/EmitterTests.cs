@@ -1348,6 +1348,11 @@ public sealed class EmitterTests
 
         Assembly assembly = DynamicCompiler.Compile(resultCode);
 
+        Type? stateMachineType = assembly.GetType("HistoriaStoryStateMachine");
+        Assert.IsNotNull(stateMachineType);
+        IStoryStateMachine? stateMachine = (IStoryStateMachine?)Activator.CreateInstance(stateMachineType);
+        MethodInfo? restoreCheckpointMethod = stateMachineType?.GetMethod("RestoreCheckpoint", BindingFlags.Public | BindingFlags.Instance);
+
         Type? checkpointType = assembly.GetType("HistoriaStoryCheckpoint");
         Assert.IsNotNull(checkpointType);
 
@@ -1360,6 +1365,10 @@ public sealed class EmitterTests
         object? checkpoint = getForIndexMethod.Invoke(null, [index]);
         Assert.IsNotNull(checkpoint);
 
+        MethodInfo? isReadyMethod = checkpointType?.GetMethod("IsReady", BindingFlags.Public | BindingFlags.Instance);
+        Assert.AreEqual(false, isReadyMethod?.Invoke(checkpoint, []));
+        Assert.ThrowsException<TargetInvocationException>(() => restoreCheckpointMethod?.Invoke(stateMachine, [checkpoint]));
+
         // checkpoint.OutcomeX = checkpoint.OutcomeX.Assign(OutcomeX.A);
         PropertyInfo? outcomeXProperty = checkpoint.GetType().GetProperty("OutcomeX", BindingFlags.Public | BindingFlags.Instance);
         object? outcomeX = outcomeXProperty?.GetValue(checkpoint);
@@ -1367,17 +1376,19 @@ public sealed class EmitterTests
         object? assignedOutcomeX = outcomeX?.GetType().GetMethod("Assign", BindingFlags.Public | BindingFlags.Instance)?.Invoke(outcomeX, [optionA]);
         outcomeXProperty?.SetValue(checkpoint, assignedOutcomeX);
 
+        Assert.AreEqual(false, isReadyMethod?.Invoke(checkpoint, []));
+        Assert.ThrowsException<TargetInvocationException>(() => restoreCheckpointMethod?.Invoke(stateMachine, [checkpoint]));
+
         // checkpoint.SpectrumY = checkpoint.SpectrumY.Assign(2, 3);
         PropertyInfo? spectrumYProperty = checkpoint.GetType().GetProperty("SpectrumY", BindingFlags.Public | BindingFlags.Instance);
         CheckpointSpectrum spectrumY = (CheckpointSpectrum)spectrumYProperty?.GetValue(checkpoint)!;
         CheckpointSpectrum assignedSpectrumY = spectrumY.Assign(2, 3);
         spectrumYProperty?.SetValue(checkpoint, assignedSpectrumY);
 
+        Assert.AreEqual(true, isReadyMethod?.Invoke(checkpoint, []));
+
         // stateMachine.RestoreCheckpoint(checkpoint);
-        Type? stateMachineType = assembly.GetType("HistoriaStoryStateMachine");
-        Assert.IsNotNull(stateMachineType);
-        IStoryStateMachine? stateMachine = (IStoryStateMachine?)Activator.CreateInstance(stateMachineType);
-        stateMachineType?.GetMethod("RestoreCheckpoint", BindingFlags.Public | BindingFlags.Instance)?.Invoke(stateMachine, [checkpoint]);
+        restoreCheckpointMethod?.Invoke(stateMachine, [checkpoint]);
 
         // test that the outcome and spectrum are good
         for (int i = 0; i < 2; i++)

@@ -1,16 +1,21 @@
-﻿using Phantonia.Historia.Language.SemanticAnalysis;
-using Phantonia.Historia.Language.SyntaxAnalysis;
+﻿using Phantonia.Historia.Language.FlowAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis;
 using System.CodeDom.Compiler;
+using System.Linq;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
-public sealed class SnapshotEmitter(StoryNode boundStory, Settings settings, SymbolTable symbolTable, IndentedTextWriter writer)
+public sealed class SnapshotEmitter(FlowGraph flowGraph, Settings settings, SymbolTable symbolTable, IndentedTextWriter writer)
 {
     public void GenerateSnapshotClass()
     {
         GeneralEmission.GenerateClassHeader("Snapshot", settings, writer);
 
         writer.BeginBlock();
+
+        GenerateFromCheckpointMethod();
+
+        writer.WriteLine();
 
         GenerateConstructors();
 
@@ -33,6 +38,34 @@ public sealed class SnapshotEmitter(StoryNode boundStory, Settings settings, Sym
         GenerateExplicitInterfaceImplementations();
 
         writer.EndBlock(); // class
+    }
+
+    private void GenerateFromCheckpointMethod()
+    {
+        if (!flowGraph.Vertices.Any(v => v.Value.IsCheckpoint))
+        {
+            return;
+        }
+
+        writer.Write("public ");
+        writer.Write(settings.StoryName);
+        writer.Write("Snapshot FromCheckpoint(");
+        writer.Write(settings.StoryName);
+        writer.WriteLine("Checkpoint checkpoint)");
+
+        writer.BeginBlock();
+
+        // TODO: replace by actual logic to not allocate state machine
+
+        writer.Write(settings.StoryName);
+        writer.Write("StateMachine stateMachine = new ");
+        writer.Write(settings.StoryName);
+        writer.WriteLine("StateMachine();");
+
+        writer.WriteLine("stateMachine.RestoreCheckpoint(checkpoint);");
+        writer.WriteLine("return stateMachine.CreateSnapshot();");
+
+        writer.EndBlock();
     }
 
     private void GenerateConstructors()

@@ -172,6 +172,15 @@ public sealed class StateMachineEmitter(StoryNode boundStory, FlowGraph flowGrap
 
         writer.BeginBlock();
 
+        writer.WriteManyLines(
+            """
+            if (!checkpoint.IsReady())
+            {
+                throw new global::System.ArgumentException("Checkpoint is not ready, i.e. fully initialized");
+            }
+            """);
+        writer.WriteLine();
+
         writer.WriteLine("fields.state = checkpoint.Index;");
         writer.WriteLine();
 
@@ -235,6 +244,12 @@ public sealed class StateMachineEmitter(StoryNode boundStory, FlowGraph flowGrap
 
             writer.WriteLine();
         }
+
+        writer.WriteManyLines(
+            """
+            Output = Heart.GetOutput(ref fields);
+            Heart.GetOptions(ref fields, options, ref optionsCount);
+            """);
 
         writer.EndBlock();
     }

@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
-public sealed class FieldsEmitter(StoryNode boundStory, SymbolTable symbolTable, Settings settings, IndentedTextWriter writer)
+public sealed class FieldsEmitter(StoryNode boundStory, SymbolTable symbolTable, IndentedTextWriter writer)
 {
     public void GenerateFieldsStruct()
     {

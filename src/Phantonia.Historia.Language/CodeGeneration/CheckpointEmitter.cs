@@ -1,6 +1,7 @@
 ﻿using Phantonia.Historia.Language.FlowAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
+using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -37,6 +38,8 @@ public sealed class CheckpointEmitter(
         GenerateOutcomeProperties();
 
         GenerateGetForIndexMethod();
+
+        GenerateIsReadyMethod();
 
         writer.EndBlock();
     }
@@ -172,6 +175,70 @@ public sealed class CheckpointEmitter(
 
         writer.WriteLine();
         writer.WriteLine("return instance;");
+
+        writer.EndBlock();
+    }
+
+    private void GenerateIsReadyMethod()
+    {
+        writer.WriteLine("public bool IsReady()");
+
+        writer.BeginBlock();
+
+        IEnumerable<Symbol> publicOutcomes = symbolTable.AllSymbols.Where(s => s is OutcomeSymbol { IsPublic: true });
+
+        if (!publicOutcomes.Any())
+        {
+            writer.Write("return true;");
+            writer.EndBlock();
+            return;
+        }
+
+        writer.Write("return ");
+
+        void GenerateTerm(Symbol symbol)
+        {
+            if (symbol is SpectrumSymbol)
+            {
+                writer.Write("(Spectrum");
+                writer.Write(symbol.Name);
+                writer.Write(".Kind != global::Phantonia.Historia.CheckpointOutcomeKind.Required || Spectrum");
+                writer.Write(symbol.Name);
+                writer.Write(".TotalCount != 0)");
+
+                return;
+            }
+
+            // because the property and enum have the name, we can't go OutcomeX.Unset, because that refers to the property
+            // instead we need to go global::OutcomeX.Unset
+            // however, we could possibly have a whole fucking namespace in between
+            // (this btw is the first time we *actually* need global::)
+            writer.Write("(Outcome");
+            writer.Write(symbol.Name);
+            writer.Write(".Kind != global::Phantonia.Historia.CheckpointOutcomeKind.Required || Outcome");
+            writer.Write(symbol.Name);
+            writer.Write(".Option != global::");
+            writer.Write(settings.Namespace);
+
+            if (settings.Namespace != "")
+            {
+                writer.Write('.');
+            }
+
+            writer.Write("Outcome");
+            writer.Write(symbol.Name);
+            writer.Write(".Unset)");
+        }
+
+        GenerateTerm(publicOutcomes.First());
+
+        foreach (Symbol symbol in publicOutcomes.Skip(1))
+        {
+            writer.Write(" && ");
+            GenerateTerm(symbol);
+        }
+
+        writer.WriteLine(';');
 
         writer.EndBlock();
     }

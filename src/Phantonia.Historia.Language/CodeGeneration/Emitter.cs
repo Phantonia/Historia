@@ -36,7 +36,7 @@ public sealed class Emitter(
 
         writer.WriteLine();
 
-        FieldsEmitter fieldsEmitter = new(boundStory, symbolTable, settings, writer);
+        FieldsEmitter fieldsEmitter = new(boundStory, symbolTable, writer);
         fieldsEmitter.GenerateFieldsStruct();
 
         writer.WriteLine();
@@ -46,7 +46,7 @@ public sealed class Emitter(
 
         writer.WriteLine();
 
-        SnapshotEmitter snapshotEmitter = new(boundStory, settings, symbolTable, writer);
+        SnapshotEmitter snapshotEmitter = new(flowGraph, settings, symbolTable, writer);
         snapshotEmitter.GenerateSnapshotClass();
 
         writer.WriteLine();
