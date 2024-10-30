@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Phantonia.Historia.Language;
 using Phantonia.Historia.Language.FlowAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -1236,9 +1237,14 @@ public sealed class EmitterTests
         MethodInfo? getForIndexMethod = checkpointType.GetMethod("GetForIndex");
 
         {
-            object? checkpoint0 = getForIndexMethod?.Invoke(null, [code.IndexOf("checkpoint output 0")]);
+            int index = code.IndexOf("checkpoint output 0");
+
+            object? checkpoint0 = getForIndexMethod?.Invoke(null, [index]);
 
             Assert.IsNotNull(checkpoint0);
+
+            int? allegedIndex = (int?)checkpoint0.GetType().GetProperty("Index", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint0);
+            Assert.AreEqual(index, allegedIndex);
 
             object? outcomeX = checkpointType.GetProperty("OutcomeX", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint0);
             Assert.IsNotNull(outcomeX);
@@ -1259,9 +1265,14 @@ public sealed class EmitterTests
         }
 
         {
-            object? checkpoint1 = getForIndexMethod?.Invoke(null, [code.IndexOf("checkpoint output 1")]);
+            int index = code.IndexOf("checkpoint output 1");
+
+            object? checkpoint1 = getForIndexMethod?.Invoke(null, [index]);
 
             Assert.IsNotNull(checkpoint1);
+
+            int? allegedIndex = (int?)checkpoint1.GetType().GetProperty("Index", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint1);
+            Assert.AreEqual(index, allegedIndex);
 
             object? outcomeX = checkpointType.GetProperty("OutcomeX", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint1);
             Assert.IsNotNull(outcomeX);
@@ -1279,6 +1290,100 @@ public sealed class EmitterTests
             Assert.AreEqual(0, positiveCount);
             int? totalCount = (int?)spectrumY.GetType().GetProperty("TotalCount", BindingFlags.Public | BindingFlags.Instance)?.GetValue(spectrumY);
             Assert.AreEqual(0, totalCount);
+        }
+    }
+
+    [TestMethod]
+    public void TestRestoreCheckpoint()
+    {
+        string code =
+            """
+            public outcome X(A, B);
+            public spectrum Y(A < 2/3, B <= 2/3, C); // don't do this
+            
+            scene main
+            {
+                X = B;
+                strengthen Y by 2;
+            
+                checkpoint output 0;
+                
+                branchon X
+                {
+                    option A
+                    {
+                        output 1;
+                    }
+                    option B
+                    {
+                        output 0;
+                    }
+                }
+
+                branchon Y
+                {
+                    option A
+                    {
+                        output 0;
+                    }
+                    option B
+                    {
+                        output 1;
+                    }
+                    option C
+                    {
+                        output 0;
+                    }
+                }
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        Assembly assembly = DynamicCompiler.Compile(resultCode);
+
+        Type? checkpointType = assembly.GetType("HistoriaStoryCheckpoint");
+        Assert.IsNotNull(checkpointType);
+
+        // var checkpoint = HistoriaStoryCheckpoint.GetForIndex(123);
+        MethodInfo? getForIndexMethod = checkpointType.GetMethod("GetForIndex");
+        Assert.IsNotNull(getForIndexMethod);
+
+        int index = code.IndexOf("checkpoint output 0;");
+
+        object? checkpoint = getForIndexMethod.Invoke(null, [index]);
+        Assert.IsNotNull(checkpoint);
+
+        // checkpoint.OutcomeX = checkpoint.OutcomeX.Assign(OutcomeX.A);
+        PropertyInfo? outcomeXProperty = checkpoint.GetType().GetProperty("OutcomeX", BindingFlags.Public | BindingFlags.Instance);
+        object? outcomeX = outcomeXProperty?.GetValue(checkpoint);
+        object? optionA = assembly.GetType("OutcomeX")?.GetField("A")?.GetValue(null);
+        object? assignedOutcomeX = outcomeX?.GetType().GetMethod("Assign", BindingFlags.Public | BindingFlags.Instance)?.Invoke(outcomeX, [optionA]);
+        outcomeXProperty?.SetValue(checkpoint, assignedOutcomeX);
+
+        // checkpoint.SpectrumY = checkpoint.SpectrumY.Assign(2, 3);
+        PropertyInfo? spectrumYProperty = checkpoint.GetType().GetProperty("SpectrumY", BindingFlags.Public | BindingFlags.Instance);
+        CheckpointSpectrum spectrumY = (CheckpointSpectrum)spectrumYProperty?.GetValue(checkpoint)!;
+        CheckpointSpectrum assignedSpectrumY = spectrumY.Assign(2, 3);
+        spectrumYProperty?.SetValue(checkpoint, assignedSpectrumY);
+
+        // stateMachine.RestoreCheckpoint(checkpoint);
+        Type? stateMachineType = assembly.GetType("HistoriaStoryStateMachine");
+        Assert.IsNotNull(stateMachineType);
+        IStoryStateMachine? stateMachine = (IStoryStateMachine?)Activator.CreateInstance(stateMachineType);
+        stateMachineType?.GetMethod("RestoreCheckpoint", BindingFlags.Public | BindingFlags.Instance)?.Invoke(stateMachine, [checkpoint]);
+
+        // test that the outcome and spectrum are good
+        for (int i = 0; i < 2; i++)
+        {
+            Assert.IsTrue(stateMachine?.TryContinue());
+            Assert.AreEqual(1, stateMachine?.Output);
         }
     }
 }

@@ -41,7 +41,7 @@ public sealed class Emitter(
 
         writer.WriteLine();
 
-        StateMachineEmitter stateMachineEmitter = new(boundStory, settings, symbolTable, writer);
+        StateMachineEmitter stateMachineEmitter = new(boundStory, flowGraph, settings, symbolTable, writer);
         stateMachineEmitter.GenerateStateMachineClass();
 
         writer.WriteLine();

@@ -28,10 +28,27 @@ public sealed class CheckpointEmitter(
 
         writer.BeginBlock();
 
+        GenerateConstructor(settings, writer);
+
+        writer.WriteLine();
+        writer.Write("public int Index { get; }");
+        writer.WriteLine();
+
         GenerateOutcomeProperties();
 
         GenerateGetForIndexMethod();
 
+        writer.EndBlock();
+    }
+
+    private static void GenerateConstructor(Settings settings, IndentedTextWriter writer)
+    {
+        writer.Write("private ");
+        writer.Write(settings.StoryName);
+        writer.WriteLine("Checkpoint(int index)");
+
+        writer.BeginBlock();
+        writer.WriteLine("Index = index;");
         writer.EndBlock();
     }
 
@@ -77,7 +94,7 @@ public sealed class CheckpointEmitter(
         writer.Write(settings.StoryName);
         writer.Write("Checkpoint instance = new ");
         writer.Write(settings.StoryName);
-        writer.WriteLine("Checkpoint();");
+        writer.WriteLine("Checkpoint(index);");
 
         writer.WriteLine();
 
@@ -99,7 +116,7 @@ public sealed class CheckpointEmitter(
 
             foreach (Symbol symbol in symbolTable.AllSymbols)
             {
-                if (symbol is not OutcomeSymbol { IsPublic: true })
+                if (symbol is not OutcomeSymbol { IsPublic: true } outcome)
                 {
                     continue;
                 }
@@ -128,6 +145,10 @@ public sealed class CheckpointEmitter(
                 if (definitelyAssignedOutcomesAtCheckpoints[vertex.Index].Any(o => o.Index == symbol.Index))
                 {
                     writer.Write("Required");
+                }
+                else if (outcome.DefaultOption is not null)
+                {
+                    writer.Write("Optional");
                 }
                 else
                 {

@@ -1,10 +1,13 @@
-﻿using Phantonia.Historia.Language.SemanticAnalysis;
+﻿using Phantonia.Historia.Language.FlowAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis;
 using System.CodeDom.Compiler;
+using System.Linq;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
-public sealed class StateMachineEmitter(StoryNode boundStory, Settings settings, SymbolTable symbolTable, IndentedTextWriter writer)
+public sealed class StateMachineEmitter(StoryNode boundStory, FlowGraph flowGraph, Settings settings, SymbolTable symbolTable, IndentedTextWriter writer)
 {
     public void GenerateStateMachineClass()
     {
@@ -31,6 +34,10 @@ public sealed class StateMachineEmitter(StoryNode boundStory, Settings settings,
         writer.WriteLine();
 
         GenerateSnapshotMethods();
+
+        writer.WriteLine();
+
+        GenerateRestoreCheckpointMethod();
 
         writer.WriteLine();
 
@@ -150,6 +157,86 @@ public sealed class StateMachineEmitter(StoryNode boundStory, Settings settings,
         writer.WriteLine("Output = Heart.GetOutput(ref fields);");
         writer.WriteLine("Heart.GetOptions(ref fields, options, ref optionsCount);");
         writer.EndBlock(); // RestoreSnapshot method
+    }
+
+    private void GenerateRestoreCheckpointMethod()
+    {
+        if (!flowGraph.Vertices.Any(v => v.Value.IsCheckpoint))
+        {
+            return;
+        }
+
+        writer.Write("public void RestoreCheckpoint(");
+        writer.Write(settings.StoryName);
+        writer.WriteLine("Checkpoint checkpoint)");
+
+        writer.BeginBlock();
+
+        writer.WriteLine("fields.state = checkpoint.Index;");
+        writer.WriteLine();
+
+        foreach (Symbol symbol in symbolTable.AllSymbols)
+        {
+            if (symbol is not OutcomeSymbol { IsPublic: true } outcome)
+            {
+                continue;
+            }
+
+            if (symbol is SpectrumSymbol spectrum)
+            {
+                writer.Write("if (checkpoint.Spectrum");
+                writer.Write(symbol.Name);
+                writer.Write(".Kind == global::Phantonia.Historia.CheckpointOutcomeKind.Required || (checkpoint.Spectrum");
+                writer.Write(symbol.Name);
+                writer.Write(".Kind == global::Phantonia.Historia.CheckpointOutcomeKind.Optional && checkpoint.Spectrum");
+                writer.Write(symbol.Name);
+                writer.WriteLine(".TotalCount != 0))");
+
+                writer.BeginBlock();
+
+                writer.Write("fields.");
+                GeneralEmission.GenerateSpectrumPositiveFieldName(spectrum, writer);
+                writer.Write(" = checkpoint.Spectrum");
+                writer.Write(symbol.Name);
+                writer.WriteLine(".PositiveCount;");
+
+                writer.Write("fields.");
+                GeneralEmission.GenerateSpectrumTotalFieldName(spectrum, writer);
+                writer.Write(" = checkpoint.Spectrum");
+                writer.Write(symbol.Name);
+                writer.WriteLine(".TotalCount;");
+
+                writer.EndBlock();
+
+                writer.WriteLine();
+
+                continue;
+            }
+
+            writer.Write("if (checkpoint.Outcome");
+            writer.Write(symbol.Name);
+            writer.Write(".Kind == global::Phantonia.Historia.CheckpointOutcomeKind.Required || (checkpoint.Outcome");
+            writer.Write(symbol.Name);
+            writer.Write(".Kind == global::Phantonia.Historia.CheckpointOutcomeKind.Optional && checkpoint.Outcome");
+            writer.Write(symbol.Name);
+            writer.Write(".Option != Outcome");
+            writer.Write(symbol.Name);
+            writer.WriteLine(".Unset))");
+
+            writer.BeginBlock();
+
+            writer.Write("fields.");
+            GeneralEmission.GenerateOutcomeFieldName(outcome, writer);
+            writer.Write(" = (int)checkpoint.Outcome");
+            writer.Write(symbol.Name);
+            writer.WriteLine(".Option - 1;"); // outcome enums have the additional "Unset" option, so all options are shifted upwards by 1
+
+            writer.EndBlock();
+
+            writer.WriteLine();
+        }
+
+        writer.EndBlock();
     }
 
     private void GenerateExplicitInterfaceImplementations()
