@@ -55,7 +55,7 @@ public sealed class ParserTests
         Lexer lexer = new(code);
         Parser parser = new(lexer.Lex());
 
-        List<Error> errors = new();
+        List<Error> errors = [];
 
         parser.ErrorFound += errors.Add;
 
@@ -74,7 +74,7 @@ public sealed class ParserTests
         {
             Kind = TokenKind.Unknown,
             Text = "!",
-            Index = code.IndexOf("!"),
+            Index = code.IndexOf('!'),
         });
 
         Assert.AreEqual(firstError, errors[0]);
@@ -362,11 +362,11 @@ public sealed class ParserTests
             {
                 Kind = TokenKind.Semicolon,
                 Text = ";",
-                Index = code.IndexOf(";"),
+                Index = code.IndexOf(';'),
             });
 
             Assert.AreEqual(expectedError, e);
-            Assert.AreEqual(code.IndexOf(";"), e.Index);
+            Assert.AreEqual(code.IndexOf(';'), e.Index);
         };
 
         _ = parser.Parse();
@@ -525,7 +525,7 @@ public sealed class ParserTests
         Lexer lexer = new(code);
         Parser parser = new(lexer.Lex());
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         parser.ErrorFound += errors.Add;
 
         _ = parser.Parse();
@@ -609,7 +609,7 @@ public sealed class ParserTests
 
         Parser parser = new(new Lexer(code).Lex());
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         parser.ErrorFound += errors.Add;
 
         _ = parser.Parse();
@@ -654,10 +654,10 @@ public sealed class ParserTests
 
         Assert.AreEqual(4, mainScene.Body.Statements.Length);
 
-        AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[0], "W", new[] { "A" }, null);
-        AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[1], "X", new[] { "A", "B" }, null);
-        AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[2], "Y", Array.Empty<string>(), null);
-        AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[3], "Z", new[] { "A", "B", "C", "D", "E", "F" }, "A");
+        AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[0], "W", ["A"], null);
+        AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[1], "X", ["A", "B"], null);
+        AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[2], "Y", [], null);
+        AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[3], "Z", ["A", "B", "C", "D", "E", "F"], "A");
     }
 
     [TestMethod]
@@ -682,7 +682,7 @@ public sealed class ParserTests
 
         SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[0];
 
-        void AssertIsCorrectAssignment<ExpressionType>(StatementNode statement)
+        static void AssertIsCorrectAssignment<ExpressionType>(StatementNode statement)
             where ExpressionType : ExpressionNode
         {
             AssignmentStatementNode? assignment = statement as AssignmentStatementNode;
@@ -717,7 +717,7 @@ public sealed class ParserTests
         Assert.IsNotNull(unionDeclaration);
 
         Assert.AreEqual("X", unionDeclaration.Name);
-        Assert.IsTrue(unionDeclaration.Subtypes.Select(s => (s as IdentifierTypeNode)?.Identifier).SequenceEqual(new[] { "Int", "String", "Y" }));
+        Assert.IsTrue(unionDeclaration.Subtypes.Select(s => (s as IdentifierTypeNode)?.Identifier).SequenceEqual(["Int", "String", "Y"]));
     }
 
     [TestMethod]
@@ -743,7 +743,7 @@ public sealed class ParserTests
 
         Assert.AreEqual(3, mainScene.Body.Statements.Length);
 
-        List<SpectrumDeclarationStatementNode> spectrumDeclarations = new();
+        List<SpectrumDeclarationStatementNode> spectrumDeclarations = [];
 
         foreach (StatementNode statement in mainScene.Body.Statements)
         {
@@ -973,7 +973,7 @@ public sealed class ParserTests
         SceneSymbolDeclarationNode? mainScene = story.TopLevelNodes[^1] as SceneSymbolDeclarationNode;
         Assert.IsNotNull(mainScene);
 
-        string[] optionNames = new[] { "Alice", "Beverly", "Charlotte" };
+        string[] optionNames = ["Alice", "Beverly", "Charlotte"];
 
         for (int i = 0; i < 3; i++)
         {
