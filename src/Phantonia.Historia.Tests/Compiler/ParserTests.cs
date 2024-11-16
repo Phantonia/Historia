@@ -1116,4 +1116,88 @@ public sealed class ParserTests
             Text = "outcome",
         }), errors[0]);
     }
+
+    [TestMethod]
+    public void TestReferences()
+    {
+        string code =
+            """
+            setting OutputType: String;
+            setting OptionType: String;
+
+            interface ICharacter
+            (
+                action Say(line: String),
+                choice Choose(prompt: String),
+            );
+
+            reference Character: ICharacter;
+
+            scene main
+            {
+                run Character.Say("Hello world");
+
+                choose Character.Choose("What to do?")
+                {
+                    option ("Jump")
+                    {
+                        output "I jumped!";
+                    }
+
+                    option ("Crouch")
+                    {
+                        output "I crouched!";
+                    }
+                }
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = parser.Parse();
+
+        Assert.AreEqual(5, story.TopLevelNodes.Length);
+
+        InterfaceSymbolDeclarationNode? intface = story.TopLevelNodes[2] as InterfaceSymbolDeclarationNode;
+        Assert.IsNotNull(intface);
+
+        Assert.AreEqual("ICharacter", intface.Name);
+        Assert.AreEqual(2, intface.Methods.Length);
+
+        Assert.AreEqual(InterfaceMethodKind.Action, intface.Methods[0].Kind);
+        Assert.AreEqual("Say", intface.Methods[0].Name);
+        Assert.AreEqual(1, intface.Methods[0].Parameters.Length);
+        Assert.AreEqual("line", intface.Methods[0].Parameters[0].Name);
+
+        Assert.AreEqual(InterfaceMethodKind.Choice, intface.Methods[1].Kind);
+        Assert.AreEqual("Choose", intface.Methods[1].Name);
+        Assert.AreEqual(1, intface.Methods[1].Parameters.Length);
+        Assert.AreEqual("prompt", intface.Methods[1].Parameters[0].Name);
+
+        ReferenceSymbolDeclarationNode? reference = story.TopLevelNodes[3] as ReferenceSymbolDeclarationNode;
+        Assert.IsNotNull(reference);
+
+        Assert.AreEqual("Character", reference.Name);
+        Assert.AreEqual("ICharacter", reference.InterfaceName);
+
+        SceneSymbolDeclarationNode? mainScene = story.TopLevelNodes[4] as SceneSymbolDeclarationNode;
+        Assert.IsNotNull(mainScene);
+
+        Assert.AreEqual(2, mainScene.Body.Statements.Length);
+
+        RunStatementNode? runStatement = mainScene.Body.Statements[0] as RunStatementNode;
+        Assert.IsNotNull(runStatement);
+        Assert.AreEqual("Character", runStatement.ReferenceName);
+        Assert.AreEqual("Say", runStatement.MethodName);
+        Assert.AreEqual(1, runStatement.Arguments.Length);
+
+        ChooseStatementNode? chooseStatement = mainScene.Body.Statements[1] as ChooseStatementNode;
+        Assert.IsNotNull(chooseStatement);
+        Assert.AreEqual("Character", chooseStatement.ReferenceName);
+        Assert.AreEqual("Choose", chooseStatement.MethodName);
+        Assert.AreEqual(1, chooseStatement.Arguments.Length);
+        Assert.AreEqual(2, chooseStatement.Options.Length);
+    }
 }

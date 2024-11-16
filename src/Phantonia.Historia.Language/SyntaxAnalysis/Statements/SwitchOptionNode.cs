@@ -1,19 +1,10 @@
-﻿using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
-using System.Collections.Generic;
+﻿namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
-
-public sealed record SwitchOptionNode : SyntaxNode
+public sealed record SwitchOptionNode : OptionNode
 {
     public SwitchOptionNode() { }
 
     public string? Name { get; init; }
-
-    public required ExpressionNode Expression { get; init; }
-
-    public required StatementBodyNode Body { get; init; }
-
-    public override IEnumerable<SyntaxNode> Children => [Expression, Body];
 
     protected internal override string GetDebuggerDisplay() => $"option {Name}{(Name is not null ? " " : "")} ({Expression.GetDebuggerDisplay()}) w/ {Body.Statements.Length} statements";
 }

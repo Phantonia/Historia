@@ -239,7 +239,24 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
             };
         }
 
-        index++;
+        ImmutableArray<ArgumentNode>? arguments = ParseArgumentList(ref index);
+
+        if (arguments is null)
+        {
+            return null;
+        }
+
+        return new RecordCreationExpressionNode
+        {
+            Arguments = (ImmutableArray<ArgumentNode>)arguments,
+            RecordName = name,
+            Index = nodeIndex,
+        };
+    }
+
+    private ImmutableArray<ArgumentNode>? ParseArgumentList(ref int index)
+    {
+        _ = Expect(TokenKind.OpenParenthesis, ref index);
 
         ImmutableArray<ArgumentNode>.Builder arguments = ImmutableArray.CreateBuilder<ArgumentNode>();
 
@@ -290,12 +307,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
             _ = Expect(TokenKind.Comma, ref index);
         }
 
-        return new RecordCreationExpressionNode
-        {
-            Arguments = arguments.ToImmutable(),
-            RecordName = name,
-            Index = nodeIndex,
-        };
+        return arguments.ToImmutable();
     }
 
     private TypeNode? ParseType(ref int index)

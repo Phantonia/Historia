@@ -470,6 +470,12 @@ public sealed class Lexer
             "by" => TokenKind.ByKeyword,
             "call" => TokenKind.CallKeyword,
             "checkpoint" => TokenKind.CheckpointKeyword,
+            "interface" => TokenKind.InterfaceKeyword,
+            "reference" => TokenKind.ReferenceKeyword,
+            "action" => TokenKind.ActionKeyword,
+            "choice" => TokenKind.ChoiceKeyword,
+            "run" => TokenKind.RunKeyword,
+            "choose" => TokenKind.ChooseKeyword,
             _ => TokenKind.Identifier,
         };
 
