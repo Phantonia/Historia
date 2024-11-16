@@ -3,10 +3,8 @@ using System.Collections.Generic;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public sealed record OutputStatementNode : StatementNode, IOutputStatementNode
+public sealed record OutputStatementNode() : StatementNode, IOutputStatementNode
 {
-    public OutputStatementNode() { }
-
     public required ExpressionNode OutputExpression { get; init; }
 
     public required bool IsCheckpoint { get; init; }

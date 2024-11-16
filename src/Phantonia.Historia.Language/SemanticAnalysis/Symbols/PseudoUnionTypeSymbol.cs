@@ -4,10 +4,8 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 
-public sealed record PseudoUnionTypeSymbol : TypeSymbol
+public sealed record PseudoUnionTypeSymbol() : TypeSymbol
 {
-    public PseudoUnionTypeSymbol() { }
-
     public required ImmutableArray<TypeNode> Subtypes { get; init; }
 
     protected internal override string GetDebuggerDisplay() => $"pseudo union symbol w/ subtypes ({string.Join(", ", Subtypes.Select(p => p.GetDebuggerDisplay()))})";

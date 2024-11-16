@@ -4,10 +4,8 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 
-public sealed record InterfaceMethodDeclarationNode : SyntaxNode
+public sealed record InterfaceMethodDeclarationNode() : SyntaxNode
 {
-    public InterfaceMethodDeclarationNode() { }
-
     public required InterfaceMethodKind Kind { get; init; }
 
     public required string Name { get; init; }

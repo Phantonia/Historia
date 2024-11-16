@@ -3,10 +3,8 @@ using System.Collections.Generic;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public record OptionNode : SyntaxNode
+public record OptionNode() : SyntaxNode
 {
-    public OptionNode() { }
-
     public required ExpressionNode Expression { get; init; }
 
     public required StatementBodyNode Body { get; init; }

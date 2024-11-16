@@ -4,10 +4,8 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public record BranchOnStatementNode : StatementNode
+public record BranchOnStatementNode() : StatementNode
 {
-    public BranchOnStatementNode() { }
-
     public required string OutcomeName { get; init; }
 
     public required ImmutableArray<BranchOnOptionNode> Options { get; init; }

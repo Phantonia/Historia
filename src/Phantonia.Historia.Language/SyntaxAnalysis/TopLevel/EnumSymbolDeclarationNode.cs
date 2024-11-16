@@ -3,10 +3,8 @@ using System.Collections.Immutable;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 
-public sealed record EnumSymbolDeclarationNode : TypeSymbolDeclarationNode
+public sealed record EnumSymbolDeclarationNode() : TypeSymbolDeclarationNode
 {
-    public EnumSymbolDeclarationNode() { }
-
     public required ImmutableArray<string> Options { get; init; }
 
     public override IEnumerable<SyntaxNode> Children => [];

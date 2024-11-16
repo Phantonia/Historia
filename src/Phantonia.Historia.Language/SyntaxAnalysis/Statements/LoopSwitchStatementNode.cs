@@ -5,10 +5,8 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public sealed record LoopSwitchStatementNode : StatementNode, IOutputStatementNode
+public sealed record LoopSwitchStatementNode() : StatementNode, IOutputStatementNode
 {
-    public LoopSwitchStatementNode() { }
-
     public required ExpressionNode OutputExpression { get; init; }
 
     public required ImmutableArray<LoopSwitchOptionNode> Options { get; init; }

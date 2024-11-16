@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 
-public sealed record InterfaceSymbolDeclarationNode : SymbolDeclarationNode
+public sealed record InterfaceSymbolDeclarationNode() : SymbolDeclarationNode
 {
     public required ImmutableArray<InterfaceMethodDeclarationNode> Methods { get; init; }
 

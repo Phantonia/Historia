@@ -3,10 +3,8 @@ using System.Collections.Generic;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public sealed record LoopSwitchOptionNode : SyntaxNode
+public sealed record LoopSwitchOptionNode() : SyntaxNode
 {
-    public LoopSwitchOptionNode() { }
-
     public required ExpressionNode Expression { get; init; }
 
     public required StatementBodyNode Body { get; init; }

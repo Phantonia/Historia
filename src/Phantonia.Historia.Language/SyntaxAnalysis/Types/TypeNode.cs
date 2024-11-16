@@ -2,5 +2,5 @@
 
 public abstract record TypeNode : SyntaxNode
 {
-    public TypeNode() { }
+    protected TypeNode() { }
 }

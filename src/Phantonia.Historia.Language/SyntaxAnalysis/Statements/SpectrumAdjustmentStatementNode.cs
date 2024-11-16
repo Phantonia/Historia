@@ -3,10 +3,8 @@ using System.Collections.Generic;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public record SpectrumAdjustmentStatementNode : StatementNode
+public record SpectrumAdjustmentStatementNode() : StatementNode
 {
-    public SpectrumAdjustmentStatementNode() { }
-
     public required bool Strengthens { get; init; }
 
     public bool Weakens => !Strengthens;

@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public sealed record RunStatementNode : StatementNode
+public record RunStatementNode() : StatementNode
 {
     public required string ReferenceName { get; init; }
 

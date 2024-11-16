@@ -4,10 +4,8 @@ using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 
-public sealed record BoundNamedSwitchStatementNode : SwitchStatementNode, IBoundOutcomeDeclarationNode
+public sealed record BoundNamedSwitchStatementNode() : SwitchStatementNode, IBoundOutcomeDeclarationNode
 {
-    public BoundNamedSwitchStatementNode() { }
-
     public required OutcomeSymbol Outcome { get; init; }
 
     SyntaxNode IBoundOutcomeDeclarationNode.DeclarationNode => this;

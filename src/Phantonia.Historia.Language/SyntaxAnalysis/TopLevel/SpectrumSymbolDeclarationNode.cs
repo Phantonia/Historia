@@ -4,10 +4,8 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 
-public record SpectrumSymbolDeclarationNode : SymbolDeclarationNode, ISpectrumDeclarationNode
+public record SpectrumSymbolDeclarationNode() : SymbolDeclarationNode, ISpectrumDeclarationNode
 {
-    public SpectrumSymbolDeclarationNode() { }
-
     private readonly ImmutableArray<SpectrumOptionNode> options;
     private readonly ImmutableArray<string> stringOptions;
 

@@ -6,10 +6,8 @@ using System.Collections.Immutable;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 
-public sealed record BoundRecordCreationExpressionNode : ExpressionNode
+public sealed record BoundRecordCreationExpressionNode() : ExpressionNode
 {
-    public BoundRecordCreationExpressionNode() { }
-
     public required RecordCreationExpressionNode CreationExpression { get; init; }
 
     public required ImmutableArray<BoundArgumentNode> BoundArguments { get; init; }

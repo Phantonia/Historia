@@ -4,10 +4,8 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public record SpectrumDeclarationStatementNode : StatementNode, ISpectrumDeclarationNode
+public record SpectrumDeclarationStatementNode() : StatementNode, ISpectrumDeclarationNode
 {
-    public SpectrumDeclarationStatementNode() { }
-
     private readonly ImmutableArray<SpectrumOptionNode> options;
     private readonly ImmutableArray<string> stringOptions;
 

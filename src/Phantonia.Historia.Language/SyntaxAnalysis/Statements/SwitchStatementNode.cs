@@ -5,10 +5,8 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public record SwitchStatementNode : StatementNode, IOutputStatementNode
+public record SwitchStatementNode() : StatementNode, IOutputStatementNode
 {
-    public SwitchStatementNode() { }
-
     public string? Name { get; init; }
 
     public required ExpressionNode OutputExpression { get; init; }
