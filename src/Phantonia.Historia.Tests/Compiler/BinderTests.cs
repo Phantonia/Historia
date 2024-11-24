@@ -22,7 +22,7 @@ public sealed class BinderTests
     {
         Lexer lexer = new(code);
         Parser parser = new(lexer.Lex());
-        parser.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         Binder binder = new(parser.Parse());
         return binder;
@@ -563,7 +563,7 @@ public sealed class BinderTests
         Error thirdError = Errors.IncompatibleType(sourceType: intType, targetType: stringType, "property", code.IndexOf("2, 1"));
         Assert.AreEqual(thirdError, errors[2]);
 
-        Error fourthError = Errors.WrongAmountOfArguments("Line", givenAmount: 1, expectedAmount: 2, code.IndexOf("Line(\"Hello\");"));
+        Error fourthError = Errors.WrongAmountOfArgumentsInRecordCreation("Line", givenAmount: 1, expectedAmount: 2, code.IndexOf("Line(\"Hello\");"));
         Assert.AreEqual(fourthError, errors[3]);
     }
 
@@ -1787,5 +1787,106 @@ public sealed class BinderTests
 
         Error expectedError = Errors.LoopSwitchHasToTerminate(code.IndexOf("loop switch"));
         Assert.AreEqual(expectedError, errors[0]);
+    }
+
+    [TestMethod]
+    public void TestReferences()
+    {
+        string code =
+            """
+            setting OutputType: String;
+            setting OptionType: String;
+
+            interface ICharacter
+            (
+                action Say(line: String),
+                choice Choose(prompt: String),
+            );
+
+            reference Character: ICharacter;
+
+            scene main
+            {
+                run Character.Say("Hello world");
+
+                choose Character.Choose("What to do?")
+                {
+                    option ("Jump")
+                    {
+                        output "I jumped!";
+                    }
+
+                    option ("Crouch")
+                    {
+                        output "I crouched!";
+                    }
+                }
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        BindingResult result = binder.Bind();
+
+        Assert.IsTrue(result.IsValid);
+
+        InterfaceSymbol? intface = result.SymbolTable["ICharacter"] as InterfaceSymbol;
+        Assert.IsNotNull(intface);
+
+        SceneSymbolDeclarationNode? mainScene = (result.BoundStory.TopLevelNodes[4] as BoundSymbolDeclarationNode)?.Declaration as SceneSymbolDeclarationNode;
+        Assert.IsNotNull(mainScene);
+
+        BoundRunStatementNode? runStatement = mainScene.Body.Statements[0] as BoundRunStatementNode;
+        Assert.IsNotNull(runStatement);
+
+        Assert.AreEqual(result.SymbolTable["Character"], runStatement.Reference);
+        Assert.AreEqual(intface.Methods[0], runStatement.Method);
+        Assert.AreEqual(1, runStatement.Arguments.Length);
+        Assert.IsTrue(runStatement.Arguments[0].Expression is TypedExpressionNode { SourceType: BuiltinTypeSymbol { Type: BuiltinType.String } });
+
+        BoundChooseStatementNode? chooseStatement = mainScene.Body.Statements[1] as BoundChooseStatementNode;
+        Assert.IsNotNull(chooseStatement);
+
+        Assert.AreEqual(result.SymbolTable["Character"], chooseStatement.Reference);
+        Assert.AreEqual(intface.Methods[1], chooseStatement.Method);
+        Assert.AreEqual(1, chooseStatement.Arguments.Length);
+        Assert.IsTrue(chooseStatement.Arguments[0].Expression is TypedExpressionNode { SourceType: BuiltinTypeSymbol { Type: BuiltinType.String } });
+    }
+
+    [TestMethod]
+    public void TestReferenceErrors()
+    {
+        string code =
+            """
+            interface I
+            (
+                action A(x: Int),
+                choice B(y: Int),
+            );
+
+            reference R: X; // interface X does not exist
+            reference S: String; // String is not an interface
+            reference T: I;
+
+            scene main
+            {
+                run X.A(4); // reference X does not exist
+                run T.X(4); // method X does not exist
+                run T.B(4); // method B is not an action
+                // run T.A(); // method A takes 1 parameter
+                run T.A(1, 2); // method A takes 1 parameter
+                run T.A("Hello world"); // method A takes Int parameter
+
+                // to be continued...
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+
+        List<Error> errors = [];
+        binder.ErrorFound += errors.Add;
+
+        _ = binder.Bind();
     }
 }

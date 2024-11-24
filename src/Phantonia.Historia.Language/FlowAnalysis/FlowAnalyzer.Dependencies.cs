@@ -10,14 +10,14 @@ public sealed partial class FlowAnalyzer
 {
     private (IEnumerable<SceneSymbol>? topologicalOrder, IReadOnlyDictionary<SceneSymbol, int> referenceCounts) PerformDependencyAnalysis(IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs)
     {
-        Dictionary<int, IReadOnlyList<int>> dependencies = [];
+        Dictionary<int, IReadOnlySet<int>> dependencies = [];
         Dictionary<int, Symbol> symbols = [];
         Dictionary<int, int> referenceCounts = [];
 
         foreach ((SceneSymbol scene, FlowGraph flowGraph) in sceneFlowGraphs)
         {
             IReadOnlyDictionary<int, int> theseDependenciesAndReferenceCounts = GetDependenciesAndReferenceCounts(flowGraph);
-            dependencies[scene.Index] = theseDependenciesAndReferenceCounts.Keys.ToList();
+            dependencies[scene.Index] = (SortedSet<int>)[.. theseDependenciesAndReferenceCounts.Keys];
             symbols[scene.Index] = scene;
 
             foreach ((int dep, int refCount) in theseDependenciesAndReferenceCounts)

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 
 namespace Phantonia.Historia.Language;
 
@@ -153,7 +154,7 @@ public static class Errors
         };
     }
 
-    public static Error WrongAmountOfArguments(string recordName, int givenAmount, int expectedAmount, int index)
+    public static Error WrongAmountOfArgumentsInRecordCreation(string recordName, int givenAmount, int expectedAmount, int index)
     {
         return new Error
         {
@@ -530,6 +531,69 @@ public static class Errors
         return new Error
         {
             ErrorMessage = $"Enum '{enumName}' does not have an option '{optionName}'",
+            Index = index,
+        };
+    }
+
+    public static Error DuplicatedMethodNameInInterface(string interfaceName, string methodName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Method '{methodName}' in interface '{interfaceName}' is duplicated",
+            Index = index,
+        };
+    }
+
+    public static Error SymbolIsNotInterface(string alledgedInterfaceName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Symbol '{alledgedInterfaceName}' is not an interface",
+            Index = index,
+        };
+    }
+
+    public static Error SymbolIsNotReference(string alledgedReferenceName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Symbol '{alledgedReferenceName}' is not a reference",
+            Index = index,
+        };
+    }
+
+    public static Error MethodDoesNotExistInInterface(string referenceName, string interfaceName, string alledgedMethodName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"The interface of reference '{referenceName}', '{interfaceName}', does not contain method '{alledgedMethodName}'",
+            Index = index,
+        };
+    }
+
+    public static Error CannotRunChoiceMethod(string interfaceName, string methodName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Cannot run choice method '{methodName}' of interface '{interfaceName}'",
+            Index = index,
+        };
+    }
+
+    public static Error CannotChooseFromActionMethod(string interfaceName, string methodName, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Cannot choose from action method '{methodName}' of interface '{interfaceName}'",
+            Index = index,
+        };
+    }
+
+    public static Error WrongAmountOfArgumentsInMethodCall(string interfaceName, string methodName, int givenAmount, int expectedAmount, int index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Method '{methodName}' of interface '{interfaceName}' has {expectedAmount} parameter{(expectedAmount != 1 ? "s" : "")}, but {givenAmount} argument{(expectedAmount != 1 ? "s were" : " was")} provided",
             Index = index,
         };
     }

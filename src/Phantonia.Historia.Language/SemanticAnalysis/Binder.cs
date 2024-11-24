@@ -129,6 +129,10 @@ public sealed partial class Binder
                 return CreateOutcomeSymbolFromDeclaration(outcomeDeclaration);
             case SpectrumSymbolDeclarationNode spectrumDeclaration:
                 return CreateSpectrumSymbolFromDeclaration(spectrumDeclaration);
+            case ReferenceSymbolDeclarationNode referenceDeclaration:
+                return CreateReferenceSymbolFromDeclaration(referenceDeclaration);
+            case InterfaceSymbolDeclarationNode interfaceDeclaration:
+                return CreateInterfaceSymbolFromDeclaration(interfaceDeclaration);
             case SettingDirectiveNode:
                 return null;
             default:
@@ -177,19 +181,6 @@ public sealed partial class Binder
             Options = enumDeclaration.Options,
             Index = enumDeclaration.Index,
         };
-    }
-
-    private static TypeSymbol GetTypeSymbol(TypeNode typeNode, SymbolTable table)
-    {
-        switch (typeNode)
-        {
-            case IdentifierTypeNode { Identifier: string identifier }:
-                // we already bound so we can safely cast here
-                return (TypeSymbol)table[identifier];
-            default:
-                Debug.Assert(false);
-                return null;
-        }
     }
 
     private OutcomeSymbol? CreateOutcomeSymbolFromDeclaration(IOutcomeDeclarationNode outcomeDeclaration)
@@ -362,6 +353,70 @@ public sealed partial class Binder
             IsPublic = spectrumDeclaration.Public,
             Index = spectrumDeclaration.Index,
         };
+    }
+
+    private static PseudoReferenceSymbol CreateReferenceSymbolFromDeclaration(ReferenceSymbolDeclarationNode referenceDeclaration)
+    {
+        return new PseudoReferenceSymbol
+        {
+            Name = referenceDeclaration.Name,
+            InterfaceName = referenceDeclaration.InterfaceName,
+            Index = referenceDeclaration.Index,
+        };
+    }
+
+    private PseudoInterfaceSymbol CreateInterfaceSymbolFromDeclaration(InterfaceSymbolDeclarationNode interfaceDeclaration)
+    {
+        ImmutableArray<PseudoInterfaceMethodSymbol>.Builder methods = ImmutableArray.CreateBuilder<PseudoInterfaceMethodSymbol>();
+        HashSet<string> methodNames = new(capacity: interfaceDeclaration.Methods.Length);
+
+        foreach (InterfaceMethodDeclarationNode methodDeclaration in interfaceDeclaration.Methods)
+        {
+            if (!methodNames.Add(methodDeclaration.Name))
+            {
+                ErrorFound?.Invoke(Errors.DuplicatedMethodNameInInterface(interfaceDeclaration.Name, methodDeclaration.Name, methodDeclaration.Index));
+            }
+
+            ImmutableArray<PseudoPropertySymbol>.Builder parameters = ImmutableArray.CreateBuilder<PseudoPropertySymbol>();
+
+            foreach (PropertyDeclarationNode propertyDeclaration in methodDeclaration.Parameters)
+            {
+                parameters.Add(new PseudoPropertySymbol
+                {
+                    Name = propertyDeclaration.Name,
+                    Type = propertyDeclaration.Type,
+                    Index = propertyDeclaration.Index,
+                });
+            }
+
+            methods.Add(new PseudoInterfaceMethodSymbol
+            {
+                Kind = methodDeclaration.Kind,
+                Name = methodDeclaration.Name,
+                Parameters = parameters.ToImmutable(),
+                Index = methodDeclaration.Index,
+            });
+        }
+
+        return new PseudoInterfaceSymbol
+        {
+            Name = interfaceDeclaration.Name,
+            Methods = methods.ToImmutable(),
+            Index = interfaceDeclaration.Index,
+        };
+    }
+
+    private static TypeSymbol GetTypeSymbol(TypeNode typeNode, SymbolTable table)
+    {
+        switch (typeNode)
+        {
+            case IdentifierTypeNode { Identifier: string identifier }:
+                // we already bound so we can safely cast here
+                return (TypeSymbol)table[identifier];
+            default:
+                Debug.Assert(false);
+                return null;
+        }
     }
 
     private static bool TypesAreCompatible(TypeSymbol sourceType, TypeSymbol targetType)
