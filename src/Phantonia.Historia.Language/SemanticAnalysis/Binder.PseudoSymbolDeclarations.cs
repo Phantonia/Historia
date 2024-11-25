@@ -48,6 +48,7 @@ public sealed partial class Binder
         if (alledgedInterface is not PseudoInterfaceSymbol)
         {
             ErrorFound?.Invoke(Errors.SymbolIsNotInterface(alledgedInterface.Name, referenceDeclaration.Index));
+            return (table, referenceDeclaration);
         }
 
         BoundSymbolDeclarationNode boundDeclaration = new()

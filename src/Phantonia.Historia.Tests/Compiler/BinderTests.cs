@@ -1279,7 +1279,7 @@ public sealed class BinderTests
             BoundSymbolDeclarationNode? boundScene = result.BoundStory.TopLevelNodes[i] as BoundSymbolDeclarationNode;
             Assert.IsNotNull(boundScene);
 
-            Assert.AreEqual(scene, boundScene.Symbol); 
+            Assert.AreEqual(scene, boundScene.Symbol);
 
             SceneSymbolDeclarationNode? sceneDeclaration = boundScene.Declaration as SceneSymbolDeclarationNode;
             Assert.IsNotNull(sceneDeclaration);
@@ -1869,16 +1869,24 @@ public sealed class BinderTests
             reference S: String; // String is not an interface
             reference T: I;
 
+            setting OptionType: Int;
+
             scene main
             {
-                run X.A(4); // reference X does not exist
-                run T.X(4); // method X does not exist
-                run T.B(4); // method B is not an action
+                run X.A(0); // reference X does not exist
+                run T.X(1); // method X does not exist
+                run T.B(2); // method B is not an action
                 // run T.A(); // method A takes 1 parameter
-                run T.A(1, 2); // method A takes 1 parameter
+                run T.A(3, 4); // method A takes 1 parameter
                 run T.A("Hello world"); // method A takes Int parameter
 
-                // to be continued...
+                choose X.B(5) { option (100) { } } // reference X does not exist
+                choose T.X(6) { option (100) { } } // method X does not exist
+                choose T.A(7) { option (100) { } } // method A is not a choice
+                // choose T.B() { option (100) { } } // method B takes 1 parameter
+                choose T.B(8, 9) { option (100) { } } // method B takes 1 parameter
+                choose T.B("What's up world") { option (100) { } } // method B takes Int parameter
+                choose T.B(10) { option ("Goodbye world") { } } // option type is Int
             }
             """;
 
@@ -1887,6 +1895,32 @@ public sealed class BinderTests
         List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
-        _ = binder.Bind();
+        BindingResult result = binder.Bind();
+
+        Assert.IsNotNull(result.SymbolTable);
+
+        List<Error> expectedErrors =
+        [
+            // declarations
+            Errors.SymbolDoesNotExistInScope("X", code.IndexOf("reference R")),
+            Errors.SymbolIsNotInterface("String", code.IndexOf("reference S")),
+
+            // run
+            Errors.SymbolDoesNotExistInScope("X", code.IndexOf("run X.A(0);")),
+            Errors.MethodDoesNotExistInInterface("T", "I", "X", code.IndexOf("run T.X(1);")),
+            Errors.CannotRunChoiceMethod("I", "B", code.IndexOf("run T.B(2);")),
+            Errors.WrongAmountOfArgumentsInMethodCall("I", "A", 2, 1, code.IndexOf("run T.A(3, 4);")),
+            Errors.IncompatibleType((TypeSymbol)result.SymbolTable["String"], (TypeSymbol)result.SymbolTable["Int"], "parameter", code.IndexOf(@"""Hello world""")),
+
+            // choose
+            Errors.SymbolDoesNotExistInScope("X", code.IndexOf("choose X.B(5)")),
+            Errors.MethodDoesNotExistInInterface("T", "I", "X", code.IndexOf("choose T.X(6)")),
+            Errors.CannotChooseFromActionMethod("I", "A", code.IndexOf("choose T.A(7)")),
+            Errors.WrongAmountOfArgumentsInMethodCall("I", "B", 2, 1, code.IndexOf("choose T.B(8, 9)")),
+            Errors.IncompatibleType((TypeSymbol)result.SymbolTable["String"], (TypeSymbol)result.SymbolTable["Int"], "parameter", code.IndexOf(@"""What's up world""")),
+            Errors.IncompatibleType((TypeSymbol)result.SymbolTable["String"], (TypeSymbol)result.SymbolTable["Int"], "option", code.IndexOf(@"""Goodbye world""")),
+        ];
+
+        Assert.IsTrue(errors.SequenceEqual(expectedErrors));
     }
 }

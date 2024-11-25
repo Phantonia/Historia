@@ -93,7 +93,7 @@ public sealed partial class Binder
             return (table, incompleteTypedExpression);
         }
 
-        (table, List<ArgumentNode> boundArguments) = BindArgumentList(recordCreation, table, recordSymbol.Properties);
+        (table, List<ArgumentNode> boundArguments) = BindArgumentList(recordCreation, table, recordSymbol.Properties, "property");
 
         if (boundArguments.All(a => a is BoundArgumentNode))
         {

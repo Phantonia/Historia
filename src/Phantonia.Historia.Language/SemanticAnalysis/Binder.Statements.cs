@@ -633,7 +633,7 @@ public sealed partial class Binder
             return (table, null, null, null);
         }
 
-        (table, List<ArgumentNode> boundArguments) = BindArgumentList(methodCallStatement, table, methodSymbol.Parameters);
+        (table, List<ArgumentNode> boundArguments) = BindArgumentList(methodCallStatement, table, methodSymbol.Parameters, "parameter");
 
         if (!boundArguments.All(a => a is BoundArgumentNode))
         {

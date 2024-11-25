@@ -593,7 +593,7 @@ public static class Errors
     {
         return new Error
         {
-            ErrorMessage = $"Method '{methodName}' of interface '{interfaceName}' has {expectedAmount} parameter{(expectedAmount != 1 ? "s" : "")}, but {givenAmount} argument{(expectedAmount != 1 ? "s were" : " was")} provided",
+            ErrorMessage = $"Method '{methodName}' of interface '{interfaceName}' has {expectedAmount} parameter{(expectedAmount != 1 ? "s" : "")}, but {givenAmount} argument{(givenAmount != 1 ? "s were" : " was")} provided",
             Index = index,
         };
     }

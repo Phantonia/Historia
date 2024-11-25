@@ -112,7 +112,7 @@ public sealed partial class Binder
         return (table, symbol);
     }
 
-    private (SymbolTable, List<ArgumentNode>) BindArgumentList(IArgumentContainerNode argumentContainer, SymbolTable table, IReadOnlyList<PropertySymbol> properties)
+    private (SymbolTable, List<ArgumentNode>) BindArgumentList(IArgumentContainerNode argumentContainer, SymbolTable table, IReadOnlyList<PropertySymbol> properties, string parameterOrProperty)
     {
         List<ArgumentNode> boundArguments = [.. argumentContainer.Arguments];
 
@@ -136,7 +136,7 @@ public sealed partial class Binder
 
             if (!TypesAreCompatible(typedExpression.SourceType, propertyType))
             {
-                ErrorFound?.Invoke(Errors.IncompatibleType(typedExpression.SourceType, propertyType, "property", argumentContainer.Arguments[i].Index));
+                ErrorFound?.Invoke(Errors.IncompatibleType(typedExpression.SourceType, propertyType, parameterOrProperty, argumentContainer.Arguments[i].Index));
                 continue;
             }
 
