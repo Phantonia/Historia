@@ -18,7 +18,7 @@ namespace Phantonia.Historia.Tests.Compiler;
 [TestClass]
 public sealed class BinderTests
 {
-    private Binder PrepareBinder(string code)
+    private static Binder PrepareBinder(string code)
     {
         Lexer lexer = new(code);
         Parser parser = new(lexer.Lex());
@@ -240,13 +240,13 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         BindingResult result = binder.Bind();
         Assert.IsFalse(result.IsValid);
 
-        Error expectedError = Errors.CyclicTypeDefinition(new[] { "C", "A", "B", "C" }, code.IndexOf("record C"));
+        Error expectedError = Errors.CyclicTypeDefinition(["C", "A", "B", "C"], code.IndexOf("record C"));
 
         Assert.AreEqual(1, errors.Count);
         Assert.AreEqual(expectedError, errors[0]);
@@ -265,13 +265,13 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         BindingResult result = binder.Bind();
         Assert.IsFalse(result.IsValid);
 
-        Error expectedError = Errors.CyclicTypeDefinition(new[] { "A", "A" }, index: code.IndexOf("record A"));
+        Error expectedError = Errors.CyclicTypeDefinition(["A", "A"], index: code.IndexOf("record A"));
 
         Assert.AreEqual(1, errors.Count);
         Assert.AreEqual(expectedError, errors[0]);
@@ -526,7 +526,7 @@ public sealed class BinderTests
             """;
 
         Binder binder = PrepareBinder(code);
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         BindingResult bindingResult = binder.Bind();
@@ -596,7 +596,7 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         _ = binder.Bind();
@@ -760,7 +760,7 @@ public sealed class BinderTests
             }
             """;
 
-        TestForError(code4, Errors.BranchOnIsNotExhaustive("Outcome", new[] { "C", "D" }, code4.IndexOf("branchon")));
+        TestForError(code4, Errors.BranchOnIsNotExhaustive("Outcome", ["C", "D"], code4.IndexOf("branchon")));
 
         string code5 =
             """
@@ -834,7 +834,7 @@ public sealed class BinderTests
         {
             Binder binder = PrepareBinder(code);
 
-            List<Error> errors = new();
+            List<Error> errors = [];
             binder.ErrorFound += errors.Add;
 
             _ = binder.Bind();
@@ -999,7 +999,7 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         BindingResult result = binder.Bind();
@@ -1027,14 +1027,14 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         _ = binder.Bind();
 
         Assert.AreEqual(1, errors.Count);
 
-        Error expectedError = Errors.CyclicTypeDefinition(new[] { "C", "A", "B", "C" }, code.IndexOf("record C"));
+        Error expectedError = Errors.CyclicTypeDefinition(["C", "A", "B", "C"], code.IndexOf("record C"));
 
         Assert.AreEqual(expectedError, errors[0]);
     }
@@ -1080,7 +1080,7 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         _ = binder.Bind();
@@ -1142,7 +1142,7 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         _ = binder.Bind();
@@ -1218,7 +1218,7 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         BindingResult result = binder.Bind();
@@ -1410,7 +1410,7 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         _ = binder.Bind();
@@ -1433,14 +1433,14 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         BindingResult result = binder.Bind();
 
         Assert.AreEqual(1, errors.Count);
 
-        Error expectedError = Errors.IncompatibleType((TypeSymbol)result.SymbolTable!["Int"], (TypeSymbol)result.SymbolTable!["String"], "setting", code.IndexOf("2"));
+        Error expectedError = Errors.IncompatibleType((TypeSymbol)result.SymbolTable!["Int"], (TypeSymbol)result.SymbolTable!["String"], "setting", code.IndexOf('2'));
         Assert.AreEqual(expectedError, errors[0]);
     }
 
@@ -1458,7 +1458,7 @@ public sealed class BinderTests
 
             Binder binder = PrepareBinder(code);
 
-            List<Error> errors = new();
+            List<Error> errors = [];
             binder.ErrorFound += errors.Add;
 
             _ = binder.Bind();
@@ -1505,7 +1505,7 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         _ = binder.Bind();
@@ -1528,14 +1528,14 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         BindingResult result = binder.Bind();
 
         Assert.AreEqual(1, errors.Count);
 
-        Error expectedError = Errors.IncompatibleType((TypeSymbol)result.SymbolTable!["Int"], (TypeSymbol)result.SymbolTable!["String"], "setting", code.IndexOf("4"));
+        Error expectedError = Errors.IncompatibleType((TypeSymbol)result.SymbolTable!["Int"], (TypeSymbol)result.SymbolTable!["String"], "setting", code.IndexOf('4'));
         Assert.AreEqual(expectedError, errors[0]);
     }
 
@@ -1553,7 +1553,7 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         _ = binder.Bind();
@@ -1587,7 +1587,7 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         _ = binder.Bind();
@@ -1650,12 +1650,12 @@ public sealed class BinderTests
             return parser.Parse();
         }
 
-        StoryNode[] stories = new[]
-        {
+        StoryNode[] stories =
+        [
             Parse(codeA, 0),
             Parse(codeB, offsetB),
             Parse(codeC, offsetC),
-        };
+        ];
 
         int storyAMaxIndex = stories[0].FlattenHierarchie().Max(n => n.Index);
         int storyBMinIndex = stories[1].FlattenHierarchie().Min(n => n.Index);
@@ -1696,7 +1696,7 @@ public sealed class BinderTests
         Assert.IsTrue(result.IsValid);
 
         EnumTypeSymbol characterType = (EnumTypeSymbol)result.SymbolTable["Character"];
-        string[] optionNames = new[] { "Alice", "Beverly", "Charlotte" };
+        string[] optionNames = ["Alice", "Beverly", "Charlotte"];
 
         BoundSymbolDeclarationNode boundEnumDeclaration = (BoundSymbolDeclarationNode)result.BoundStory.TopLevelNodes[0];
         EnumSymbolDeclarationNode enumDeclaration = (EnumSymbolDeclarationNode)boundEnumDeclaration.Declaration;
@@ -1778,7 +1778,7 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         _ = binder.Bind();
