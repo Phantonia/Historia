@@ -79,7 +79,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
     {
         return statement switch
         {
-            OutputStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex
+            OutputStatementNode or CallStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex
             {
                 Index = statement.Index,
                 AssociatedStatement = statement,
@@ -90,24 +90,13 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             BranchOnStatementNode branchOnStatement => GenerateBranchOnFlowGraph(branchOnStatement),
             OutcomeDeclarationStatementNode => FlowGraph.Empty,
             SpectrumDeclarationStatementNode => FlowGraph.Empty,
-            AssignmentStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex
+            AssignmentStatementNode or SpectrumAdjustmentStatementNode or BoundRunStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex
             {
                 Index = statement.Index,
                 AssociatedStatement = statement,
                 Kind = FlowVertexKind.Invisible,
             }),
-            SpectrumAdjustmentStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex
-            {
-                Index = statement.Index,
-                AssociatedStatement = statement,
-                Kind = FlowVertexKind.Invisible,
-            }),
-            CallStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex
-            {
-                Index = statement.Index,
-                AssociatedStatement = statement,
-                Kind = FlowVertexKind.Visible,
-            }),
+            BoundChooseStatementNode chooseStatement => GenerateChooseFlowGraph(chooseStatement),
             _ => throw new NotImplementedException($"Unknown statement type {statement.GetType().FullName}"),
         };
     }
@@ -302,6 +291,25 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body);
 
             flowGraph = flowGraph.AppendToVertex(branchOnStatement.Index, nestedFlowGraph);
+        }
+
+        return flowGraph;
+    }
+
+    private FlowGraph GenerateChooseFlowGraph(BoundChooseStatementNode chooseStatement)
+    {
+        FlowGraph flowGraph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex
+        {
+            Index = chooseStatement.Index,
+            AssociatedStatement = chooseStatement,
+            Kind = FlowVertexKind.Invisible,
+        });
+
+        foreach (OptionNode option in chooseStatement.Options)
+        {
+            FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body);
+
+            flowGraph = flowGraph.AppendToVertex(chooseStatement.Index, nestedFlowGraph);
         }
 
         return flowGraph;
