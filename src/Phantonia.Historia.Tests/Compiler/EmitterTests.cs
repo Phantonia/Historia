@@ -15,43 +15,10 @@ public sealed class EmitterTests
 {
     // debug this to generate the class
     // less than ideal i know
-    // [TestMethod] // emitter not ready for this
+    //[TestMethod] // emitter not ready for this
     public void PrivateClassGenerator()
     {
-        string code =
-            """
-            scene main
-            {
-                output (16);
-                
-                switch (17)
-                {
-                    option (18)
-                    {
-                        output (19);
-                        output (20);
-                    }
-
-                    option (21)
-                    {
-                        output (22);
-
-                        switch (23)
-                        {
-                            option (24)
-                            {
-                                output (25);
-                            }
-
-                            option (26)
-                            { }
-                        }
-                    }
-                }
-
-                output(27);
-            }
-            """;
+        string code = "insert code here";
 
         StringWriter sw = new();
         CompilationResult result = new Language.Compiler(code, sw).Compile();
