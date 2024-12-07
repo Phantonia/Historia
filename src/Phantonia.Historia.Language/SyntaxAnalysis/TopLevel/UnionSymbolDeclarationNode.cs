@@ -5,10 +5,8 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 
-public sealed record UnionSymbolDeclarationNode : TypeSymbolDeclarationNode
+public sealed record UnionSymbolDeclarationNode() : TypeSymbolDeclarationNode
 {
-    public UnionSymbolDeclarationNode() { }
-
     public required ImmutableArray<TypeNode> Subtypes { get; init; }
 
     public override IEnumerable<SyntaxNode> Children => Subtypes;

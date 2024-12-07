@@ -240,6 +240,40 @@ public static class GeneralEmission
         }
     }
 
+    public static void GenerateReferences(SymbolTable symbolTable, bool readOnly, IndentedTextWriter writer)
+    {
+        foreach (ReferenceSymbol reference in symbolTable.AllSymbols.OfType<ReferenceSymbol>())
+        {
+            writer.Write("public I");
+            writer.Write(reference.Interface.Name);
+            writer.Write(" Reference");
+            writer.WriteLine(reference.Name);
+
+            writer.BeginBlock();
+
+            writer.WriteLine("get");
+            writer.BeginBlock();
+            writer.Write("return fields.reference");
+            writer.Write(reference.Name);
+            writer.WriteLine(';');
+            writer.EndBlock(); // get
+
+            if (!readOnly)
+            {
+                writer.WriteLine("set");
+                writer.BeginBlock();
+                writer.Write("fields.reference");
+                writer.Write(reference.Name);
+                writer.WriteLine(" = value;");
+                writer.EndBlock(); // set
+            }
+
+            writer.EndBlock(); // property
+
+            writer.WriteLine();
+        }
+    }
+
     public static void GenerateExplicitInterfaceImplementations(string stateMachineOrSnapshot, Settings settings, IndentedTextWriter writer)
     {
         writer.Write("object global::Phantonia.Historia.IStory");
@@ -319,7 +353,7 @@ public static class GeneralEmission
 
     public static void GenerateGenericStoryType(Type type, Settings settings, IndentedTextWriter writer) => GenerateGenericStoryType($"global::{type.FullName?[..type.FullName.IndexOf('`')]}", settings, writer);
 
-    public static void GenerateExpression(ExpressionNode expression, Settings settings, IndentedTextWriter writer)
+    public static void GenerateExpression(ExpressionNode expression, IndentedTextWriter writer)
     {
         TypedExpressionNode? typedExpression = expression as TypedExpressionNode;
         Debug.Assert(typedExpression is not null);
@@ -334,7 +368,7 @@ public static class GeneralEmission
             GenerateExpression(typedExpression with
             {
                 TargetType = typedExpression.SourceType,
-            }, settings, writer);
+            }, writer);
             writer.Write(')');
             return;
         }
@@ -353,10 +387,10 @@ public static class GeneralEmission
                 writer.Write('(');
                 foreach (BoundArgumentNode argument in recordCreation.BoundArguments.Take(recordCreation.BoundArguments.Length - 1))
                 {
-                    GenerateExpression(argument.Expression, settings, writer);
+                    GenerateExpression(argument.Expression, writer);
                     writer.Write(", ");
                 }
-                GenerateExpression(recordCreation.BoundArguments[^1].Expression, settings, writer);
+                GenerateExpression(recordCreation.BoundArguments[^1].Expression, writer);
                 writer.Write(')');
                 return;
             case BoundEnumOptionExpressionNode enumOptionExpression:
@@ -444,7 +478,7 @@ public static class GeneralEmission
                          {
                              SwitchStatementNode s => s.Options.Length,
                              LoopSwitchStatementNode l => l.Options.Length,
-                             _ => int.MinValue
+                             _ => int.MinValue,
                          })
                          .Append(0) // if sequence is empty, at least have one number
                          .Max();

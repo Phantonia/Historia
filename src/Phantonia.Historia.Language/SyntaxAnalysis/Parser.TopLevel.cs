@@ -3,6 +3,7 @@ using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using Phantonia.Historia.Language.SyntaxAnalysis.Types;
+using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 
@@ -56,6 +57,10 @@ public sealed partial class Parser
                         Index = nodeIndex,
                     };
                 }
+            case { Kind: TokenKind.InterfaceKeyword }:
+                return ParseInterfaceDeclaration(ref index);
+            case { Kind: TokenKind.ReferenceKeyword }:
+                return ParseReferenceDeclaration(ref index);
             case { Kind: TokenKind.EndOfFile }:
                 return null;
             default:
@@ -152,6 +157,25 @@ public sealed partial class Parser
 
         Token identifierToken = Expect(TokenKind.Identifier, ref index);
 
+        ImmutableArray<PropertyDeclarationNode>? propertyDeclarations = ParsePropertyDeclarationList(ref index);
+
+        if (propertyDeclarations is null)
+        {
+            return null;
+        }
+
+        _ = Expect(TokenKind.Semicolon, ref index);
+
+        return new RecordSymbolDeclarationNode
+        {
+            Name = identifierToken.Text,
+            Properties = (ImmutableArray<PropertyDeclarationNode>)propertyDeclarations,
+            Index = nodeIndex,
+        };
+    }
+
+    private ImmutableArray<PropertyDeclarationNode>? ParsePropertyDeclarationList(ref int index)
+    {
         _ = Expect(TokenKind.OpenParenthesis, ref index);
 
         ImmutableArray<PropertyDeclarationNode>.Builder propertyDeclarations = ImmutableArray.CreateBuilder<PropertyDeclarationNode>();
@@ -186,14 +210,7 @@ public sealed partial class Parser
         // else this is redundant and just does index++
         _ = Expect(TokenKind.ClosedParenthesis, ref index);
 
-        _ = Expect(TokenKind.Semicolon, ref index);
-
-        return new RecordSymbolDeclarationNode
-        {
-            Name = identifierToken.Text,
-            Properties = propertyDeclarations.ToImmutable(),
-            Index = nodeIndex,
-        };
+        return propertyDeclarations.ToImmutable();
     }
 
     private EnumSymbolDeclarationNode? ParseEnumSymbolDeclaration(ref int index)
@@ -333,5 +350,110 @@ public sealed partial class Parser
                 ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index - 1]));
                 return ParseTopLevelNode(ref index);
         }
+    }
+
+    private InterfaceSymbolDeclarationNode? ParseInterfaceDeclaration(ref int index)
+    {
+        Debug.Assert(tokens[index].Kind == TokenKind.InterfaceKeyword);
+
+        int nodeIndex = tokens[index].Index;
+        index++;
+
+        string name = Expect(TokenKind.Identifier, ref index).Text;
+
+        _ = Expect(TokenKind.OpenParenthesis, ref index);
+
+        ImmutableArray<InterfaceMethodDeclarationNode>.Builder methods = ImmutableArray.CreateBuilder<InterfaceMethodDeclarationNode>();
+
+        while (tokens[index] is not { Kind: TokenKind.ClosedParenthesis })
+        {
+            var nextMethod = ParseInterfaceMethodDeclaration(ref index);
+
+            if (nextMethod is null)
+            {
+                return null;
+            }
+
+            methods.Add(nextMethod);
+
+            if (tokens[index] is not { Kind: TokenKind.Comma })
+            {
+                break;
+            }
+
+            index++;
+        }
+
+        _ = Expect(TokenKind.ClosedParenthesis, ref index);
+        _ = Expect(TokenKind.Semicolon, ref index);
+
+        return new InterfaceSymbolDeclarationNode
+        {
+            Name = name,
+            Methods = methods.ToImmutable(),
+            Index = nodeIndex,
+        };
+    }
+
+    private InterfaceMethodDeclarationNode? ParseInterfaceMethodDeclaration(ref int index)
+    {
+        int nodeIndex = tokens[index].Index;
+
+        InterfaceMethodKind kind;
+
+        switch (tokens[index].Kind)
+        {
+            case TokenKind.ActionKeyword:
+                kind = InterfaceMethodKind.Action;
+                index++;
+                break;
+            case TokenKind.ChoiceKeyword:
+                kind = InterfaceMethodKind.Choice;
+                index++;
+                break;
+            default:
+                ErrorFound?.Invoke(Errors.ExpectedToken(tokens[index], TokenKind.ActionKeyword));
+                return null;
+        }
+
+        string name = Expect(TokenKind.Identifier, ref index).Text;
+
+        ImmutableArray<PropertyDeclarationNode>? parameterList = ParsePropertyDeclarationList(ref index);
+
+        if (parameterList is null)
+        {
+            return null;
+        }
+
+        return new InterfaceMethodDeclarationNode
+        {
+            Name = name,
+            Kind = kind,
+            Parameters = (ImmutableArray<PropertyDeclarationNode>)parameterList,
+            Index = nodeIndex,
+        };
+    }
+
+    private ReferenceSymbolDeclarationNode? ParseReferenceDeclaration(ref int index)
+    {
+        Debug.Assert(tokens[index].Kind is TokenKind.ReferenceKeyword);
+
+        int nodeIndex = tokens[index].Index;
+        index++;
+
+        string name = Expect(TokenKind.Identifier, ref index).Text;
+
+        _ = Expect(TokenKind.Colon, ref index);
+
+        string interfaceName = Expect(TokenKind.Identifier, ref index).Text;
+
+        _ = Expect(TokenKind.Semicolon, ref index);
+
+        return new ReferenceSymbolDeclarationNode
+        {
+            Name = name,
+            InterfaceName = interfaceName,
+            Index = nodeIndex,
+        };
     }
 }

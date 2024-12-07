@@ -15,20 +15,20 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
     public StoryNode Parse()
     {
         int index = 0;
-        ImmutableArray<TopLevelNode>.Builder symbolBuilder = ImmutableArray.CreateBuilder<TopLevelNode>();
+        ImmutableArray<TopLevelNode>.Builder topLevelBuilder = ImmutableArray.CreateBuilder<TopLevelNode>();
 
-        TopLevelNode? nextSymbol = ParseTopLevelNode(ref index);
+        TopLevelNode? nextTopLevelNode = ParseTopLevelNode(ref index);
 
-        while (nextSymbol is not null)
+        while (nextTopLevelNode is not null)
         {
-            symbolBuilder.Add(nextSymbol);
+            topLevelBuilder.Add(nextTopLevelNode);
 
-            nextSymbol = ParseTopLevelNode(ref index);
+            nextTopLevelNode = ParseTopLevelNode(ref index);
         }
 
         return new StoryNode
         {
-            TopLevelNodes = symbolBuilder.ToImmutable(),
+            TopLevelNodes = topLevelBuilder.ToImmutable(),
             Index = tokens.Length > 0 ? tokens[0].Index : 0,
         };
     }
@@ -239,11 +239,28 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
             };
         }
 
-        index++;
+        ImmutableArray<ArgumentNode>? arguments = ParseArgumentList(ref index);
+
+        if (arguments is null)
+        {
+            return null;
+        }
+
+        return new RecordCreationExpressionNode
+        {
+            Arguments = (ImmutableArray<ArgumentNode>)arguments,
+            RecordName = name,
+            Index = nodeIndex,
+        };
+    }
+
+    private ImmutableArray<ArgumentNode>? ParseArgumentList(ref int index)
+    {
+        _ = Expect(TokenKind.OpenParenthesis, ref index);
 
         ImmutableArray<ArgumentNode>.Builder arguments = ImmutableArray.CreateBuilder<ArgumentNode>();
 
-        while (index < tokens.Length)
+        while (tokens[index] is not { Kind: TokenKind.ClosedParenthesis })
         {
             int argumentIndex = tokens[index].Index;
 
@@ -266,7 +283,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
                     Index = argumentIndex,
                 });
             }
-            else if (tokens[index].Kind != TokenKind.ClosedParenthesis)
+            else
             {
                 ExpressionNode? expression = ParseExpression(ref index);
                 if (expression is null)
@@ -281,21 +298,19 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
                 });
             }
 
-            if (tokens[index].Kind == TokenKind.ClosedParenthesis)
+            if (tokens[index] is not { Kind: TokenKind.Comma })
             {
-                index++;
                 break;
             }
 
-            _ = Expect(TokenKind.Comma, ref index);
+            index++;
         }
 
-        return new RecordCreationExpressionNode
-        {
-            Arguments = arguments.ToImmutable(),
-            RecordName = name,
-            Index = nodeIndex,
-        };
+        // in case of no trailing comma, just expect a closed parenthesis
+        // else this is redundant and just does index++
+        _ = Expect(TokenKind.ClosedParenthesis, ref index);
+
+        return arguments.ToImmutable();
     }
 
     private TypeNode? ParseType(ref int index)

@@ -43,6 +43,12 @@ public enum TokenKind
     ByKeyword,
     CallKeyword,
     CheckpointKeyword,
+    InterfaceKeyword,
+    ReferenceKeyword,
+    ActionKeyword,
+    ChoiceKeyword,
+    RunKeyword,
+    ChooseKeyword,
 
     // literals
     Identifier,

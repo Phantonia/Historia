@@ -3,9 +3,7 @@ using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 
-public sealed record BoundBranchOnStatementNode : BranchOnStatementNode
+public sealed record BoundBranchOnStatementNode() : BranchOnStatementNode
 {
-    public BoundBranchOnStatementNode() { }
-
     public required OutcomeSymbol Outcome { get; init; }
 }

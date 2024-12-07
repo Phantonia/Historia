@@ -2,10 +2,8 @@
 
 namespace Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 
-public record OutcomeSymbol : Symbol
+public record OutcomeSymbol() : Symbol
 {
-    public OutcomeSymbol() { }
-
     public required ImmutableArray<string> OptionNames { get; init; }
 
     public required bool AlwaysAssigned { get; init; }

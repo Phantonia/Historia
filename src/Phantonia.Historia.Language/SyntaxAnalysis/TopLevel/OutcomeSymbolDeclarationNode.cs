@@ -3,10 +3,8 @@ using System.Collections.Immutable;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 
-public sealed record OutcomeSymbolDeclarationNode : SymbolDeclarationNode, IOutcomeDeclarationNode
+public sealed record OutcomeSymbolDeclarationNode() : SymbolDeclarationNode, IOutcomeDeclarationNode
 {
-    public OutcomeSymbolDeclarationNode() { }
-
     public required bool Public { get; init; }
 
     public required ImmutableArray<string> Options { get; init; }

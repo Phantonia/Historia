@@ -15,7 +15,7 @@ public sealed partial class Binder
 {
     private (SymbolTable, TopLevelNode) BindTopLevelNode(TopLevelNode declaration, Settings settings, SymbolTable table)
     {
-        if (declaration is BoundSymbolDeclarationNode { Declaration: var innerDeclaration })
+        if (declaration is BoundSymbolDeclarationNode { Declaration: SymbolDeclarationNode innerDeclaration })
         {
             return BindTopLevelNode(innerDeclaration, settings, table);
         }
@@ -30,21 +30,14 @@ public sealed partial class Binder
                 return BindUnionDeclaration(unionDeclaration, table);
             case EnumSymbolDeclarationNode enumDeclaration:
                 return BindEnumDeclaration(enumDeclaration, table);
-            case OutcomeSymbolDeclarationNode outcomeDeclaration:
+            case SymbolDeclarationNode symbolDeclaration
+                    and (OutcomeSymbolDeclarationNode or SpectrumSymbolDeclarationNode or ReferenceSymbolDeclarationNode or InterfaceSymbolDeclarationNode):
                 return (table, new BoundSymbolDeclarationNode
                 {
-                    Declaration = outcomeDeclaration,
-                    Symbol = table[outcomeDeclaration.Name],
-                    Name = outcomeDeclaration.Name,
-                    Index = outcomeDeclaration.Index,
-                });
-            case SpectrumSymbolDeclarationNode spectrumDeclaration:
-                return (table, new BoundSymbolDeclarationNode
-                {
-                    Declaration = spectrumDeclaration,
-                    Symbol = table[spectrumDeclaration.Name],
-                    Name = spectrumDeclaration.Name,
-                    Index = spectrumDeclaration.Index,
+                    Declaration = symbolDeclaration,
+                    Symbol = table[symbolDeclaration.Name],
+                    Name = symbolDeclaration.Name,
+                    Index = symbolDeclaration.Index,
                 });
             default:
                 Debug.Assert(false);

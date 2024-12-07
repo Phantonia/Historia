@@ -6,27 +6,30 @@ using Phantonia.Historia.Language.SyntaxAnalysis.Types;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 
 public sealed partial class Binder
 {
+    private static bool NeedsDependencyAnalysis(SymbolDeclarationNode declaration)
+        => declaration is TypeSymbolDeclarationNode or ReferenceSymbolDeclarationNode or InterfaceSymbolDeclarationNode;
+
     private DependencyGraph? BuildTypeDependencyGraph(StoryNode story, SymbolTable table)
     {
         Dictionary<int, Symbol> symbols = [];
-        Dictionary<int, IReadOnlyList<int>> dependencies = [];
+        Dictionary<int, IReadOnlySet<int>> dependencies = [];
 
         foreach (TopLevelNode declaration in story.TopLevelNodes)
         {
-            if (declaration is not BoundSymbolDeclarationNode { Declaration: TypeSymbolDeclarationNode typeDeclaration, Symbol: Symbol symbol })
+            if (declaration is not BoundSymbolDeclarationNode { Declaration: SymbolDeclarationNode innerDeclaration, Symbol: Symbol symbol }
+                || !NeedsDependencyAnalysis(innerDeclaration))
             {
                 continue;
             }
 
             symbols[symbol.Index] = symbol;
-            dependencies[symbol.Index] = GetDependencies(typeDeclaration, table);
+            dependencies[symbol.Index] = GetDependencies(innerDeclaration, table);
         }
 
         DependencyGraph dependencyGraph = new()
@@ -46,9 +49,9 @@ public sealed partial class Binder
         return dependencyGraph;
     }
 
-    private static IReadOnlyList<int> GetDependencies(TypeSymbolDeclarationNode declaration, SymbolTable table)
+    private static IReadOnlySet<int> GetDependencies(SymbolDeclarationNode declaration, SymbolTable table)
     {
-        List<int> dependencies = [];
+        SortedSet<int> dependencies = [];
 
         switch (declaration)
         {
@@ -94,6 +97,31 @@ public sealed partial class Binder
             case EnumSymbolDeclarationNode:
                 // no dependencies at all
                 break;
+            case ReferenceSymbolDeclarationNode referenceDeclaration:
+                dependencies.Add(table[referenceDeclaration.InterfaceName].Index);
+                break;
+            case InterfaceSymbolDeclarationNode interfaceDeclaration:
+                foreach (TypeNode type in interfaceDeclaration.Methods.SelectMany(m => m.Parameters).Select(p => p.Type))
+                {
+                    Debug.Assert(type is BoundTypeNode);
+
+                    switch (((BoundTypeNode)type).Node)
+                    {
+                        case IdentifierTypeNode { Identifier: string identifier }:
+                            // we don't need dependencies on built in type symbols as they can never reference user defined type symbols
+                            if (table[identifier] is not BuiltinTypeSymbol)
+                            {
+                                dependencies.Add(table[identifier].Index);
+                            }
+
+                            break;
+                        default:
+                            Debug.Assert(false);
+                            break;
+                    }
+                }
+
+                break;
             default:
                 Debug.Assert(false);
                 break;
@@ -108,20 +136,17 @@ public sealed partial class Binder
 
         foreach (Symbol symbol in order.Select(i => dependencyGraph.Symbols[i]))
         {
-            TypeSymbol? typeSymbol = symbol as TypeSymbol;
-            Debug.Assert(typeSymbol is not null);
+            Symbol trueSymbol = TurnIntoTrueSymbol(symbol, table);
 
-            TypeSymbol trueTypeSymbol = TurnIntoTrueTypeSymbol(typeSymbol, table);
-
-            table = table.Replace(trueTypeSymbol.Name, trueTypeSymbol);
+            table = table.Replace(trueSymbol.Name, trueSymbol);
         }
 
         return table;
     }
 
-    private TypeSymbol TurnIntoTrueTypeSymbol(TypeSymbol typeSymbol, SymbolTable table)
+    private Symbol TurnIntoTrueSymbol(Symbol symbol, SymbolTable table)
     {
-        switch (typeSymbol)
+        switch (symbol)
         {
             case PseudoRecordTypeSymbol recordSymbol:
                 return TurnIntoTrueRecordSymbol(recordSymbol, table);
@@ -129,6 +154,10 @@ public sealed partial class Binder
                 return TurnIntoTrueUnionSymbol(unionSymbol, table);
             case EnumTypeSymbol enumSymbol:
                 return enumSymbol;
+            case PseudoReferenceSymbol referenceSymbol:
+                return TurnIntoTrueReferenceSymbol(referenceSymbol, table);
+            case PseudoInterfaceSymbol interfaceSymbol:
+                return TurnIntoTrueInterfaceSymbol(interfaceSymbol, table);
             default:
                 Debug.Assert(false);
                 return null;
@@ -202,6 +231,39 @@ public sealed partial class Binder
             Name = pseudoUnion.Name,
             Subtypes = [.. trueSubtypes],
             Index = pseudoUnion.Index,
+        };
+    }
+
+    private static ReferenceSymbol TurnIntoTrueReferenceSymbol(PseudoReferenceSymbol pseudoReference, SymbolTable table)
+    {
+        // we already checked that the interface exists
+        InterfaceSymbol intface = (InterfaceSymbol)table[pseudoReference.InterfaceName];
+        return new ReferenceSymbol
+        {
+            Name = pseudoReference.Name,
+            Interface = intface,
+            Index = pseudoReference.Index,
+        };
+    }
+
+    private static InterfaceSymbol TurnIntoTrueInterfaceSymbol(PseudoInterfaceSymbol pseudoInterface, SymbolTable table)
+    {
+        return new InterfaceSymbol
+        {
+            Name = pseudoInterface.Name,
+            Methods = [.. pseudoInterface.Methods.Select(m => TurnIntoTrueInterfaceMethodSymbol(m, table))],
+            Index = pseudoInterface.Index,
+        };
+    }
+
+    private static InterfaceMethodSymbol TurnIntoTrueInterfaceMethodSymbol(PseudoInterfaceMethodSymbol pseudoMethod, SymbolTable table)
+    {
+        return new InterfaceMethodSymbol
+        {
+            Kind = pseudoMethod.Kind,
+            Name = pseudoMethod.Name,
+            Parameters = [.. pseudoMethod.Parameters.Select(p => TurnIntoTruePropertySymbol(p, table))],
+            Index = pseudoMethod.Index,
         };
     }
 }

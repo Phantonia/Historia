@@ -81,7 +81,7 @@ public sealed partial class Binder
 
         if (recordCreation.Arguments.Length != recordSymbol.Properties.Length)
         {
-            ErrorFound?.Invoke(Errors.WrongAmountOfArguments(recordSymbol.Name, recordCreation.Arguments.Length, recordSymbol.Properties.Length, recordCreation.Index));
+            ErrorFound?.Invoke(Errors.WrongAmountOfArgumentsInRecordCreation(recordSymbol.Name, recordCreation.Arguments.Length, recordSymbol.Properties.Length, recordCreation.Index));
 
             TypedExpressionNode incompleteTypedExpression = new()
             {
@@ -93,47 +93,7 @@ public sealed partial class Binder
             return (table, incompleteTypedExpression);
         }
 
-        List<ArgumentNode> boundArguments = [.. recordCreation.Arguments];
-
-        for (int i = 0; i < recordCreation.Arguments.Length; i++)
-        {
-            if (recordCreation.Arguments[i].PropertyName != null && recordCreation.Arguments[i].PropertyName != recordSymbol.Properties[i].Name)
-            {
-                ErrorFound?.Invoke(Errors.WrongPropertyInRecordCreation(recordCreation.Arguments[i].PropertyName!, recordCreation.Arguments[i].Index));
-
-                continue;
-            }
-
-            TypeSymbol propertyType = recordSymbol.Properties[i].Type;
-
-            (table, ExpressionNode maybeTypedExpression) = BindAndTypeExpression(recordCreation.Arguments[i].Expression, table);
-
-            if (maybeTypedExpression is not TypedExpressionNode typedExpression)
-            {
-                continue;
-            }
-
-            if (!TypesAreCompatible(typedExpression.SourceType, propertyType))
-            {
-                ErrorFound?.Invoke(Errors.IncompatibleType(typedExpression.SourceType, propertyType, "property", recordCreation.Arguments[i].Index));
-                continue;
-            }
-
-            typedExpression = typedExpression with
-            {
-                TargetType = recordSymbol.Properties[i].Type,
-            };
-
-            BoundArgumentNode boundArgument = new()
-            {
-                Expression = typedExpression,
-                PropertyName = recordCreation.Arguments[i].PropertyName,
-                Property = recordSymbol.Properties[i],
-                Index = recordCreation.Index,
-            };
-
-            boundArguments[i] = boundArgument;
-        }
+        (table, List<ArgumentNode> boundArguments) = BindArgumentList(recordCreation, table, recordSymbol.Properties, "property");
 
         if (boundArguments.All(a => a is BoundArgumentNode))
         {

@@ -4,10 +4,8 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 
-public sealed record RecordCreationExpressionNode : ExpressionNode
+public sealed record RecordCreationExpressionNode() : ExpressionNode, IArgumentContainerNode
 {
-    public RecordCreationExpressionNode() { }
-
     public required string RecordName { get; init; }
 
     public required ImmutableArray<ArgumentNode> Arguments { get; init; }

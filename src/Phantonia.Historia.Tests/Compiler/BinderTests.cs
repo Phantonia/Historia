@@ -18,11 +18,11 @@ namespace Phantonia.Historia.Tests.Compiler;
 [TestClass]
 public sealed class BinderTests
 {
-    private Binder PrepareBinder(string code)
+    private static Binder PrepareBinder(string code)
     {
         Lexer lexer = new(code);
         Parser parser = new(lexer.Lex());
-        parser.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         Binder binder = new(parser.Parse());
         return binder;
@@ -240,13 +240,13 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         BindingResult result = binder.Bind();
         Assert.IsFalse(result.IsValid);
 
-        Error expectedError = Errors.CyclicTypeDefinition(new[] { "C", "A", "B", "C" }, code.IndexOf("record C"));
+        Error expectedError = Errors.CyclicTypeDefinition(["C", "A", "B", "C"], code.IndexOf("record C"));
 
         Assert.AreEqual(1, errors.Count);
         Assert.AreEqual(expectedError, errors[0]);
@@ -265,13 +265,13 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         BindingResult result = binder.Bind();
         Assert.IsFalse(result.IsValid);
 
-        Error expectedError = Errors.CyclicTypeDefinition(new[] { "A", "A" }, index: code.IndexOf("record A"));
+        Error expectedError = Errors.CyclicTypeDefinition(["A", "A"], index: code.IndexOf("record A"));
 
         Assert.AreEqual(1, errors.Count);
         Assert.AreEqual(expectedError, errors[0]);
@@ -526,7 +526,7 @@ public sealed class BinderTests
             """;
 
         Binder binder = PrepareBinder(code);
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         BindingResult bindingResult = binder.Bind();
@@ -563,7 +563,7 @@ public sealed class BinderTests
         Error thirdError = Errors.IncompatibleType(sourceType: intType, targetType: stringType, "property", code.IndexOf("2, 1"));
         Assert.AreEqual(thirdError, errors[2]);
 
-        Error fourthError = Errors.WrongAmountOfArguments("Line", givenAmount: 1, expectedAmount: 2, code.IndexOf("Line(\"Hello\");"));
+        Error fourthError = Errors.WrongAmountOfArgumentsInRecordCreation("Line", givenAmount: 1, expectedAmount: 2, code.IndexOf("Line(\"Hello\");"));
         Assert.AreEqual(fourthError, errors[3]);
     }
 
@@ -596,7 +596,7 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         _ = binder.Bind();
@@ -760,7 +760,7 @@ public sealed class BinderTests
             }
             """;
 
-        TestForError(code4, Errors.BranchOnIsNotExhaustive("Outcome", new[] { "C", "D" }, code4.IndexOf("branchon")));
+        TestForError(code4, Errors.BranchOnIsNotExhaustive("Outcome", ["C", "D"], code4.IndexOf("branchon")));
 
         string code5 =
             """
@@ -834,7 +834,7 @@ public sealed class BinderTests
         {
             Binder binder = PrepareBinder(code);
 
-            List<Error> errors = new();
+            List<Error> errors = [];
             binder.ErrorFound += errors.Add;
 
             _ = binder.Bind();
@@ -999,7 +999,7 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         BindingResult result = binder.Bind();
@@ -1027,14 +1027,14 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         _ = binder.Bind();
 
         Assert.AreEqual(1, errors.Count);
 
-        Error expectedError = Errors.CyclicTypeDefinition(new[] { "C", "A", "B", "C" }, code.IndexOf("record C"));
+        Error expectedError = Errors.CyclicTypeDefinition(["C", "A", "B", "C"], code.IndexOf("record C"));
 
         Assert.AreEqual(expectedError, errors[0]);
     }
@@ -1080,7 +1080,7 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         _ = binder.Bind();
@@ -1142,7 +1142,7 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         _ = binder.Bind();
@@ -1218,7 +1218,7 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         BindingResult result = binder.Bind();
@@ -1279,7 +1279,7 @@ public sealed class BinderTests
             BoundSymbolDeclarationNode? boundScene = result.BoundStory.TopLevelNodes[i] as BoundSymbolDeclarationNode;
             Assert.IsNotNull(boundScene);
 
-            Assert.AreEqual(scene, boundScene.Symbol); 
+            Assert.AreEqual(scene, boundScene.Symbol);
 
             SceneSymbolDeclarationNode? sceneDeclaration = boundScene.Declaration as SceneSymbolDeclarationNode;
             Assert.IsNotNull(sceneDeclaration);
@@ -1410,7 +1410,7 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         _ = binder.Bind();
@@ -1433,14 +1433,14 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         BindingResult result = binder.Bind();
 
         Assert.AreEqual(1, errors.Count);
 
-        Error expectedError = Errors.IncompatibleType((TypeSymbol)result.SymbolTable!["Int"], (TypeSymbol)result.SymbolTable!["String"], "setting", code.IndexOf("2"));
+        Error expectedError = Errors.IncompatibleType((TypeSymbol)result.SymbolTable!["Int"], (TypeSymbol)result.SymbolTable!["String"], "setting", code.IndexOf('2'));
         Assert.AreEqual(expectedError, errors[0]);
     }
 
@@ -1458,7 +1458,7 @@ public sealed class BinderTests
 
             Binder binder = PrepareBinder(code);
 
-            List<Error> errors = new();
+            List<Error> errors = [];
             binder.ErrorFound += errors.Add;
 
             _ = binder.Bind();
@@ -1505,7 +1505,7 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         _ = binder.Bind();
@@ -1528,14 +1528,14 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         BindingResult result = binder.Bind();
 
         Assert.AreEqual(1, errors.Count);
 
-        Error expectedError = Errors.IncompatibleType((TypeSymbol)result.SymbolTable!["Int"], (TypeSymbol)result.SymbolTable!["String"], "setting", code.IndexOf("4"));
+        Error expectedError = Errors.IncompatibleType((TypeSymbol)result.SymbolTable!["Int"], (TypeSymbol)result.SymbolTable!["String"], "setting", code.IndexOf('4'));
         Assert.AreEqual(expectedError, errors[0]);
     }
 
@@ -1553,7 +1553,7 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         _ = binder.Bind();
@@ -1587,7 +1587,7 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         _ = binder.Bind();
@@ -1650,12 +1650,12 @@ public sealed class BinderTests
             return parser.Parse();
         }
 
-        StoryNode[] stories = new[]
-        {
+        StoryNode[] stories =
+        [
             Parse(codeA, 0),
             Parse(codeB, offsetB),
             Parse(codeC, offsetC),
-        };
+        ];
 
         int storyAMaxIndex = stories[0].FlattenHierarchie().Max(n => n.Index);
         int storyBMinIndex = stories[1].FlattenHierarchie().Min(n => n.Index);
@@ -1696,7 +1696,7 @@ public sealed class BinderTests
         Assert.IsTrue(result.IsValid);
 
         EnumTypeSymbol characterType = (EnumTypeSymbol)result.SymbolTable["Character"];
-        string[] optionNames = new[] { "Alice", "Beverly", "Charlotte" };
+        string[] optionNames = ["Alice", "Beverly", "Charlotte"];
 
         BoundSymbolDeclarationNode boundEnumDeclaration = (BoundSymbolDeclarationNode)result.BoundStory.TopLevelNodes[0];
         EnumSymbolDeclarationNode enumDeclaration = (EnumSymbolDeclarationNode)boundEnumDeclaration.Declaration;
@@ -1778,7 +1778,7 @@ public sealed class BinderTests
 
         Binder binder = PrepareBinder(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         binder.ErrorFound += errors.Add;
 
         _ = binder.Bind();
@@ -1787,5 +1787,140 @@ public sealed class BinderTests
 
         Error expectedError = Errors.LoopSwitchHasToTerminate(code.IndexOf("loop switch"));
         Assert.AreEqual(expectedError, errors[0]);
+    }
+
+    [TestMethod]
+    public void TestReferences()
+    {
+        string code =
+            """
+            setting OutputType: String;
+            setting OptionType: String;
+
+            interface ICharacter
+            (
+                action Say(line: String),
+                choice Choose(prompt: String),
+            );
+
+            reference Character: ICharacter;
+
+            scene main
+            {
+                run Character.Say("Hello world");
+
+                choose Character.Choose("What to do?")
+                {
+                    option ("Jump")
+                    {
+                        output "I jumped!";
+                    }
+
+                    option ("Crouch")
+                    {
+                        output "I crouched!";
+                    }
+                }
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        BindingResult result = binder.Bind();
+
+        Assert.IsTrue(result.IsValid);
+
+        InterfaceSymbol? intface = result.SymbolTable["ICharacter"] as InterfaceSymbol;
+        Assert.IsNotNull(intface);
+
+        SceneSymbolDeclarationNode? mainScene = (result.BoundStory.TopLevelNodes[4] as BoundSymbolDeclarationNode)?.Declaration as SceneSymbolDeclarationNode;
+        Assert.IsNotNull(mainScene);
+
+        BoundRunStatementNode? runStatement = mainScene.Body.Statements[0] as BoundRunStatementNode;
+        Assert.IsNotNull(runStatement);
+
+        Assert.AreEqual(result.SymbolTable["Character"], runStatement.Reference);
+        Assert.AreEqual(intface.Methods[0], runStatement.Method);
+        Assert.AreEqual(1, runStatement.Arguments.Length);
+        Assert.IsTrue(runStatement.Arguments[0].Expression is TypedExpressionNode { SourceType: BuiltinTypeSymbol { Type: BuiltinType.String } });
+
+        BoundChooseStatementNode? chooseStatement = mainScene.Body.Statements[1] as BoundChooseStatementNode;
+        Assert.IsNotNull(chooseStatement);
+
+        Assert.AreEqual(result.SymbolTable["Character"], chooseStatement.Reference);
+        Assert.AreEqual(intface.Methods[1], chooseStatement.Method);
+        Assert.AreEqual(1, chooseStatement.Arguments.Length);
+        Assert.IsTrue(chooseStatement.Arguments[0].Expression is TypedExpressionNode { SourceType: BuiltinTypeSymbol { Type: BuiltinType.String } });
+    }
+
+    [TestMethod]
+    public void TestReferenceErrors()
+    {
+        string code =
+            """
+            interface I
+            (
+                action A(x: Int),
+                choice B(y: Int),
+            );
+
+            reference R: X; // interface X does not exist
+            reference S: String; // String is not an interface
+            reference T: I;
+
+            setting OptionType: Int;
+
+            scene main
+            {
+                run X.A(0); // reference X does not exist
+                run T.X(1); // method X does not exist
+                run T.B(2); // method B is not an action
+                // run T.A(); // method A takes 1 parameter
+                run T.A(3, 4); // method A takes 1 parameter
+                run T.A("Hello world"); // method A takes Int parameter
+
+                choose X.B(5) { option (100) { } } // reference X does not exist
+                choose T.X(6) { option (100) { } } // method X does not exist
+                choose T.A(7) { option (100) { } } // method A is not a choice
+                // choose T.B() { option (100) { } } // method B takes 1 parameter
+                choose T.B(8, 9) { option (100) { } } // method B takes 1 parameter
+                choose T.B("What's up world") { option (100) { } } // method B takes Int parameter
+                choose T.B(10) { option ("Goodbye world") { } } // option type is Int
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+
+        List<Error> errors = [];
+        binder.ErrorFound += errors.Add;
+
+        BindingResult result = binder.Bind();
+
+        Assert.IsNotNull(result.SymbolTable);
+
+        List<Error> expectedErrors =
+        [
+            // declarations
+            Errors.SymbolDoesNotExistInScope("X", code.IndexOf("reference R")),
+            Errors.SymbolIsNotInterface("String", code.IndexOf("reference S")),
+
+            // run
+            Errors.SymbolDoesNotExistInScope("X", code.IndexOf("run X.A(0);")),
+            Errors.MethodDoesNotExistInInterface("T", "I", "X", code.IndexOf("run T.X(1);")),
+            Errors.CannotRunChoiceMethod("I", "B", code.IndexOf("run T.B(2);")),
+            Errors.WrongAmountOfArgumentsInMethodCall("I", "A", 2, 1, code.IndexOf("run T.A(3, 4);")),
+            Errors.IncompatibleType((TypeSymbol)result.SymbolTable["String"], (TypeSymbol)result.SymbolTable["Int"], "parameter", code.IndexOf(@"""Hello world""")),
+
+            // choose
+            Errors.SymbolDoesNotExistInScope("X", code.IndexOf("choose X.B(5)")),
+            Errors.MethodDoesNotExistInInterface("T", "I", "X", code.IndexOf("choose T.X(6)")),
+            Errors.CannotChooseFromActionMethod("I", "A", code.IndexOf("choose T.A(7)")),
+            Errors.WrongAmountOfArgumentsInMethodCall("I", "B", 2, 1, code.IndexOf("choose T.B(8, 9)")),
+            Errors.IncompatibleType((TypeSymbol)result.SymbolTable["String"], (TypeSymbol)result.SymbolTable["Int"], "parameter", code.IndexOf(@"""What's up world""")),
+            Errors.IncompatibleType((TypeSymbol)result.SymbolTable["String"], (TypeSymbol)result.SymbolTable["Int"], "option", code.IndexOf(@"""Goodbye world""")),
+        ];
+
+        Assert.IsTrue(errors.SequenceEqual(expectedErrors));
     }
 }

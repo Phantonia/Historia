@@ -109,7 +109,7 @@ public sealed class StoryGraphEmitter(FlowGraph flowGraph, Settings settings, In
 
         foreach (SwitchOptionNode option in switchStatement.Options)
         {
-            GeneralEmission.GenerateExpression(option.Expression, settings, writer);
+            GeneralEmission.GenerateExpression(option.Expression, writer);
             writer.Write(", ");
         }
 
@@ -197,7 +197,7 @@ public sealed class StoryGraphEmitter(FlowGraph flowGraph, Settings settings, In
         writer.Write('(');
         writer.Write(vertex.Index);
         writer.Write(", ");
-        GeneralEmission.GenerateExpression(outputStatement.OutputExpression, settings, writer);
+        GeneralEmission.GenerateExpression(outputStatement.OutputExpression, writer);
         writer.Write(", ");
 
         void GenerateOptionType() => GeneralEmission.GenerateType(settings.OptionType, writer);

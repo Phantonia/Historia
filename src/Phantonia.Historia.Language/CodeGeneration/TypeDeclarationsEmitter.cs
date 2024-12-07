@@ -4,10 +4,11 @@ using Phantonia.Historia.Language.SyntaxAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using System.CodeDom.Compiler;
 using System.Linq;
+using System.Reflection.Metadata;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
-public sealed class TypeDeclarationsEmitter(StoryNode boundStory, IndentedTextWriter writer)
+public sealed class TypeDeclarationsEmitter(StoryNode boundStory, Settings settings, IndentedTextWriter writer)
 {
     public void GenerateTypeDeclarations()
     {
@@ -34,6 +35,9 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, IndentedTextWr
                     break;
                 case OutcomeSymbol { IsPublic: true } outcomeSymbol:
                     GenerateOutcomeEnum(outcomeSymbol);
+                    break;
+                case InterfaceSymbol interfaceSymbol:
+                    GenerateInterfaceDeclaration(interfaceSymbol);
                     break;
                 default:
                     continue;
@@ -564,6 +568,11 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, IndentedTextWr
 
         if (outcomeSymbol.DefaultOption is null)
         {
+            // we don't ban someone naming an option Unset
+            // so if they do, we'd call the value for Unset '_Unset' instead
+            // but they could have called an option that too
+            // so we just as many underscores as we need
+            // this is the edge case of the edge case of the edge case of the...
             int i = 0;
 
             while (outcomeSymbol.OptionNames.Contains(new string('_', i) + "Unset"))
@@ -586,5 +595,78 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, IndentedTextWr
         }
 
         writer.EndBlock(); // enum
+    }
+
+    private void GenerateInterfaceDeclaration(InterfaceSymbol interfaceSymbol)
+    {
+        writer.Write("public interface I");
+        writer.WriteLine(interfaceSymbol.Name);
+
+        writer.BeginBlock();
+
+        foreach (InterfaceMethodSymbol method in interfaceSymbol.Methods)
+        {
+            if (method.Kind is InterfaceMethodKind.Action)
+            {
+                writer.Write("void ");
+                writer.Write(method.Name);
+                writer.Write('(');
+                GenerateParameters(method);
+                writer.WriteLine(");");
+            }
+            else
+            {
+                writer.Write("int ");
+                writer.Write(method.Name);
+                writer.Write('(');
+
+                GenerateParameters(method);
+
+                writer.Write(", global::");
+                writer.Write(nameof(Phantonia));
+                writer.Write('.');
+                writer.Write(nameof(Historia));
+                writer.Write('.');
+                writer.Write(nameof(ReadOnlyList<int>)); // doesn't emit the '<int>' part but it wouldn't otherwise compile
+                writer.Write('<');
+                GeneralEmission.GenerateType(settings.OptionType, writer);
+                writer.Write("> ");
+
+                // see outcome enum generation for why we do this
+                int i = 0;
+
+                while (method.Parameters.Any(p => p.Name == new string('_', i) + "options"))
+                {
+                    i++;
+                }
+
+                for (int j = 0; j < i; j++)
+                {
+                    writer.Write('_');
+                }
+
+                writer.WriteLine("options);");
+            }
+        }
+
+        writer.EndBlock(); // interface
+
+        void GenerateParameters(InterfaceMethodSymbol method)
+        {
+            if (method.Parameters.Length > 0)
+            {
+                GeneralEmission.GenerateType(method.Parameters[0].Type, writer);
+                writer.Write(' ');
+                writer.Write(method.Parameters[0].Name);
+
+                foreach (PropertySymbol parameter in method.Parameters.Skip(1))
+                {
+                    writer.Write(", ");
+                    GeneralEmission.GenerateType(parameter.Type, writer);
+                    writer.Write(' ');
+                    writer.Write(parameter.Name);
+                }
+            }
+        }
     }
 }

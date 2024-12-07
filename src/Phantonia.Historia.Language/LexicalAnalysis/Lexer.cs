@@ -220,6 +220,18 @@ public sealed class Lexer
             currentIndex++;
         }
 
+        if (delimiterCount == 2) // represents string "" or ''
+        {
+            return new Token
+            {
+                Index = startIndex,
+                Kind = TokenKind.StringLiteral,
+                Text = new string(delimiter, 2),
+            };
+        }
+
+        // delimiterCount must be 1 or >=3
+
         // whenever the delimiter is seen again (unless escaped), we reduce this countdown to see if it reaches 0 (i.e. the string is terminated)
         // else we reset it for possible later termination
         int delimiterCountdown = delimiterCount;
@@ -470,6 +482,12 @@ public sealed class Lexer
             "by" => TokenKind.ByKeyword,
             "call" => TokenKind.CallKeyword,
             "checkpoint" => TokenKind.CheckpointKeyword,
+            "interface" => TokenKind.InterfaceKeyword,
+            "reference" => TokenKind.ReferenceKeyword,
+            "action" => TokenKind.ActionKeyword,
+            "choice" => TokenKind.ChoiceKeyword,
+            "run" => TokenKind.RunKeyword,
+            "choose" => TokenKind.ChooseKeyword,
             _ => TokenKind.Identifier,
         };
 

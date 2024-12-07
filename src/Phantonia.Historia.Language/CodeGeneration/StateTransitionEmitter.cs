@@ -2,6 +2,7 @@
 using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
+using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -78,6 +79,12 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
                     break;
                 case CallerResolutionStatementNode resolutionStatement:
                     GenerateCallerResolutionTransition(resolutionStatement, edges);
+                    break;
+                case BoundRunStatementNode runStatement:
+                    GenerateRunTransition(runStatement, edges);
+                    break;
+                case BoundChooseStatementNode chooseStatement:
+                    GenerateChooseTransition(chooseStatement, edges);
                     break;
             }
 
@@ -399,7 +406,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
         writer.Write("fields.");
         GeneralEmission.GenerateSpectrumTotalFieldName(spectrum, writer);
         writer.Write(" += ");
-        GeneralEmission.GenerateExpression(spectrumAdjustment.AdjustmentAmount, settings, writer);
+        GeneralEmission.GenerateExpression(spectrumAdjustment.AdjustmentAmount, writer);
         writer.WriteLine(';');
 
         if (spectrumAdjustment.Strengthens)
@@ -407,7 +414,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
             writer.Write("fields.");
             GeneralEmission.GenerateSpectrumPositiveFieldName(spectrum, writer);
             writer.Write(" += ");
-            GeneralEmission.GenerateExpression(spectrumAdjustment.AdjustmentAmount, settings, writer);
+            GeneralEmission.GenerateExpression(spectrumAdjustment.AdjustmentAmount, writer);
             writer.WriteLine(';');
         }
 
@@ -450,6 +457,99 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
         writer.EndBlock(); // switch
         writer.WriteLine();
         writer.WriteLine("throw new global::System.InvalidOperationException(\"Fatal internal error: Invalid call site\");");
+    }
+
+    private void GenerateRunTransition(BoundRunStatementNode runStatement, ImmutableList<FlowEdge> edges)
+    {
+        Debug.Assert(edges.Count == 1);
+
+        writer.Write("fields.reference");
+        writer.Write(runStatement.Reference.Name);
+        writer.Write('.');
+        writer.Write(runStatement.Method.Name);
+
+        writer.Write('(');
+
+        if (runStatement.Arguments.Length > 0)
+        {
+            GeneralEmission.GenerateExpression(runStatement.Arguments[0].Expression, writer);
+
+            foreach (BoundArgumentNode argument in runStatement.Arguments.Skip(1))
+            {
+                writer.Write(", ");
+                GeneralEmission.GenerateExpression(argument.Expression, writer);
+            }
+        }
+
+        writer.WriteLine(");");
+
+        GenerateTransitionTo(edges.First(e => e.IsStory).ToVertex);
+    }
+
+    private void GenerateChooseTransition(BoundChooseStatementNode chooseStatement, ImmutableList<FlowEdge> edges)
+    {
+        writer.BeginBlock();
+
+        GeneralEmission.GenerateType(settings.OptionType, writer);
+        writer.WriteLine("[] options = optionsPool.Value!;");
+
+        for (int i = 0; i < chooseStatement.Options.Length; i++)
+        {
+            writer.Write("options[");
+            writer.Write(i);
+            writer.Write("] = ");
+            GeneralEmission.GenerateExpression(chooseStatement.Options[i].Expression, writer);
+            writer.WriteLine(';');
+        }
+
+        writer.WriteLine();
+
+        writer.Write("int next = fields.reference");
+        writer.Write(chooseStatement.Reference.Name);
+        writer.Write('.');
+        writer.Write(chooseStatement.Method.Name);
+
+        writer.Write('(');
+
+        foreach (BoundArgumentNode argument in chooseStatement.Arguments)
+        {
+            GeneralEmission.GenerateExpression(argument.Expression, writer);
+            writer.Write(", ");
+        }
+
+        writer.Write("new global::Phantonia.Historia.ReadOnlyList<");
+        GeneralEmission.GenerateType(settings.OptionType, writer);
+        writer.Write(">(options, 0, ");
+        writer.Write(chooseStatement.Options.Length);
+        writer.WriteLine("));");
+
+        writer.WriteLine();
+
+        writer.WriteLine("switch (next)");
+        writer.BeginBlock();
+
+        for (int i = 0; i < chooseStatement.Options.Length; i++)
+        {
+            writer.Write("case ");
+            writer.Write(i);
+            writer.WriteLine(':');
+            writer.Indent++;
+
+            GenerateTransitionTo(edges[i].ToVertex);
+
+            writer.Indent--;
+        }
+
+        writer.WriteLine("default:");
+        writer.Indent++;
+
+        writer.WriteLine($$"""throw new global::System.InvalidOperationException($"Expected an option between 0 and {{chooseStatement.Options.Length - 1}}, instead got option {next}");""");
+
+        writer.Indent--;
+
+        writer.EndBlock(); // switch
+
+        writer.EndBlock(); // scope
     }
 
     private void GenerateTransitionTo(int toVertex)

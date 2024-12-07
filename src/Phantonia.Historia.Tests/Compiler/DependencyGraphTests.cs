@@ -27,17 +27,17 @@ public sealed class DependencyGraphTests
             [123] = new PseudoRecordTypeSymbol { Name = "Xyz", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 123, },
         };
 
-        Dictionary<int, IReadOnlyList<int>> dependencies = new()
+        Dictionary<int, IReadOnlySet<int>> dependencies = new()
         {
-            [17] = new[] { 26, 43 },
-            [26] = new[] { 43, 55 },
-            [43] = new[] { 70 },
-            [55] = new[] { 70, 89 },
-            [70] = new[] { 105 },
-            [89] = new[] { 105, 117 },
-            [105] = new[] { 117 },
-            [117] = new[] { 123 },
-            [123] = new[] { 89 },
+            [17] = (SortedSet<int>)[26, 43],
+            [26] = (SortedSet<int>)[43, 55],
+            [43] = (SortedSet<int>)[70],
+            [55] = (SortedSet<int>)[70, 89],
+            [70] = (SortedSet<int>)[105],
+            [89] = (SortedSet<int>)[105, 117],
+            [105] = (SortedSet<int>)[117],
+            [117] = (SortedSet<int>)[123],
+            [123] = (SortedSet<int>)[89],
         };
 
         DependencyGraph graph = new()
@@ -80,17 +80,17 @@ public sealed class DependencyGraphTests
             [123] = new PseudoRecordTypeSymbol { Name = "Xyz", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 123, },
         };
 
-        Dictionary<int, IReadOnlyList<int>> dependencies = new()
+        Dictionary<int, IReadOnlySet<int>> dependencies = new()
         {
-            [17] = new[] { 26, 43 },
-            [26] = new[] { 43, 55 },
-            [43] = new[] { 70 },
-            [55] = new[] { 70, 89 },
-            [70] = new[] { 105 },
-            [89] = new[] { 105, 117 },
-            [105] = new[] { 117 },
-            [117] = new[] { 123 },
-            [123] = Array.Empty<int>(),
+            [17] = (SortedSet<int>)[26, 43],
+            [26] = (SortedSet<int>)[43, 55],
+            [43] = (SortedSet<int>)[70],
+            [55] = (SortedSet<int>)[70, 89],
+            [70] = (SortedSet<int>)[105],
+            [89] = (SortedSet<int>)[105, 117],
+            [105] = (SortedSet<int>)[117],
+            [117] = (SortedSet<int>)[123],
+            [123] = (SortedSet<int>)[],
         };
 
         DependencyGraph graph = new()

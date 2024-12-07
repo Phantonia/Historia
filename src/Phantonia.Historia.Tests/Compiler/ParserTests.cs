@@ -55,7 +55,7 @@ public sealed class ParserTests
         Lexer lexer = new(code);
         Parser parser = new(lexer.Lex());
 
-        List<Error> errors = new();
+        List<Error> errors = [];
 
         parser.ErrorFound += errors.Add;
 
@@ -74,7 +74,7 @@ public sealed class ParserTests
         {
             Kind = TokenKind.Unknown,
             Text = "!",
-            Index = code.IndexOf("!"),
+            Index = code.IndexOf('!'),
         });
 
         Assert.AreEqual(firstError, errors[0]);
@@ -362,11 +362,11 @@ public sealed class ParserTests
             {
                 Kind = TokenKind.Semicolon,
                 Text = ";",
-                Index = code.IndexOf(";"),
+                Index = code.IndexOf(';'),
             });
 
             Assert.AreEqual(expectedError, e);
-            Assert.AreEqual(code.IndexOf(";"), e.Index);
+            Assert.AreEqual(code.IndexOf(';'), e.Index);
         };
 
         _ = parser.Parse();
@@ -525,7 +525,7 @@ public sealed class ParserTests
         Lexer lexer = new(code);
         Parser parser = new(lexer.Lex());
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         parser.ErrorFound += errors.Add;
 
         _ = parser.Parse();
@@ -609,7 +609,7 @@ public sealed class ParserTests
 
         Parser parser = new(new Lexer(code).Lex());
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         parser.ErrorFound += errors.Add;
 
         _ = parser.Parse();
@@ -654,10 +654,10 @@ public sealed class ParserTests
 
         Assert.AreEqual(4, mainScene.Body.Statements.Length);
 
-        AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[0], "W", new[] { "A" }, null);
-        AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[1], "X", new[] { "A", "B" }, null);
-        AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[2], "Y", Array.Empty<string>(), null);
-        AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[3], "Z", new[] { "A", "B", "C", "D", "E", "F" }, "A");
+        AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[0], "W", ["A"], null);
+        AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[1], "X", ["A", "B"], null);
+        AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[2], "Y", [], null);
+        AssertIsCorrectOutcomeDeclaration(mainScene.Body.Statements[3], "Z", ["A", "B", "C", "D", "E", "F"], "A");
     }
 
     [TestMethod]
@@ -682,7 +682,7 @@ public sealed class ParserTests
 
         SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[0];
 
-        void AssertIsCorrectAssignment<ExpressionType>(StatementNode statement)
+        static void AssertIsCorrectAssignment<ExpressionType>(StatementNode statement)
             where ExpressionType : ExpressionNode
         {
             AssignmentStatementNode? assignment = statement as AssignmentStatementNode;
@@ -717,7 +717,7 @@ public sealed class ParserTests
         Assert.IsNotNull(unionDeclaration);
 
         Assert.AreEqual("X", unionDeclaration.Name);
-        Assert.IsTrue(unionDeclaration.Subtypes.Select(s => (s as IdentifierTypeNode)?.Identifier).SequenceEqual(new[] { "Int", "String", "Y" }));
+        Assert.IsTrue(unionDeclaration.Subtypes.Select(s => (s as IdentifierTypeNode)?.Identifier).SequenceEqual(["Int", "String", "Y"]));
     }
 
     [TestMethod]
@@ -743,7 +743,7 @@ public sealed class ParserTests
 
         Assert.AreEqual(3, mainScene.Body.Statements.Length);
 
-        List<SpectrumDeclarationStatementNode> spectrumDeclarations = new();
+        List<SpectrumDeclarationStatementNode> spectrumDeclarations = [];
 
         foreach (StatementNode statement in mainScene.Body.Statements)
         {
@@ -973,7 +973,7 @@ public sealed class ParserTests
         SceneSymbolDeclarationNode? mainScene = story.TopLevelNodes[^1] as SceneSymbolDeclarationNode;
         Assert.IsNotNull(mainScene);
 
-        string[] optionNames = new[] { "Alice", "Beverly", "Charlotte" };
+        string[] optionNames = ["Alice", "Beverly", "Charlotte"];
 
         for (int i = 0; i < 3; i++)
         {
@@ -1115,5 +1115,152 @@ public sealed class ParserTests
             Kind = TokenKind.OutcomeKeyword,
             Text = "outcome",
         }), errors[0]);
+    }
+
+    [TestMethod]
+    public void TestReferences()
+    {
+        string code =
+            """
+            setting OutputType: String;
+            setting OptionType: String;
+
+            interface ICharacter
+            (
+                action Say(line: String),
+                choice Choose(prompt: String),
+            );
+
+            reference Character: ICharacter;
+
+            scene main
+            {
+                run Character.Say("Hello world");
+
+                choose Character.Choose("What to do?")
+                {
+                    option ("Jump")
+                    {
+                        output "I jumped!";
+                    }
+
+                    option ("Crouch")
+                    {
+                        output "I crouched!";
+                    }
+                }
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = parser.Parse();
+
+        Assert.AreEqual(5, story.TopLevelNodes.Length);
+
+        InterfaceSymbolDeclarationNode? intface = story.TopLevelNodes[2] as InterfaceSymbolDeclarationNode;
+        Assert.IsNotNull(intface);
+
+        Assert.AreEqual("ICharacter", intface.Name);
+        Assert.AreEqual(2, intface.Methods.Length);
+
+        Assert.AreEqual(InterfaceMethodKind.Action, intface.Methods[0].Kind);
+        Assert.AreEqual("Say", intface.Methods[0].Name);
+        Assert.AreEqual(1, intface.Methods[0].Parameters.Length);
+        Assert.AreEqual("line", intface.Methods[0].Parameters[0].Name);
+
+        Assert.AreEqual(InterfaceMethodKind.Choice, intface.Methods[1].Kind);
+        Assert.AreEqual("Choose", intface.Methods[1].Name);
+        Assert.AreEqual(1, intface.Methods[1].Parameters.Length);
+        Assert.AreEqual("prompt", intface.Methods[1].Parameters[0].Name);
+
+        ReferenceSymbolDeclarationNode? reference = story.TopLevelNodes[3] as ReferenceSymbolDeclarationNode;
+        Assert.IsNotNull(reference);
+
+        Assert.AreEqual("Character", reference.Name);
+        Assert.AreEqual("ICharacter", reference.InterfaceName);
+
+        SceneSymbolDeclarationNode? mainScene = story.TopLevelNodes[4] as SceneSymbolDeclarationNode;
+        Assert.IsNotNull(mainScene);
+
+        Assert.AreEqual(2, mainScene.Body.Statements.Length);
+
+        RunStatementNode? runStatement = mainScene.Body.Statements[0] as RunStatementNode;
+        Assert.IsNotNull(runStatement);
+        Assert.AreEqual("Character", runStatement.ReferenceName);
+        Assert.AreEqual("Say", runStatement.MethodName);
+        Assert.AreEqual(1, runStatement.Arguments.Length);
+
+        ChooseStatementNode? chooseStatement = mainScene.Body.Statements[1] as ChooseStatementNode;
+        Assert.IsNotNull(chooseStatement);
+        Assert.AreEqual("Character", chooseStatement.ReferenceName);
+        Assert.AreEqual("Choose", chooseStatement.MethodName);
+        Assert.AreEqual(1, chooseStatement.Arguments.Length);
+        Assert.AreEqual(2, chooseStatement.Options.Length);
+    }
+
+    [TestMethod]
+    public void TestSwitchAndChooseWithoutOption()
+    {
+        string code =
+            """
+            interface I(choice C(x: Int));
+            reference R: I;
+
+            scene main
+            {
+                switch (0) { } // switch
+                choose R.C(1) { } // choose
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+
+        List<Error> errors = [];
+        parser.ErrorFound += errors.Add;
+
+        _ = parser.Parse();
+
+        Error firstError = Errors.MustHaveAtLeastOneOption(code.IndexOf("} // switch"));
+        Error secondError = Errors.MustHaveAtLeastOneOption(code.IndexOf("} // choose"));
+
+        Assert.AreEqual(2, errors.Count);
+        Assert.AreEqual(firstError, errors[0]);
+        Assert.AreEqual(secondError, errors[1]);
+    }
+
+    [TestMethod]
+    public void TestInterfaceWithParameterlessMethod()
+    {
+        string code =
+            """
+            interface I
+            (
+                action X(),
+                choice Y(),
+            );
+
+            reference R: I;
+
+            scene main
+            {
+                run R.X();
+
+                choose R.Y()
+                {
+                    option (0) { }
+                }
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        // we just assert that this goes through without errors or exceptions
+        _ = parser.Parse();
     }
 }

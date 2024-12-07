@@ -3,10 +3,8 @@ using System.Collections.Immutable;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public record OutcomeDeclarationStatementNode : StatementNode, IOutcomeDeclarationNode
+public record OutcomeDeclarationStatementNode() : StatementNode, IOutcomeDeclarationNode
 {
-    public OutcomeDeclarationStatementNode() { }
-
     public required string Name { get; init; }
 
     public required ImmutableArray<string> Options { get; init; }

@@ -2,6 +2,8 @@
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
+using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -77,6 +79,10 @@ public sealed partial class Binder
                 return BindSpectrumAdjustmentStatement(adjustmentStatement, table);
             case CallStatementNode callStatement:
                 return BindCallStatement(callStatement, table);
+            case RunStatementNode runStatement:
+                return BindRunStatement(runStatement, table);
+            case ChooseStatementNode chooseStatement:
+                return BindChooseStatement(chooseStatement, settings, table);
             default:
                 Debug.Assert(false);
                 return default;
@@ -501,5 +507,139 @@ public sealed partial class Binder
         };
 
         return (table, boundCallStatement);
+    }
+
+    private (SymbolTable, StatementNode) BindRunStatement(RunStatementNode runStatement, SymbolTable table)
+    {
+        (table, ReferenceSymbol? referenceSymbol, InterfaceMethodSymbol? methodSymbol, IEnumerable<BoundArgumentNode>? boundArguments) = BindMethodCallStatement(runStatement, table);
+
+        if (referenceSymbol is null || methodSymbol is null || boundArguments is null)
+        {
+            return (table, runStatement);
+        }
+
+        BoundRunStatementNode boundRunStatement = new()
+        {
+            Reference = referenceSymbol,
+            Method = methodSymbol,
+            Arguments = [.. boundArguments],
+            Index = runStatement.Index,
+        };
+
+        return (table, boundRunStatement);
+    }
+
+    private (SymbolTable, StatementNode) BindChooseStatement(ChooseStatementNode chooseStatement, Settings settings, SymbolTable table)
+    {
+        (table, ReferenceSymbol? referenceSymbol, InterfaceMethodSymbol? methodSymbol, IEnumerable<BoundArgumentNode>? boundArguments) = BindMethodCallStatement(chooseStatement, table);
+
+        if (referenceSymbol is null || methodSymbol is null || boundArguments is null)
+        {
+            return (table, chooseStatement);
+        }
+
+        List<OptionNode> boundOptions = [.. chooseStatement.Options];
+
+        for (int i = 0; i < boundOptions.Count; i++)
+        {
+            (table, ExpressionNode optionExpression) = BindAndTypeExpression(boundOptions[i].Expression, table);
+
+            if (optionExpression is TypedExpressionNode { SourceType: TypeSymbol sourceType } typedExpression)
+            {
+                if (!TypesAreCompatible(sourceType, settings.OptionType))
+                {
+                    ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, settings.OptionType, "option", optionExpression.Index));
+                }
+                else
+                {
+                    optionExpression = typedExpression with
+                    {
+                        TargetType = settings.OptionType,
+                    };
+                }
+            }
+
+            (table, StatementBodyNode optionBody) = BindStatementBody(boundOptions[i].Body, settings, table);
+
+            boundOptions[i] = boundOptions[i] with
+            {
+                Expression = optionExpression,
+                Body = optionBody,
+            };
+        }
+
+        BoundChooseStatementNode boundChooseStatement = new()
+        {
+            Reference = referenceSymbol,
+            Method = methodSymbol,
+            Arguments = [.. boundArguments],
+            Options = [.. boundOptions],
+            Index = chooseStatement.Index,
+        };
+
+        return (table, boundChooseStatement);
+    }
+
+    private (SymbolTable table, ReferenceSymbol? referenceSymbol, InterfaceMethodSymbol? methodSymbol, IEnumerable<BoundArgumentNode>? boundArguments)
+        BindMethodCallStatement(MethodCallStatementNode methodCallStatement, SymbolTable table)
+    {
+        if (!table.IsDeclared(methodCallStatement.ReferenceName))
+        {
+            ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(methodCallStatement.ReferenceName, methodCallStatement.Index));
+            return (table, null, null, null);
+        }
+
+        if (table[methodCallStatement.ReferenceName] is not ReferenceSymbol referenceSymbol)
+        {
+            ErrorFound?.Invoke(Errors.SymbolIsNotReference(methodCallStatement.ReferenceName, methodCallStatement.Index));
+            return (table, null, null, null);
+        }
+
+        InterfaceSymbol interfaceSymbol = referenceSymbol.Interface;
+
+        InterfaceMethodSymbol? methodSymbol = interfaceSymbol.Methods.FirstOrDefault(m => m.Name == methodCallStatement.MethodName);
+
+        if (methodSymbol is null)
+        {
+            ErrorFound?.Invoke(Errors.MethodDoesNotExistInInterface(referenceSymbol.Name, interfaceSymbol.Name, methodCallStatement.MethodName, methodCallStatement.Index));
+            return (table, null, null, null);
+        }
+
+        InterfaceMethodKind expectedKind = methodCallStatement switch
+        {
+            RunStatementNode => InterfaceMethodKind.Action,
+            ChooseStatementNode => InterfaceMethodKind.Choice,
+            _ => default,
+        };
+
+        if (methodSymbol.Kind != expectedKind)
+        {
+            switch (expectedKind)
+            {
+                case InterfaceMethodKind.Action:
+                    ErrorFound?.Invoke(Errors.CannotRunChoiceMethod(interfaceSymbol.Name, methodSymbol.Name, methodCallStatement.Index));
+                    break;
+                case InterfaceMethodKind.Choice:
+                    ErrorFound?.Invoke(Errors.CannotChooseFromActionMethod(interfaceSymbol.Name, methodSymbol.Name, methodCallStatement.Index));
+                    break;
+            }
+
+            return (table, null, null, null);
+        }
+
+        if (methodCallStatement.Arguments.Length != methodSymbol.Parameters.Length)
+        {
+            ErrorFound?.Invoke(Errors.WrongAmountOfArgumentsInMethodCall(interfaceSymbol.Name, methodSymbol.Name, methodCallStatement.Arguments.Length, methodSymbol.Parameters.Length, methodCallStatement.Index));
+            return (table, null, null, null);
+        }
+
+        (table, List<ArgumentNode> boundArguments) = BindArgumentList(methodCallStatement, table, methodSymbol.Parameters, "parameter");
+
+        if (!boundArguments.All(a => a is BoundArgumentNode))
+        {
+            return (table, null, null, null);
+        }
+
+        return (table, referenceSymbol, methodSymbol, boundArguments.Cast<BoundArgumentNode>());
     }
 }

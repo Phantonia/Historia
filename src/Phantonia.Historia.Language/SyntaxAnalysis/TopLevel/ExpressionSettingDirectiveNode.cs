@@ -3,10 +3,8 @@ using System.Collections.Generic;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 
-public sealed record ExpressionSettingDirectiveNode : SettingDirectiveNode
+public sealed record ExpressionSettingDirectiveNode() : SettingDirectiveNode
 {
-    public ExpressionSettingDirectiveNode() { }
-
     public required ExpressionNode Expression { get; init; }
 
     public override IEnumerable<SyntaxNode> Children => [Expression];

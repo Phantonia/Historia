@@ -1,11 +1,9 @@
 ﻿using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
+using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using Phantonia.Historia.Language.SyntaxAnalysis.Types;
 using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Diagnostics;
-using System.Linq;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 
@@ -17,11 +15,6 @@ public sealed partial class Binder
 
         foreach (TopLevelNode declaration in story.TopLevelNodes)
         {
-            if (declaration is not TypeSymbolDeclarationNode)
-            {
-                continue;
-            }
-
             (table, TopLevelNode boundDeclaration) = BindPseudoDeclaration(declaration, table);
             boundStory = boundStory with
             {
@@ -32,25 +25,90 @@ public sealed partial class Binder
         return (table, boundStory);
     }
 
-    private (SymbolTable, TopLevelNode) BindPseudoDeclaration(TopLevelNode declaration, SymbolTable table)
+    private (SymbolTable, TopLevelNode) BindPseudoDeclaration(TopLevelNode declaration, SymbolTable table) => declaration switch
     {
-        switch (declaration)
+        RecordSymbolDeclarationNode recordDeclaration => BindPseudoRecordDeclaration(recordDeclaration, table),
+        UnionSymbolDeclarationNode unionDeclaration => BindPseudoUnionDeclaration(unionDeclaration, table),
+        EnumSymbolDeclarationNode enumDeclaration => BindPseudoEnumDeclaration(enumDeclaration, table),
+        ReferenceSymbolDeclarationNode referenceDeclaration => BindPseudoReferenceDeclaration(referenceDeclaration, table),
+        InterfaceSymbolDeclarationNode interfaceDeclaration => BindPseudoInterfaceDeclaration(interfaceDeclaration, table),
+        _ => (table, declaration),
+    };
+
+    private (SymbolTable, TopLevelNode) BindPseudoReferenceDeclaration(ReferenceSymbolDeclarationNode referenceDeclaration, SymbolTable table)
+    {
+        if (!table.IsDeclared(referenceDeclaration.InterfaceName))
         {
-            case RecordSymbolDeclarationNode recordDeclaration:
-                return BindPseudoRecordDeclaration(recordDeclaration, table);
-            case UnionSymbolDeclarationNode unionDeclaration:
-                return BindPseudoUnionDeclaration(unionDeclaration, table);
-            case EnumSymbolDeclarationNode enumDeclaration:
-                return BindPseudoEnumDeclaration(enumDeclaration, table);
-            default:
-                Debug.Assert(false);
-                return default;
+            ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(referenceDeclaration.InterfaceName, referenceDeclaration.Index));
+            return (table, referenceDeclaration);
         }
+
+        Symbol alledgedInterface = table[referenceDeclaration.InterfaceName];
+
+        if (alledgedInterface is not PseudoInterfaceSymbol)
+        {
+            ErrorFound?.Invoke(Errors.SymbolIsNotInterface(alledgedInterface.Name, referenceDeclaration.Index));
+            return (table, referenceDeclaration);
+        }
+
+        BoundSymbolDeclarationNode boundDeclaration = new()
+        {
+            Declaration = referenceDeclaration,
+            Name = referenceDeclaration.Name,
+            Symbol = table[referenceDeclaration.Name],
+            Index = referenceDeclaration.Index,
+        };
+
+        return (table, boundDeclaration);
+    }
+
+    private (SymbolTable, TopLevelNode) BindPseudoInterfaceDeclaration(InterfaceSymbolDeclarationNode interfaceDeclaration, SymbolTable table)
+    {
+        List<InterfaceMethodDeclarationNode> methods = [.. interfaceDeclaration.Methods];
+
+        for (int i = 0; i < methods.Count; i++)
+        {
+            (table, methods[i]) = BindPseudoInterfaceMethodDeclaration(methods[i], table);
+        }
+
+        BoundSymbolDeclarationNode boundDeclaration = new()
+        {
+            Name = interfaceDeclaration.Name,
+            Declaration = interfaceDeclaration with
+            {
+                Methods = [.. methods],
+            },
+            Symbol = table[interfaceDeclaration.Name],
+            Index = interfaceDeclaration.Index,
+        };
+
+        return (table, boundDeclaration);
+    }
+
+    private (SymbolTable, InterfaceMethodDeclarationNode) BindPseudoInterfaceMethodDeclaration(InterfaceMethodDeclarationNode methodDeclaration, SymbolTable table)
+    {
+        List<PropertyDeclarationNode> parameters = [.. methodDeclaration.Parameters];
+
+        for (int i = 0; i < parameters.Count; i++)
+        {
+            (table, TypeNode boundType) = BindType(parameters[i].Type, table);
+            parameters[i] = parameters[i] with
+            {
+                Type = boundType,
+            };
+        }
+
+        methodDeclaration = methodDeclaration with
+        {
+            Parameters = [.. parameters],
+        };
+
+        return (table, methodDeclaration);
     }
 
     private (SymbolTable, TopLevelNode) BindPseudoRecordDeclaration(RecordSymbolDeclarationNode recordDeclaration, SymbolTable table)
     {
-        List<PropertyDeclarationNode> properties = recordDeclaration.Properties.ToList();
+        List<PropertyDeclarationNode> properties = [.. recordDeclaration.Properties];
 
         for (int i = 0; i < properties.Count; i++)
         {

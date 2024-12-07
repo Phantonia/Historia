@@ -54,12 +54,15 @@ public sealed record SymbolTable
 
     public SymbolTable Replace(string name, Symbol newSymbol)
     {
+        Symbol currentInstance = this[name];
+
         // we can only replace on our current scope
         Scope currentScope = Table.Peek().SetItem(name, newSymbol);
 
         return this with
         {
             Table = Table.Pop().Push(currentScope),
+            AllSymbols = AllSymbols.Replace(currentInstance, newSymbol),
         };
     }
 

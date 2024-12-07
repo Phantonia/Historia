@@ -13,7 +13,7 @@ public sealed record BoundTypeNode : TypeNode
 
     public required TypeSymbol Symbol { get; init; }
 
-    public override IEnumerable<SyntaxNode> Children => new[] { Node };
+    public override IEnumerable<SyntaxNode> Children => [Node];
 
     protected internal override string GetDebuggerDisplay() => $"{Node.GetDebuggerDisplay()} bound @ {Symbol.GetDebuggerDisplay()}";
 }

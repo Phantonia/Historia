@@ -1,9 +1,9 @@
 ﻿using Phantonia.Historia.Language.LexicalAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
-using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis;
 
@@ -82,6 +82,10 @@ public sealed partial class Parser
                 return ParseSpectrumAdjustmentStatement(strengthens: false, ref index);
             case { Kind: TokenKind.Identifier }:
                 return ParseIdentifierLeadStatement(ref index);
+            case { Kind: TokenKind.RunKeyword }:
+                return ParseRunStatement(ref index);
+            case { Kind: TokenKind.ChooseKeyword }:
+                return ParseChooseStatement(ref index);
             case { Kind: TokenKind.EndOfFile }:
                 ErrorFound?.Invoke(Errors.UnexpectedEndOfFile(tokens[index]));
                 return null;
@@ -118,6 +122,38 @@ public sealed partial class Parser
         };
     }
 
+    private RunStatementNode? ParseRunStatement(ref int index)
+    {
+        Debug.Assert(tokens[index].Kind is TokenKind.RunKeyword);
+
+        int nodeIndex = tokens[index].Index;
+
+        index++;
+
+        string referenceName = Expect(TokenKind.Identifier, ref index).Text;
+
+        _ = Expect(TokenKind.Dot, ref index);
+
+        string methodName = Expect(TokenKind.Identifier, ref index).Text;
+
+        ImmutableArray<ArgumentNode>? arguments = ParseArgumentList(ref index);
+
+        if (arguments is null)
+        {
+            return null;
+        }
+
+        _ = Expect(TokenKind.Semicolon, ref index);
+
+        return new RunStatementNode
+        {
+            ReferenceName = referenceName,
+            MethodName = methodName,
+            Arguments = (ImmutableArray<ArgumentNode>)arguments,
+            Index = nodeIndex,
+        };
+    }
+
     private SwitchStatementNode? ParseSwitchStatement(ref int index, bool isCheckpoint)
     {
         int nodeIndex = tokens[index].Index;
@@ -146,7 +182,7 @@ public sealed partial class Parser
 
         _ = Expect(TokenKind.OpenBrace, ref index);
 
-        ImmutableArray<SwitchOptionNode>? optionNodes = ParseSwitchOptions(ref index);
+        ImmutableArray<OptionNode>? optionNodes = ParseOptions(allowNames: true, ref index);
         if (optionNodes is null)
         {
             return null;
@@ -158,15 +194,56 @@ public sealed partial class Parser
         {
             Name = name,
             OutputExpression = expression,
-            Options = (ImmutableArray<SwitchOptionNode>)optionNodes,
+            Options = ((ImmutableArray<OptionNode>)optionNodes).Cast<SwitchOptionNode>().ToImmutableArray(),
             IsCheckpoint = isCheckpoint,
             Index = nodeIndex,
         };
     }
 
-    private ImmutableArray<SwitchOptionNode>? ParseSwitchOptions(ref int index)
+    private StatementNode? ParseChooseStatement(ref int index)
     {
-        ImmutableArray<SwitchOptionNode>.Builder optionBuilder = ImmutableArray.CreateBuilder<SwitchOptionNode>();
+        Debug.Assert(tokens[index].Kind is TokenKind.ChooseKeyword);
+
+        int nodeIndex = tokens[index].Index;
+
+        index++;
+
+        string referenceName = Expect(TokenKind.Identifier, ref index).Text;
+
+        _ = Expect(TokenKind.Dot, ref index);
+
+        string methodName = Expect(TokenKind.Identifier, ref index).Text;
+
+        ImmutableArray<ArgumentNode>? arguments = ParseArgumentList(ref index);
+
+        if (arguments is null)
+        {
+            return null;
+        }
+
+        _ = Expect(TokenKind.OpenBrace, ref index);
+
+        ImmutableArray<OptionNode>? optionNodes = ParseOptions(allowNames: false, ref index);
+        if (optionNodes is null)
+        {
+            return null;
+        }
+
+        _ = Expect(TokenKind.ClosedBrace, ref index);
+
+        return new ChooseStatementNode
+        {
+            ReferenceName = referenceName,
+            MethodName = methodName,
+            Arguments = (ImmutableArray<ArgumentNode>)arguments,
+            Options = (ImmutableArray<OptionNode>)optionNodes,
+            Index = nodeIndex,
+        };
+    }
+
+    private ImmutableArray<OptionNode>? ParseOptions(bool allowNames, ref int index)
+    {
+        ImmutableArray<OptionNode>.Builder optionBuilder = ImmutableArray.CreateBuilder<OptionNode>();
 
         while (tokens[index] is { Kind: TokenKind.OptionKeyword })
         {
@@ -178,6 +255,11 @@ public sealed partial class Parser
 
             if (tokens[index].Kind == TokenKind.Identifier)
             {
+                if (!allowNames)
+                {
+                    ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index]));
+                }
+
                 name = tokens[index].Text;
                 index++;
             }
@@ -200,15 +282,34 @@ public sealed partial class Parser
                 return null;
             }
 
-            SwitchOptionNode optionNode = new()
+            OptionNode optionNode;
+
+            if (allowNames)
             {
-                Name = name,
-                Expression = expression,
-                Body = body,
-                Index = nodeIndex,
-            };
+                optionNode = new SwitchOptionNode()
+                {
+                    Name = name,
+                    Expression = expression,
+                    Body = body,
+                    Index = nodeIndex,
+                };
+            }
+            else
+            {
+                optionNode = new OptionNode()
+                {
+                    Expression = expression,
+                    Body = body,
+                    Index = nodeIndex,
+                };
+            }
 
             optionBuilder.Add(optionNode);
+        }
+
+        if (optionBuilder.Count == 0)
+        {
+            ErrorFound?.Invoke(Errors.MustHaveAtLeastOneOption(tokens[index].Index));
         }
 
         return optionBuilder.ToImmutable();
@@ -361,7 +462,7 @@ public sealed partial class Parser
                 return loopSwitchStatement;
             default:
                 ErrorFound?.Invoke(Errors.ExpectedVisibleStatementAsCheckpoint(tokens[index]));
-                
+
                 // ignore that we found a 'checkpoint' keyword and just try again
                 return ParseStatement(ref index);
         }

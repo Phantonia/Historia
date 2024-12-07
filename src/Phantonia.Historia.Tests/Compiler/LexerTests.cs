@@ -131,16 +131,16 @@ public sealed class LexerTests
     {
         string code =
             """"""
-            "a" 'b' "cde" 'fghijk' ""lmn"" ''opq'' """rst""" '''uvw''' """"xyz""""
+            "a" 'b' "cde" 'fghijk' """rst""" '''uvw''' """"xyz""""
             """""";
 
         Lexer lexer = new(code);
         ImmutableArray<Token> tokens = lexer.Lex();
 
-        Assert.AreEqual(10, tokens.Length);
-        string[] literals = new[] { "a", "b", "cde", "fghijk", "lmn", "opq", "rst", "uvw", "xyz" };
+        Assert.AreEqual(8, tokens.Length);
+        string[] literals = ["a", "b", "cde", "fghijk", "rst", "uvw", "xyz"];
 
-        for (int i = 0; i < 9; i++)
+        for (int i = 0; i < 7; i++)
         {
             Token t = tokens[i];
             Assert.AreEqual(TokenKind.StringLiteral, t.Kind);
@@ -175,8 +175,8 @@ public sealed class LexerTests
     {
         string code =
             """"
-            ""That is "nonsense" tbh""
-            ''Hey, I'm cool''
+            """That is "nonsense" tbh"""
+            '''Hey, I'm cool'''
             """";
 
         Lexer lexer = new(code);

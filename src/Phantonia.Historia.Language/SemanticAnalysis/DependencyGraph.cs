@@ -11,7 +11,7 @@ public sealed class DependencyGraph
 
     public required IReadOnlyDictionary<int, Symbol> Symbols { get; init; }
 
-    public required IReadOnlyDictionary<int, IReadOnlyList<int>> Dependencies { get; init; }
+    public required IReadOnlyDictionary<int, IReadOnlySet<int>> Dependencies { get; init; }
 
     public bool IsCyclic([NotNullWhen(returnValue: true)] out IEnumerable<int>? cycle)
     {

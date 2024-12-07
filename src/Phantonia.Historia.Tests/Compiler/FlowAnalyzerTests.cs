@@ -1161,4 +1161,66 @@ public sealed class FlowAnalyzerTests
         Assert.AreEqual(1, errors.Count);
         Assert.AreEqual(expectedError, errors[0]);
     }
+
+    [TestMethod]
+    public void TestReferencesAndFlow()
+    {
+        string code =
+            """
+            setting OutputType: String;
+            setting OptionType: String;
+            
+            interface ICharacter
+            (
+                action Say(line: String),
+                choice Choose(prompt: String),
+            );
+            
+            reference Character: ICharacter;
+            
+            scene main
+            {
+                run Character.Say("Hello world");
+            
+                choose Character.Choose("What to do?")
+                {
+                    option ("Jump")
+                    {
+                        output "I jumped!";
+                    }
+            
+                    option ("Crouch")
+                    {
+                        output "I crouched!";
+                    }
+                }
+            }
+            """;
+
+        FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
+
+        FlowAnalysisResult result = flowAnalyzer.PerformFlowAnalysis();
+        Assert.IsTrue(result.IsValid);
+
+        int iRun = code.IndexOf("run");
+        int iChoose = code.IndexOf("choose");
+        int ioJump = code.IndexOf("""output "I jumped!";""");
+        int ioCrouch = code.IndexOf("""output "I crouched!";""");
+
+        Assert.AreEqual(4, result.MainFlowGraph.Vertices.Count);
+
+        Assert.IsTrue(result.MainFlowGraph.StartEdges.Select(e => e.ToVertex).Order().SequenceEqual([iRun]));
+
+        Assert.IsTrue(result.MainFlowGraph.Vertices.ContainsKey(iRun));
+        Assert.IsTrue(result.MainFlowGraph.OutgoingEdges[iRun].Select(e => e.ToVertex).Order().SequenceEqual([iChoose]));
+
+        Assert.IsTrue(result.MainFlowGraph.Vertices.ContainsKey(iChoose));
+        Assert.IsTrue(result.MainFlowGraph.OutgoingEdges[iChoose].Select(e => e.ToVertex).Order().SequenceEqual([ioJump, ioCrouch]));
+
+        Assert.IsTrue(result.MainFlowGraph.Vertices.ContainsKey(ioJump));
+        Assert.IsTrue(result.MainFlowGraph.OutgoingEdges[ioJump].Select(e => e.ToVertex).Order().SequenceEqual([FlowGraph.FinalVertex]));
+
+        Assert.IsTrue(result.MainFlowGraph.Vertices.ContainsKey(ioCrouch));
+        Assert.IsTrue(result.MainFlowGraph.OutgoingEdges[ioCrouch].Select(e => e.ToVertex).Order().SequenceEqual([FlowGraph.FinalVertex]));
+    }
 }
