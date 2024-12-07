@@ -1,5 +1,6 @@
 ﻿using Phantonia.Historia.Language.FlowAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using System.CodeDom.Compiler;
 using System.Linq;
 
@@ -47,11 +48,15 @@ public sealed class SnapshotEmitter(FlowGraph flowGraph, Settings settings, Symb
             return;
         }
 
-        writer.Write("public ");
+        writer.Write("public static ");
         writer.Write(settings.StoryName);
         writer.Write("Snapshot FromCheckpoint(");
         writer.Write(settings.StoryName);
-        writer.WriteLine("Checkpoint checkpoint)");
+        writer.Write("Checkpoint checkpoint");
+
+        GenerateReferenceParameterList(symbolTable, writer);
+
+        writer.WriteLine(")");
 
         writer.BeginBlock();
 
@@ -60,12 +65,57 @@ public sealed class SnapshotEmitter(FlowGraph flowGraph, Settings settings, Symb
         writer.Write(settings.StoryName);
         writer.Write("StateMachine stateMachine = new ");
         writer.Write(settings.StoryName);
-        writer.WriteLine("StateMachine();");
+        writer.Write("StateMachine(");
+
+        GenerateReferenceArgumentList(symbolTable, writer);
 
         writer.WriteLine("stateMachine.RestoreCheckpoint(checkpoint);");
         writer.WriteLine("return stateMachine.CreateSnapshot();");
 
         writer.EndBlock();
+    }
+
+    private static void GenerateReferenceParameterList(SymbolTable symbolTable, IndentedTextWriter writer)
+    {
+        foreach (Symbol symbol in symbolTable.AllSymbols)
+        {
+            if (symbol is not ReferenceSymbol reference)
+            {
+                continue;
+            }
+
+            writer.Write(", ");
+
+            writer.Write('I');
+            writer.Write(reference.Interface.Name);
+            writer.Write(" reference");
+            writer.Write(reference.Name);
+        }
+    }
+
+    private static void GenerateReferenceArgumentList(SymbolTable symbolTable, IndentedTextWriter writer)
+    {
+        bool first = true;
+
+        foreach (Symbol symbol in symbolTable.AllSymbols)
+        {
+            if (symbol is not ReferenceSymbol reference)
+            {
+                continue;
+            }
+
+            if (!first)
+            {
+                writer.Write(", ");
+            }
+
+            writer.Write("reference");
+            writer.Write(reference.Name);
+
+            first = false;
+        }
+
+        writer.WriteLine(");");
     }
 
     private void GenerateConstructors()
@@ -141,7 +191,7 @@ public sealed class SnapshotEmitter(FlowGraph flowGraph, Settings settings, Symb
         writer.WriteLine("Fields fieldsCopy = fields;");
         writer.Write("Heart.StateTransition(ref fieldsCopy, ");
         writer.Write(option);
-        writer.Write(");");
+        writer.WriteLine(");");
         GeneralEmission.GenerateType(settings.OutputType, writer);
         writer.WriteLine(" output = Heart.GetOutput(ref fieldsCopy);");
         GeneralEmission.GenerateType(settings.OptionType, writer);

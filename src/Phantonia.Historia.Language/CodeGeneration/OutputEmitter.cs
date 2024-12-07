@@ -58,7 +58,7 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
 
             writer.Indent++;
             writer.Write($"return ");
-            GeneralEmission.GenerateExpression(outputExpression, settings, writer);
+            GeneralEmission.GenerateExpression(outputExpression, writer);
             writer.WriteLine(";");
             writer.Indent--;
         }
@@ -109,7 +109,7 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
                         writer.Write("options[");
                         writer.Write(i);
                         writer.Write("] = ");
-                        GeneralEmission.GenerateExpression(switchStatement.Options[i].Expression, settings, writer);
+                        GeneralEmission.GenerateExpression(switchStatement.Options[i].Expression, writer);
                         writer.WriteLine(';');
                     }
 
@@ -149,7 +149,7 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
                         writer.BeginBlock();
 
                         writer.Write("options[i] = ");
-                        GeneralEmission.GenerateExpression(loopSwitchStatement.Options[i].Expression, settings, writer);
+                        GeneralEmission.GenerateExpression(loopSwitchStatement.Options[i].Expression, writer);
                         writer.WriteLine(';');
 
                         writer.WriteLine("i++;");

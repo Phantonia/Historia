@@ -57,6 +57,13 @@ public sealed class FieldsEmitter(StoryNode boundStory, SymbolTable symbolTable,
                     GeneralEmission.GenerateTrackerFieldName(tracker, writer);
                     writer.WriteLine(";");
                     break;
+                case ReferenceSymbol reference:
+                    writer.Write("public I");
+                    writer.Write(reference.Interface.Name);
+                    writer.Write(" reference");
+                    writer.Write(reference.Name);
+                    writer.WriteLine(';');
+                    break;
             }
         }
 

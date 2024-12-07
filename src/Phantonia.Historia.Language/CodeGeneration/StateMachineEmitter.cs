@@ -50,12 +50,50 @@ public sealed class StateMachineEmitter(StoryNode boundStory, FlowGraph flowGrap
     {
         writer.Write("public ");
         writer.Write(settings.StoryName);
-        writer.WriteLine("StateMachine()");
+        writer.Write("StateMachine(");
+
+        bool first = true;
+
+        foreach (Symbol symbol in symbolTable.AllSymbols)
+        {
+            if (symbol is not ReferenceSymbol reference)
+            {
+                continue;
+            }
+
+            if (!first)
+            {
+                writer.Write(", ");
+            }
+
+            writer.Write('I');
+            writer.Write(reference.Interface.Name);
+            writer.Write(" reference");
+            writer.Write(reference.Name);
+
+            first = false;
+        }
+
+        writer.WriteLine(')');
         writer.BeginBlock();
 
         writer.Write("fields.state = ");
         writer.Write(Constants.StartState);
         writer.WriteLine(';');
+
+        foreach (Symbol symbol in symbolTable.AllSymbols)
+        {
+            if (symbol is not ReferenceSymbol reference)
+            {
+                continue;
+            }
+
+            writer.Write("fields.reference");
+            writer.Write(reference.Name);
+            writer.Write(" = reference");
+            writer.Write(reference.Name);
+            writer.WriteLine(';');
+        }
 
         int maxOptionCount = GeneralEmission.GetMaximumOptionCount(boundStory);
 

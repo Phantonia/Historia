@@ -31,7 +31,7 @@ public sealed class Emitter(
             writer.BeginBlock();
         }
 
-        TypeDeclarationsEmitter typeDeclarationsEmitter = new(boundStory, writer);
+        TypeDeclarationsEmitter typeDeclarationsEmitter = new(boundStory, settings, writer);
         typeDeclarationsEmitter.GenerateTypeDeclarations();
 
         writer.WriteLine();
@@ -51,7 +51,7 @@ public sealed class Emitter(
 
         writer.WriteLine();
 
-        HeartEmitter heartEmitter = new(flowGraph, settings, writer);
+        HeartEmitter heartEmitter = new(flowGraph, boundStory, settings, writer);
         heartEmitter.GenerateHeartClass();
 
         writer.WriteLine();

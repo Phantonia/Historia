@@ -319,7 +319,7 @@ public static class GeneralEmission
 
     public static void GenerateGenericStoryType(Type type, Settings settings, IndentedTextWriter writer) => GenerateGenericStoryType($"global::{type.FullName?[..type.FullName.IndexOf('`')]}", settings, writer);
 
-    public static void GenerateExpression(ExpressionNode expression, Settings settings, IndentedTextWriter writer)
+    public static void GenerateExpression(ExpressionNode expression, IndentedTextWriter writer)
     {
         TypedExpressionNode? typedExpression = expression as TypedExpressionNode;
         Debug.Assert(typedExpression is not null);
@@ -334,7 +334,7 @@ public static class GeneralEmission
             GenerateExpression(typedExpression with
             {
                 TargetType = typedExpression.SourceType,
-            }, settings, writer);
+            }, writer);
             writer.Write(')');
             return;
         }
@@ -353,10 +353,10 @@ public static class GeneralEmission
                 writer.Write('(');
                 foreach (BoundArgumentNode argument in recordCreation.BoundArguments.Take(recordCreation.BoundArguments.Length - 1))
                 {
-                    GenerateExpression(argument.Expression, settings, writer);
+                    GenerateExpression(argument.Expression, writer);
                     writer.Write(", ");
                 }
-                GenerateExpression(recordCreation.BoundArguments[^1].Expression, settings, writer);
+                GenerateExpression(recordCreation.BoundArguments[^1].Expression, writer);
                 writer.Write(')');
                 return;
             case BoundEnumOptionExpressionNode enumOptionExpression:
@@ -444,7 +444,7 @@ public static class GeneralEmission
                          {
                              SwitchStatementNode s => s.Options.Length,
                              LoopSwitchStatementNode l => l.Options.Length,
-                             _ => int.MinValue
+                             _ => int.MinValue,
                          })
                          .Append(0) // if sequence is empty, at least have one number
                          .Max();

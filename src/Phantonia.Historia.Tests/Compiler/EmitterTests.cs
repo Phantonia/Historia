@@ -1,7 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Phantonia.Historia.Language;
 using Phantonia.Historia.Language.FlowAnalysis;
-using Phantonia.Historia.Language.SemanticAnalysis;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -332,7 +331,7 @@ public sealed class EmitterTests
 
         StringWriter sw = new();
         CompilationResult result = new Language.Compiler(code, sw).Compile();
-        
+
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
 
@@ -838,7 +837,7 @@ public sealed class EmitterTests
                 }
             }
             """;
-        
+
         StringWriter sw = new();
         CompilationResult result = new Language.Compiler(code, sw).Compile();
 
@@ -1396,5 +1395,56 @@ public sealed class EmitterTests
             Assert.IsTrue(stateMachine?.TryContinue());
             Assert.AreEqual(1, stateMachine?.Output);
         }
+    }
+
+    [TestMethod]
+    public void TestReferencesAndInterfaces()
+    {
+        string code =
+            """
+            setting OptionType: String;
+
+            interface Something
+            (
+                action Do(x: String, y: Int),
+                choice What(x: String),
+            );
+
+            reference Domething: Something;
+
+            scene main
+            {
+                checkpoint output 0;
+                
+                run Domething.Do("xyz", 4);
+
+                choose Domething.What("the fuck")
+                {
+                    option ("YES!!!")
+                    {
+                        output 1;
+                    }
+
+                    option ("no :(")
+                    {
+                        outcome X(A, B);
+                        X = A;
+                        output 2;
+                    }
+                }
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        Assembly assembly = DynamicCompiler.Compile(resultCode);
+
+        Assert.Fail();
     }
 }
