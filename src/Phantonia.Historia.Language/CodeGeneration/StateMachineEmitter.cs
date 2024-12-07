@@ -29,6 +29,8 @@ public sealed class StateMachineEmitter(StoryNode boundStory, FlowGraph flowGrap
 
         GeneralEmission.GeneratePublicOutcomes(symbolTable, readOnly: false, writer); // ends in a writer.WriteLine()
 
+        GeneralEmission.GenerateReferences(symbolTable, readOnly: false, writer); // ends in writer.WriteLine()
+
         GenerateContinueMethods();
 
         writer.WriteLine();

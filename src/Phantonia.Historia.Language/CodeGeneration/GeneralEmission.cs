@@ -240,6 +240,40 @@ public static class GeneralEmission
         }
     }
 
+    public static void GenerateReferences(SymbolTable symbolTable, bool readOnly, IndentedTextWriter writer)
+    {
+        foreach (ReferenceSymbol reference in symbolTable.AllSymbols.OfType<ReferenceSymbol>())
+        {
+            writer.Write("public I");
+            writer.Write(reference.Interface.Name);
+            writer.Write(" Reference");
+            writer.WriteLine(reference.Name);
+
+            writer.BeginBlock();
+
+            writer.WriteLine("get");
+            writer.BeginBlock();
+            writer.Write("return fields.reference");
+            writer.Write(reference.Name);
+            writer.WriteLine(';');
+            writer.EndBlock(); // get
+
+            if (!readOnly)
+            {
+                writer.WriteLine("set");
+                writer.BeginBlock();
+                writer.Write("fields.reference");
+                writer.Write(reference.Name);
+                writer.WriteLine(" = value;");
+                writer.EndBlock(); // set
+            }
+
+            writer.EndBlock(); // property
+
+            writer.WriteLine();
+        }
+    }
+
     public static void GenerateExplicitInterfaceImplementations(string stateMachineOrSnapshot, Settings settings, IndentedTextWriter writer)
     {
         writer.Write("object global::Phantonia.Historia.IStory");

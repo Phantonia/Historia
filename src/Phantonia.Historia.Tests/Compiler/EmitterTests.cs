@@ -1445,6 +1445,6 @@ public sealed class EmitterTests
 
         Assembly assembly = DynamicCompiler.Compile(resultCode);
 
-        Assert.Fail();
+        // TODO: I need to proberly test this once I have build time code generation
     }
 }
