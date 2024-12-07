@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
 
 namespace Phantonia.Historia.Language;
 
@@ -75,6 +74,15 @@ public static class Errors
             ErrorMessage = $"The 'checkpoint' keyword is only valid for visible statements, so expected one of the following keywords: " +
                 $"'output', 'switch', 'loop switch', instead got '{unexpectedToken.Text}'",
             Index = unexpectedToken.Index,
+        };
+    }
+
+    public static Error MustHaveAtLeastOneOption(int index)
+    {
+        return new Error
+        {
+            ErrorMessage = "A switch or choose statement must have at least one option",
+            Index = index,
         };
     }
 

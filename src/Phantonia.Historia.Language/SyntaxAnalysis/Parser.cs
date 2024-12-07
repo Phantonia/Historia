@@ -15,20 +15,20 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
     public StoryNode Parse()
     {
         int index = 0;
-        ImmutableArray<TopLevelNode>.Builder symbolBuilder = ImmutableArray.CreateBuilder<TopLevelNode>();
+        ImmutableArray<TopLevelNode>.Builder topLevelBuilder = ImmutableArray.CreateBuilder<TopLevelNode>();
 
-        TopLevelNode? nextSymbol = ParseTopLevelNode(ref index);
+        TopLevelNode? nextTopLevelNode = ParseTopLevelNode(ref index);
 
-        while (nextSymbol is not null)
+        while (nextTopLevelNode is not null)
         {
-            symbolBuilder.Add(nextSymbol);
+            topLevelBuilder.Add(nextTopLevelNode);
 
-            nextSymbol = ParseTopLevelNode(ref index);
+            nextTopLevelNode = ParseTopLevelNode(ref index);
         }
 
         return new StoryNode
         {
-            TopLevelNodes = symbolBuilder.ToImmutable(),
+            TopLevelNodes = topLevelBuilder.ToImmutable(),
             Index = tokens.Length > 0 ? tokens[0].Index : 0,
         };
     }
@@ -260,7 +260,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
 
         ImmutableArray<ArgumentNode>.Builder arguments = ImmutableArray.CreateBuilder<ArgumentNode>();
 
-        while (index < tokens.Length)
+        while (tokens[index] is not { Kind: TokenKind.ClosedParenthesis })
         {
             int argumentIndex = tokens[index].Index;
 
@@ -283,7 +283,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
                     Index = argumentIndex,
                 });
             }
-            else if (tokens[index].Kind != TokenKind.ClosedParenthesis)
+            else
             {
                 ExpressionNode? expression = ParseExpression(ref index);
                 if (expression is null)
@@ -298,14 +298,17 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
                 });
             }
 
-            if (tokens[index].Kind == TokenKind.ClosedParenthesis)
+            if (tokens[index] is not { Kind: TokenKind.Comma })
             {
-                index++;
                 break;
             }
 
-            _ = Expect(TokenKind.Comma, ref index);
+            index++;
         }
+
+        // in case of no trailing comma, just expect a closed parenthesis
+        // else this is redundant and just does index++
+        _ = Expect(TokenKind.ClosedParenthesis, ref index);
 
         return arguments.ToImmutable();
     }

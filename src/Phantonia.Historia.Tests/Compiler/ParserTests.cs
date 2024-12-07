@@ -1200,4 +1200,67 @@ public sealed class ParserTests
         Assert.AreEqual(1, chooseStatement.Arguments.Length);
         Assert.AreEqual(2, chooseStatement.Options.Length);
     }
+
+    [TestMethod]
+    public void TestSwitchAndChooseWithoutOption()
+    {
+        string code =
+            """
+            interface I(choice C(x: Int));
+            reference R: I;
+
+            scene main
+            {
+                switch (0) { } // switch
+                choose R.C(1) { } // choose
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+
+        List<Error> errors = [];
+        parser.ErrorFound += errors.Add;
+
+        _ = parser.Parse();
+
+        Error firstError = Errors.MustHaveAtLeastOneOption(code.IndexOf("} // switch"));
+        Error secondError = Errors.MustHaveAtLeastOneOption(code.IndexOf("} // choose"));
+
+        Assert.AreEqual(2, errors.Count);
+        Assert.AreEqual(firstError, errors[0]);
+        Assert.AreEqual(secondError, errors[1]);
+    }
+
+    [TestMethod]
+    public void TestInterfaceWithParameterlessMethod()
+    {
+        string code =
+            """
+            interface I
+            (
+                action X(),
+                choice Y(),
+            );
+
+            reference R: I;
+
+            scene main
+            {
+                run R.X();
+
+                choose R.Y()
+                {
+                    option (0) { }
+                }
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        // we just assert that this goes through without errors or exceptions
+        _ = parser.Parse();
+    }
 }

@@ -1,7 +1,6 @@
 ﻿using Phantonia.Historia.Language.LexicalAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
-using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
@@ -297,15 +296,20 @@ public sealed partial class Parser
             }
             else
             {
-                optionNode = new()
+                optionNode = new OptionNode()
                 {
                     Expression = expression,
                     Body = body,
                     Index = nodeIndex,
                 };
             }
-            
+
             optionBuilder.Add(optionNode);
+        }
+
+        if (optionBuilder.Count == 0)
+        {
+            ErrorFound?.Invoke(Errors.MustHaveAtLeastOneOption(tokens[index].Index));
         }
 
         return optionBuilder.ToImmutable();
