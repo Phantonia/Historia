@@ -1,5 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using Phantonia.Historia.Language.LexicalAnalysis;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
+using System.IO;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis;
 
@@ -11,6 +14,8 @@ public abstract record SyntaxNode : ISyntaxNode
     public required int Index { get; init; }
 
     public abstract IEnumerable<SyntaxNode> Children { get; }
+
+    public ImmutableArray<Token> PrecedingTokens { get; init; } = [];
 
     public IEnumerable<SyntaxNode> FlattenHierarchie()
     {
@@ -26,6 +31,10 @@ public abstract record SyntaxNode : ISyntaxNode
             }
         }
     }
+
+    public abstract string Reconstruct();
+
+    public abstract void Reconstruct(TextWriter writer);
 
     protected internal abstract string GetDebuggerDisplay();
 }
