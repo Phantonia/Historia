@@ -68,6 +68,7 @@ public sealed class ParserTests
             Kind = TokenKind.Identifier,
             Text = "hello",
             Index = code.IndexOf("hello!"),
+            PrecedingTrivia = Environment.NewLine,
         });
 
         Error secondError = Errors.UnexpectedToken(new Token
@@ -75,6 +76,7 @@ public sealed class ParserTests
             Kind = TokenKind.Unknown,
             Text = "!",
             Index = code.IndexOf('!'),
+            PrecedingTrivia = "",
         });
 
         Assert.AreEqual(firstError, errors[0]);
@@ -102,6 +104,7 @@ public sealed class ParserTests
                 Kind = TokenKind.EndOfFile,
                 Index = code.Length,
                 Text = "",
+                PrecedingTrivia = Environment.NewLine,
             });
 
             Assert.AreEqual(expectedError, e);
@@ -330,6 +333,7 @@ public sealed class ParserTests
                 Kind = TokenKind.Identifier,
                 Text = "Int",
                 Index = code.IndexOf("Int"),
+                PrecedingTrivia = " ",
             }, TokenKind.Colon);
 
             Assert.AreEqual(expectedError, e);
@@ -363,6 +367,7 @@ public sealed class ParserTests
                 Kind = TokenKind.Semicolon,
                 Text = ";",
                 Index = code.IndexOf(';'),
+                PrecedingTrivia = " ",
             });
 
             Assert.AreEqual(expectedError, e);
@@ -1114,6 +1119,7 @@ public sealed class ParserTests
             Index = code.IndexOf("outcome"),
             Kind = TokenKind.OutcomeKeyword,
             Text = "outcome",
+            PrecedingTrivia = " ",
         }), errors[0]);
     }
 

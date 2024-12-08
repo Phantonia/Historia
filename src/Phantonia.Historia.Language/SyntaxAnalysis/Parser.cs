@@ -42,7 +42,13 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
         else
         {
             ErrorFound?.Invoke(Errors.ExpectedToken(tokens[index], kind));
-            return new Token { Kind = TokenKind.Empty, Index = tokens[index].Index, Text = "" };
+            return new Token
+            {
+                Kind = TokenKind.Empty,
+                Index = tokens[index].Index,
+                Text = "",
+                PrecedingTrivia = "",
+            };
         }
     }
 
@@ -173,7 +179,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
                     Value = value,
                     Index = tokens[index++].Index,
                 };
-            case { Kind: TokenKind.StringLiteral, Text: string literal }:
+            case { Kind: TokenKind.StringLiteral, StringValue: string literal }:
                 return new StringLiteralExpressionNode
                 {
                     StringLiteral = literal,
