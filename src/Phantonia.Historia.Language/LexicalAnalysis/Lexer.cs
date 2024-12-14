@@ -571,6 +571,8 @@ public sealed class Lexer
             "is" => TokenKind.IsKeyword,
             "and" => TokenKind.AndKeyword,
             "or" => TokenKind.OrKeyword,
+            "if" => TokenKind.IfKeyword,
+            "else" => TokenKind.ElseKeyword,
             _ => TokenKind.Identifier,
         };
 

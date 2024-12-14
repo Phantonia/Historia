@@ -1324,4 +1324,55 @@ public sealed class ParserTests
         IsExpressionNode? kl = ijkl.RightExpression as IsExpressionNode;
         Assert.IsNotNull(kl);
     }
+
+    [TestMethod]
+    public void TestIfStatement()
+    {
+        string code =
+            """
+            outcome X(A, B, C);
+
+            scene main
+            {
+                X = A;
+
+                if X is A
+                {
+                    output 0;
+                }
+                else if X is B
+                {
+                    output 1;
+                }
+                else
+                {
+                    output 2;
+                }
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = parser.Parse();
+
+        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[1];
+
+        Assert.AreEqual(2, mainScene.Body.Statements.Length);
+
+        IfStatementNode? ifStatement = mainScene.Body.Statements[1] as IfStatementNode;
+        Assert.IsNotNull(ifStatement);
+
+        IsExpressionNode? isExpression = ifStatement.Condition as IsExpressionNode;
+        Assert.IsNotNull(isExpression);
+        Assert.AreEqual("X", isExpression.OutcomeName);
+        Assert.AreEqual("A", isExpression.OptionName);
+
+        OutputStatementNode? output0Statement = ifStatement.ThenBlock.Statements[0] as OutputStatementNode;
+        Assert.IsNotNull(output0Statement);
+
+        IfStatementNode? elseIfStatement = ifStatement.ElseBlock?.Statements[0] as IfStatementNode;
+        Assert.IsNotNull(elseIfStatement);
+    }
 }

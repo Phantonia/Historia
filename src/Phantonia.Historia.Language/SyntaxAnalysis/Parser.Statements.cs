@@ -1,6 +1,7 @@
 ﻿using Phantonia.Historia.Language.LexicalAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
+using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
@@ -86,6 +87,8 @@ public sealed partial class Parser
                 return ParseRunStatement(ref index);
             case { Kind: TokenKind.ChooseKeyword }:
                 return ParseChooseStatement(ref index);
+            case { Kind: TokenKind.IfKeyword }:
+                return ParseIfStatement(ref index);
             case { Kind: TokenKind.EndOfFile }:
                 ErrorFound?.Invoke(Errors.UnexpectedEndOfFile(tokens[index]));
                 return null;
@@ -632,6 +635,74 @@ public sealed partial class Parser
             SpectrumName = spectrumName,
             Strengthens = strengthens,
             AdjustmentAmount = adjustmentAmount,
+            Index = nodeIndex,
+        };
+    }
+
+    private IfStatementNode? ParseIfStatement(ref int index)
+    {
+        int nodeIndex = tokens[index].Index;
+        index++;
+
+        ExpressionNode? condition = ParseExpression(ref index);
+
+        if (condition is null)
+        {
+            return null;
+        }
+
+        StatementBodyNode? thenBlock = ParseStatementBody(ref index);
+
+        if (thenBlock is null)
+        {
+            return null;
+        }
+
+        if (tokens[index].Kind is not TokenKind.ElseKeyword)
+        {
+            return new IfStatementNode
+            {
+                Condition = condition,
+                ThenBlock = thenBlock,
+                ElseBlock = null,
+                Index = nodeIndex,
+            };
+        }
+
+        index++;
+
+        StatementBodyNode? elseBlock;
+
+        if (tokens[index].Kind is TokenKind.IfKeyword)
+        {
+            IfStatementNode? ifStatement = ParseIfStatement(ref index);
+
+            if (ifStatement is null)
+            {
+                return null;
+            }
+
+            elseBlock = new StatementBodyNode
+            {
+                Index = ifStatement.Index,
+                Statements = [ifStatement],
+            };
+        }
+        else
+        {
+            elseBlock = ParseStatementBody(ref index);
+
+            if (elseBlock is null)
+            {
+                return null;
+            }
+        }
+
+        return new IfStatementNode
+        {
+            Condition = condition,
+            ThenBlock = thenBlock,
+            ElseBlock = elseBlock,
             Index = nodeIndex,
         };
     }
