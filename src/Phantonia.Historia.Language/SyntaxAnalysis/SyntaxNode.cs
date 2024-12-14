@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis;
 
@@ -32,9 +33,24 @@ public abstract record SyntaxNode : ISyntaxNode
         }
     }
 
-    public abstract string Reconstruct();
+    public string Reconstruct()
+    {
+        return string.Concat(PrecedingTokens.Select(t => t.Reconstruct())) + ReconstructCore();
+    }
 
-    public abstract void Reconstruct(TextWriter writer);
+    public void Reconstruct(TextWriter writer)
+    {
+        foreach (Token token in PrecedingTokens)
+        {
+            writer.Write(token.Reconstruct());
+        }
+
+        ReconstructCore(writer);
+    }
+
+    internal abstract string ReconstructCore();
+
+    internal abstract void ReconstructCore(TextWriter writer);
 
     protected internal abstract string GetDebuggerDisplay();
 }

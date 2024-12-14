@@ -28,10 +28,10 @@ public sealed record SpectrumOptionNode() : SyntaxNode
 
     public override IEnumerable<SyntaxNode> Children => [];
 
-    public override string Reconstruct()
+    public override string ReconstructCore()
         => NameToken.Reconstruct() + InequalitySignToken.Reconstruct() + NumeratorToken.Reconstruct() + SlashToken.Reconstruct() + DenominatorToken.Reconstruct() + CommaToken?.Reconstruct();
 
-    public override void Reconstruct(TextWriter writer)
+    public override void ReconstructCore(TextWriter writer)
     {
         writer.Write(NameToken.Reconstruct());
         writer.Write(InequalitySignToken.Reconstruct());

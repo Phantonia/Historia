@@ -4,7 +4,6 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 
@@ -26,14 +25,14 @@ public sealed record EnumSymbolDeclarationNode() : TypeSymbolDeclarationNode
 
     public override IEnumerable<SyntaxNode> Children => [];
 
-    public override string Reconstruct()
+    public override string ReconstructCore()
     {
         StringWriter writer = new();
-        Reconstruct(writer);
+        ReconstructCore(writer);
         return writer.ToString();
     }
 
-    public override void Reconstruct(TextWriter writer)
+    public override void ReconstructCore(TextWriter writer)
     {
         writer.Write(EnumKeywordToken.Reconstruct());
         writer.Write(OpenParenthesisToken.Reconstruct());
