@@ -171,6 +171,77 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
 
     private ExpressionNode? ParseExpression(ref int index)
     {
+        int nodeIndex = tokens[index].Index;
+
+        ExpressionNode? leftHandSide = ParseConjunctiveExpression(ref index);
+
+        if (leftHandSide is null)
+        {
+            return null;
+        }
+
+        if (tokens[index].Kind is not TokenKind.OrKeyword)
+        {
+            return leftHandSide;
+        }
+
+        index++;
+        ExpressionNode? rightHandSide = ParseExpression(ref index);
+
+        if (rightHandSide is null)
+        {
+            return null;
+        }
+
+        // this way all expressions are right associative
+        // no problem as both AND and OR are associative
+        // for a clean tree we might still prefer left associative expressions
+        // if so we could rewire the tree here
+
+        return new OrExpressionNode
+        {
+            LeftExpression = leftHandSide,
+            RightExpression = rightHandSide,
+            Index = nodeIndex,
+        };
+    }
+
+    private ExpressionNode? ParseConjunctiveExpression(ref int index)
+    {
+        int nodeIndex = tokens[index].Index;
+
+        ExpressionNode? leftHandSide = ParseSimpleExpression(ref index);
+
+        if (leftHandSide is null)
+        {
+            return null;
+        }
+
+        if (tokens[index].Kind is not TokenKind.AndKeyword)
+        {
+            return leftHandSide;
+        }
+
+        index++;
+        ExpressionNode? rightHandSide = ParseConjunctiveExpression(ref index);
+
+        if (rightHandSide is null)
+        {
+            return null;
+        }
+        
+        // see comment about associativity in ParseExpression method
+
+        return new AndExpressionNode
+        {
+            LeftExpression = leftHandSide,
+            RightExpression = rightHandSide,
+            Index = nodeIndex,
+        };
+    }
+
+    private ExpressionNode? ParseSimpleExpression(ref int index)
+    {
         switch (tokens[index])
         {
             case { Kind: TokenKind.IntegerLiteral, IntegerValue: int value }:
@@ -221,43 +292,57 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
         int nodeIndex = tokens[index].Index;
         index++;
 
-        if (tokens[index] is not { Kind: TokenKind.OpenParenthesis })
+        switch (tokens[index].Kind)
         {
-            if (tokens[index] is { Kind: TokenKind.Dot })
-            {
-                string enumName = name;
-
-                index++;
-                string optionName = Expect(TokenKind.Identifier, ref index).Text;
-
-                return new EnumOptionExpressionNode
+            case TokenKind.Dot:
                 {
-                    EnumName = enumName,
-                    OptionName = optionName,
+                    string enumName = name;
+
+                    index++;
+                    string optionName = Expect(TokenKind.Identifier, ref index).Text;
+
+                    return new EnumOptionExpressionNode
+                    {
+                        EnumName = enumName,
+                        OptionName = optionName,
+                        Index = nodeIndex,
+                    };
+                }
+            case TokenKind.OpenParenthesis:
+                ImmutableArray<ArgumentNode>? arguments = ParseArgumentList(ref index);
+
+                if (arguments is null)
+                {
+                    return null;
+                }
+
+                return new RecordCreationExpressionNode
+                {
+                    Arguments = (ImmutableArray<ArgumentNode>)arguments,
+                    RecordName = name,
                     Index = nodeIndex,
                 };
-            }
+            case TokenKind.IsKeyword:
+                {
+                    string outcomeName = name;
 
-            return new IdentifierExpressionNode
-            {
-                Identifier = name,
-                Index = nodeIndex,
-            };
+                    index++;
+                    string optionName = Expect(TokenKind.Identifier, ref index).Text;
+
+                    return new IsExpressionNode
+                    {
+                        OutcomeName = outcomeName,
+                        OptionName = optionName,
+                        Index = nodeIndex,
+                    };
+                }
+            default:
+                return new IdentifierExpressionNode
+                {
+                    Identifier = name,
+                    Index = nodeIndex,
+                };
         }
-
-        ImmutableArray<ArgumentNode>? arguments = ParseArgumentList(ref index);
-
-        if (arguments is null)
-        {
-            return null;
-        }
-
-        return new RecordCreationExpressionNode
-        {
-            Arguments = (ImmutableArray<ArgumentNode>)arguments,
-            RecordName = name,
-            Index = nodeIndex,
-        };
     }
 
     private ImmutableArray<ArgumentNode>? ParseArgumentList(ref int index)

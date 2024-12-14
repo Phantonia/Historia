@@ -568,6 +568,9 @@ public sealed class Lexer
             "choice" => TokenKind.ChoiceKeyword,
             "run" => TokenKind.RunKeyword,
             "choose" => TokenKind.ChooseKeyword,
+            "is" => TokenKind.IsKeyword,
+            "and" => TokenKind.AndKeyword,
+            "or" => TokenKind.OrKeyword,
             _ => TokenKind.Identifier,
         };
 

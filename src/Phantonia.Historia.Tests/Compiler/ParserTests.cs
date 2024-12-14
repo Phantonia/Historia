@@ -1269,4 +1269,59 @@ public sealed class ParserTests
         // we just assert that this goes through without errors or exceptions
         _ = parser.Parse();
     }
+
+    [TestMethod]
+    public void TestConditions()
+    {
+        string code =
+            """
+            // since there is no valid language construct that accepts conditions
+            // we just cheat and parse something that the binder will spit out
+
+            setting Namespace: A is B and C is D or E is F and G is H and (I is J or K is L);
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = parser.Parse();
+
+        ExpressionNode expression = ((ExpressionSettingDirectiveNode)story.TopLevelNodes[0]).Expression;
+
+        OrExpressionNode? abcdefghijkl = expression as OrExpressionNode;
+        Assert.IsNotNull(abcdefghijkl);
+
+        AndExpressionNode? abcd = abcdefghijkl.LeftExpression as AndExpressionNode;
+        Assert.IsNotNull(abcd);
+
+        IsExpressionNode? ab = abcd.LeftExpression as IsExpressionNode;
+        Assert.IsNotNull(ab);
+        Assert.AreEqual("A", ab.OutcomeName);
+        Assert.AreEqual("B", ab.OptionName);
+
+        IsExpressionNode? cd = abcd.LeftExpression as IsExpressionNode;
+        Assert.IsNotNull(cd);
+
+        AndExpressionNode? efghijkl = abcdefghijkl.RightExpression as AndExpressionNode;
+        Assert.IsNotNull(efghijkl);
+
+        IsExpressionNode? ef = efghijkl.LeftExpression as IsExpressionNode;
+        Assert.IsNotNull(ef);
+
+        AndExpressionNode? ghijkl = efghijkl.RightExpression as AndExpressionNode;
+        Assert.IsNotNull(ghijkl);
+
+        IsExpressionNode? gh = ghijkl.LeftExpression as IsExpressionNode;
+        Assert.IsNotNull(gh);
+
+        OrExpressionNode? ijkl = ghijkl.RightExpression as OrExpressionNode;
+        Assert.IsNotNull(ijkl);
+
+        IsExpressionNode? ij = ijkl.LeftExpression as IsExpressionNode;
+        Assert.IsNotNull(ij);
+
+        IsExpressionNode? kl = ijkl.RightExpression as IsExpressionNode;
+        Assert.IsNotNull(kl);
+    }
 }
