@@ -1923,4 +1923,47 @@ public sealed class BinderTests
 
         Assert.IsTrue(errors.SequenceEqual(expectedErrors));
     }
+
+    [TestMethod]
+    public void TestIfStatement()
+    {
+        string code =
+            """
+            outcome X(A, B, C);
+
+            scene main
+            {
+                X = A;
+
+                if X is A or X is B
+                {
+                    output 0;
+                }
+                else if X is C
+                {
+                    output 1;
+                }
+                else
+                {
+                    output 2;
+                }
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        BindingResult result = binder.Bind();
+
+        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)result.BoundStory!.TopLevelNodes[1];
+
+        IfStatementNode ifStatement = (IfStatementNode)mainScene.Body.Statements[1];
+
+        if (ifStatement.Condition is not TypedExpressionNode { SourceType: TypeSymbol conditionType, Expression: BoundIsExpressionNode { Outcome: OutcomeSymbol outcome } })
+        {
+            Assert.Fail();
+        }
+
+        TypeSymbol booleanType = (TypeSymbol)result.
+    }
 }

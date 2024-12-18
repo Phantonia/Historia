@@ -1,6 +1,7 @@
 ﻿using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -48,6 +49,10 @@ public sealed partial class Binder
                 return BindAndTypeRecordCreationExpression(recordCreationExpression, table);
             case EnumOptionExpressionNode enumOptionExpression:
                 return BindAndTypeEnumOptionExpression(enumOptionExpression, table);
+            case IsExpressionNode isExpression:
+                return BindAndTypeIsExpression(isExpression, table);
+            case AndExpressionNode andExpression:
+                return BindAndTypeAndExpression(andExpression, table);
             case IdentifierExpressionNode { Identifier: string identifier, Index: int index }:
                 if (!table.IsDeclared(identifier))
                 {
@@ -165,5 +170,47 @@ public sealed partial class Binder
         };
 
         return (table, typedExpression);
+    }
+
+    private (SymbolTable, ExpressionNode) BindAndTypeIsExpression(IsExpressionNode expression, SymbolTable table)
+    {
+        if (!table.IsDeclared(expression.OutcomeName))
+        {
+            ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(expression.OutcomeName, expression.Index));
+            return (table, expression);
+        }
+
+        if (table[expression.OutcomeName] is not OutcomeSymbol outcome)
+        {
+            ErrorFound?.Invoke(Errors.SymbolIsNotOutcome(expression.OutcomeName, expression.Index));
+            return (table, expression);
+        }
+
+        if (!outcome.OptionNames.Contains(expression.OptionName))
+        {
+            ErrorFound?.Invoke(Errors.OptionDoesNotExistInOutcome(outcome.Name, expression.OptionName, expression.Index));
+            return (table, expression);
+        }
+
+        TypeSymbol booleanType = (TypeSymbol)table["Boolean"];
+
+        TypedExpressionNode typedExpression = new()
+        {
+            Expression = new BoundIsExpressionNode
+            {
+                Expression = expression,
+                Outcome = outcome,
+                Index = expression.Index,
+            },
+            SourceType = booleanType,
+            Index = expression.Index,
+        };
+
+        return (table, typedExpression);
+    }
+
+    private (SymbolTable, ExpressionNode) BindAndTypeAndExpression(AndExpressionNode andExpression, SymbolTable table)
+    {
+        
     }
 }

@@ -15,5 +15,5 @@ public sealed record TypedExpressionNode() : ExpressionNode
 
     public override IEnumerable<SyntaxNode> Children => [Expression];
 
-    protected internal override string GetDebuggerDisplay() => $"{Expression.GetDebuggerDisplay()} w/ type {SourceType.GetDebuggerDisplay()} (target type: {TargetType?.GetDebuggerDisplay() ?? "none"}";
+    protected internal override string GetDebuggerDisplay() => $"{Expression.GetDebuggerDisplay()} w/ type {SourceType.GetDebuggerDisplay()} (target type: {TargetType?.GetDebuggerDisplay() ?? "none"})";
 }

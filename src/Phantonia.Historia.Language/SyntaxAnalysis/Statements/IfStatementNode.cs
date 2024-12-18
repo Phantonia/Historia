@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public sealed record IfStatementNode : StatementNode
+public sealed record IfStatementNode() : StatementNode
 {
     public required ExpressionNode Condition { get; init; }
 

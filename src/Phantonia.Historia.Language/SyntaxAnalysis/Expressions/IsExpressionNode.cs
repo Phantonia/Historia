@@ -2,7 +2,7 @@
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 
-public sealed record IsExpressionNode : ExpressionNode
+public sealed record IsExpressionNode() : ExpressionNode
 {
     public required string OutcomeName { get; init; }
 

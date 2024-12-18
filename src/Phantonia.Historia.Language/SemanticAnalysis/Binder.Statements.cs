@@ -3,7 +3,6 @@ using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -83,6 +82,8 @@ public sealed partial class Binder
                 return BindRunStatement(runStatement, table);
             case ChooseStatementNode chooseStatement:
                 return BindChooseStatement(chooseStatement, settings, table);
+            case IfStatementNode ifStatement:
+                return BindIfStatement(ifStatement, settings, table);
             default:
                 Debug.Assert(false);
                 return default;
@@ -578,6 +579,44 @@ public sealed partial class Binder
         };
 
         return (table, boundChooseStatement);
+    }
+
+    private (SymbolTable, StatementNode) BindIfStatement(IfStatementNode ifStatement, Settings settings, SymbolTable table)
+    {
+        (table, ExpressionNode boundCondition) = BindAndTypeExpression(ifStatement.Condition, table);
+
+        if (boundCondition is TypedExpressionNode { SourceType: TypeSymbol sourceType })
+        {
+            TypeSymbol booleanType = (TypeSymbol)table["Boolean"];
+
+            if (!TypesAreCompatible(sourceType, booleanType))
+            {
+                ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, booleanType, "condition", boundCondition.Index));
+            };
+
+            boundCondition = ((TypedExpressionNode)boundCondition) with
+            {
+                TargetType = booleanType,
+            };
+        }
+
+        (table, StatementBodyNode? boundThenBlock) = BindStatementBody(ifStatement.ThenBlock, settings, table);
+
+        StatementBodyNode? boundElseBlock = null;
+
+        if (ifStatement.ElseBlock is not null)
+        {
+            (table, boundElseBlock) = BindStatementBody(ifStatement.ElseBlock, settings, table);
+        }
+
+        IfStatementNode boundStatement = ifStatement with
+        {
+            Condition = boundCondition,
+            ThenBlock = boundThenBlock,
+            ElseBlock = boundElseBlock,
+        };
+
+        return (table, boundStatement);
     }
 
     private (SymbolTable table, ReferenceSymbol? referenceSymbol, InterfaceMethodSymbol? methodSymbol, IEnumerable<BoundArgumentNode>? boundArguments)
