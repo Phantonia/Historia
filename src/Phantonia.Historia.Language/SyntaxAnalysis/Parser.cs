@@ -198,10 +198,11 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
         // for a clean tree we might still prefer left associative expressions
         // if so we could rewire the tree here
 
-        return new OrExpressionNode
+        return new LogicExpressionNode
         {
             LeftExpression = leftHandSide,
             RightExpression = rightHandSide,
+            Operator = LogicOperator.Or,
             Index = nodeIndex,
         };
     }
@@ -232,10 +233,11 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
         
         // see comment about associativity in ParseExpression method
 
-        return new AndExpressionNode
+        return new LogicExpressionNode
         {
             LeftExpression = leftHandSide,
             RightExpression = rightHandSide,
+            Operator = LogicOperator.And,
             Index = nodeIndex,
         };
     }

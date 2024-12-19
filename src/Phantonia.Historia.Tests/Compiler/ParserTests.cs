@@ -1289,11 +1289,13 @@ public sealed class ParserTests
 
         ExpressionNode expression = ((ExpressionSettingDirectiveNode)story.TopLevelNodes[0]).Expression;
 
-        OrExpressionNode? abcdefghijkl = expression as OrExpressionNode;
+        LogicExpressionNode? abcdefghijkl = expression as LogicExpressionNode;
         Assert.IsNotNull(abcdefghijkl);
+        Assert.AreEqual(LogicOperator.Or, abcdefghijkl.Operator);
 
-        AndExpressionNode? abcd = abcdefghijkl.LeftExpression as AndExpressionNode;
+        LogicExpressionNode? abcd = abcdefghijkl.LeftExpression as LogicExpressionNode;
         Assert.IsNotNull(abcd);
+        Assert.AreEqual(LogicOperator.And, abcd.Operator);
 
         IsExpressionNode? ab = abcd.LeftExpression as IsExpressionNode;
         Assert.IsNotNull(ab);
@@ -1303,20 +1305,23 @@ public sealed class ParserTests
         IsExpressionNode? cd = abcd.LeftExpression as IsExpressionNode;
         Assert.IsNotNull(cd);
 
-        AndExpressionNode? efghijkl = abcdefghijkl.RightExpression as AndExpressionNode;
+        LogicExpressionNode? efghijkl = abcdefghijkl.RightExpression as LogicExpressionNode;
         Assert.IsNotNull(efghijkl);
+        Assert.AreEqual(LogicOperator.And, efghijkl.Operator);
 
         IsExpressionNode? ef = efghijkl.LeftExpression as IsExpressionNode;
         Assert.IsNotNull(ef);
 
-        AndExpressionNode? ghijkl = efghijkl.RightExpression as AndExpressionNode;
+        LogicExpressionNode? ghijkl = efghijkl.RightExpression as LogicExpressionNode;
         Assert.IsNotNull(ghijkl);
+        Assert.AreEqual(LogicOperator.And, ghijkl.Operator);
 
         IsExpressionNode? gh = ghijkl.LeftExpression as IsExpressionNode;
         Assert.IsNotNull(gh);
 
-        OrExpressionNode? ijkl = ghijkl.RightExpression as OrExpressionNode;
+        LogicExpressionNode? ijkl = ghijkl.RightExpression as LogicExpressionNode;
         Assert.IsNotNull(ijkl);
+        Assert.AreEqual(LogicOperator.Or, ijkl.Operator);
 
         IsExpressionNode? ij = ijkl.LeftExpression as IsExpressionNode;
         Assert.IsNotNull(ij);

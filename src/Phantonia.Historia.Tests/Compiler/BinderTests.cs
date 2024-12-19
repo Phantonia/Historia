@@ -1955,15 +1955,59 @@ public sealed class BinderTests
 
         BindingResult result = binder.Bind();
 
-        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)result.BoundStory!.TopLevelNodes[1];
+        TypeSymbol booleanType = (TypeSymbol)result.SymbolTable!["Boolean"];
+        OutcomeSymbol xOutcome = (OutcomeSymbol)result.SymbolTable["X"];
+
+        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)((BoundSymbolDeclarationNode)result.BoundStory!.TopLevelNodes[1]).Declaration;
 
         IfStatementNode ifStatement = (IfStatementNode)mainScene.Body.Statements[1];
 
-        if (ifStatement.Condition is not TypedExpressionNode { SourceType: TypeSymbol conditionType, Expression: BoundIsExpressionNode { Outcome: OutcomeSymbol outcome } })
+        if (ifStatement.Condition is not TypedExpressionNode
+            {
+                SourceType: TypeSymbol conditionType,
+                Expression: LogicExpressionNode
+                {
+                    LeftExpression: ExpressionNode leftHandSide,
+                    RightExpression: ExpressionNode rightHandSide,
+                },
+            })
         {
             Assert.Fail();
+            return;
         }
 
-        TypeSymbol booleanType = (TypeSymbol)result.
+        Assert.AreEqual(booleanType, conditionType);
+
+        if (leftHandSide is not TypedExpressionNode
+            {
+                SourceType: TypeSymbol leftHandType,
+                Expression: BoundIsExpressionNode
+                {
+                    Outcome: OutcomeSymbol leftHandOutcome,
+                },
+            })
+        {
+            Assert.Fail();
+            return;
+        }
+
+        Assert.AreEqual(booleanType, leftHandType);
+        Assert.AreEqual(xOutcome, leftHandOutcome);
+
+        if (rightHandSide is not TypedExpressionNode
+            {
+                SourceType: TypeSymbol rightHandType,
+                Expression: BoundIsExpressionNode
+                {
+                    Outcome: OutcomeSymbol rightHandOutcome,
+                },
+            })
+        {
+            Assert.Fail();
+            return;
+        }
+
+        Assert.AreEqual(booleanType, rightHandType);
+        Assert.AreEqual(xOutcome, rightHandOutcome);
     }
 }

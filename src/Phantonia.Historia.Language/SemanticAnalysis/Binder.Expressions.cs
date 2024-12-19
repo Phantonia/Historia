@@ -51,8 +51,8 @@ public sealed partial class Binder
                 return BindAndTypeEnumOptionExpression(enumOptionExpression, table);
             case IsExpressionNode isExpression:
                 return BindAndTypeIsExpression(isExpression, table);
-            case AndExpressionNode andExpression:
-                return BindAndTypeAndExpression(andExpression, table);
+            case LogicExpressionNode logicExpression:
+                return BindAndTypeLogicExpression(logicExpression, table);
             case IdentifierExpressionNode { Identifier: string identifier, Index: int index }:
                 if (!table.IsDeclared(identifier))
                 {
@@ -209,8 +209,51 @@ public sealed partial class Binder
         return (table, typedExpression);
     }
 
-    private (SymbolTable, ExpressionNode) BindAndTypeAndExpression(AndExpressionNode andExpression, SymbolTable table)
+    private (SymbolTable, ExpressionNode) BindAndTypeLogicExpression(LogicExpressionNode logicExpression, SymbolTable table)
     {
-        
+        (table, ExpressionNode boundLeftHandSide) = BindAndTypeExpression(logicExpression.LeftExpression, table);
+        (table, ExpressionNode boundRightHandSide) = BindAndTypeExpression(logicExpression.RightExpression, table);
+
+        if (boundLeftHandSide is not TypedExpressionNode { SourceType: TypeSymbol leftHandType } || boundRightHandSide is not TypedExpressionNode { SourceType: TypeSymbol rightHandType })
+        {
+            return (table, logicExpression);
+        }
+
+        TypeSymbol booleanType = (TypeSymbol)table["Boolean"];
+
+        bool error = false;
+
+        if (!TypesAreCompatible(leftHandType, booleanType))
+        {
+            ErrorFound?.Invoke(Errors.IncompatibleType(leftHandType, booleanType, "operand", logicExpression.LeftExpression.Index));
+            error = true;
+        }
+
+        if (!TypesAreCompatible(rightHandType, booleanType))
+        {
+            ErrorFound?.Invoke(Errors.IncompatibleType(rightHandType, booleanType, "operand", logicExpression.RightExpression.Index));
+            error = true;
+        }
+
+        if (error)
+        {
+            return (table, logicExpression);
+        }
+
+        TypedExpressionNode typedLeftHandSide = (TypedExpressionNode)boundLeftHandSide with { TargetType = booleanType };
+        TypedExpressionNode typedRightHandSide = (TypedExpressionNode)boundRightHandSide with { TargetType = booleanType };
+
+        TypedExpressionNode typedLogicExpression = new()
+        {
+            Expression = logicExpression with
+            {
+                LeftExpression = typedLeftHandSide,
+                RightExpression = typedRightHandSide,
+            },
+            SourceType = booleanType,
+            Index = logicExpression.Index,
+        };
+
+        return (table, typedLogicExpression);
     }
 }
