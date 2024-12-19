@@ -97,6 +97,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
                 Kind = FlowVertexKind.Invisible,
             }),
             BoundChooseStatementNode chooseStatement => GenerateChooseFlowGraph(chooseStatement),
+            IfStatementNode ifStatement => GenerateIfFlowGraph(ifStatement),
             _ => throw new NotImplementedException($"Unknown statement type {statement.GetType().FullName}"),
         };
     }
@@ -310,6 +311,36 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body);
 
             flowGraph = flowGraph.AppendToVertex(chooseStatement.Index, nestedFlowGraph);
+        }
+
+        return flowGraph;
+    }
+
+    private FlowGraph GenerateIfFlowGraph(IfStatementNode ifStatement)
+    {
+        FlowGraph flowGraph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex
+        {
+            Index = ifStatement.Index,
+            AssociatedStatement = ifStatement,
+            Kind = FlowVertexKind.Invisible,
+        });
+
+        FlowGraph thenFlowGraph = GenerateBodyFlowGraph(ifStatement.ThenBlock);
+
+        flowGraph = flowGraph.Append(thenFlowGraph);
+
+        if (ifStatement.ElseBlock is not null)
+        {
+            FlowGraph elseFlowGraph = GenerateBodyFlowGraph(ifStatement.ElseBlock);
+            flowGraph = flowGraph.AppendToVertex(ifStatement.Index, elseFlowGraph);
+        }
+        else
+        {
+            // we need to draw an edge from the if statement vertex into nothingness
+            flowGraph = flowGraph with
+            {
+                OutgoingEdges = flowGraph.OutgoingEdges.SetItem(ifStatement.Index, flowGraph.OutgoingEdges[ifStatement.Index].Add(FlowEdge.CreateStrongTo(FlowGraph.FinalVertex))),
+            };
         }
 
         return flowGraph;
