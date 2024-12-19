@@ -274,6 +274,8 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
 
                     return expression;
                 }
+            case { Kind: TokenKind.NotKeyword }:
+                return ParseNotExpression(ref index);
             case { Kind: TokenKind.EndOfFile }:
                 ErrorFound?.Invoke(Errors.UnexpectedEndOfFile(tokens[index]));
                 return null;
@@ -404,6 +406,27 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
         _ = Expect(TokenKind.ClosedParenthesis, ref index);
 
         return arguments.ToImmutable();
+    }
+
+    private NotExpressionNode? ParseNotExpression(ref int index)
+    {
+        Debug.Assert(tokens[index].Kind is TokenKind.NotKeyword);
+
+        int nodeIndex = tokens[index].Index;
+        index++;
+
+        ExpressionNode? innerExpression = ParseSimpleExpression(ref index);
+
+        if (innerExpression is null)
+        {
+            return null;
+        }
+
+        return new NotExpressionNode
+        {
+            InnerExpression = innerExpression,
+            Index = nodeIndex,
+        };
     }
 
     private TypeNode? ParseType(ref int index)

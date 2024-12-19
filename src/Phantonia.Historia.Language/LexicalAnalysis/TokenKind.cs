@@ -52,6 +52,7 @@ public enum TokenKind
     IsKeyword,
     AndKeyword,
     OrKeyword,
+    NotKeyword,
     IfKeyword,
     ElseKeyword,
 

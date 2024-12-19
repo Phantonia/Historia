@@ -1380,4 +1380,46 @@ public sealed class ParserTests
         IfStatementNode? elseIfStatement = ifStatement.ElseBlock?.Statements[0] as IfStatementNode;
         Assert.IsNotNull(elseIfStatement);
     }
+
+    [TestMethod]
+    public void TestNot()
+    {
+        string code =
+            """
+            outcome X(A, B);
+
+            scene main
+            {
+                X = A;
+
+                if not X is A and X is B { }
+            }
+            """;
+        
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = parser.Parse();
+
+        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[1];
+
+        Assert.AreEqual(2, mainScene.Body.Statements.Length);
+
+        IfStatementNode? ifStatement = mainScene.Body.Statements[1] as IfStatementNode;
+        Assert.IsNotNull(ifStatement);
+
+        if (ifStatement.Condition is not LogicExpressionNode
+            {
+                Operator: LogicOperator.And,
+                LeftExpression: NotExpressionNode
+                {
+                    InnerExpression: IsExpressionNode,
+                },
+                RightExpression: IsExpressionNode,
+            })
+        {
+            Assert.Fail();
+        }
+    }
 }

@@ -53,6 +53,8 @@ public sealed partial class Binder
                 return BindAndTypeIsExpression(isExpression, table);
             case LogicExpressionNode logicExpression:
                 return BindAndTypeLogicExpression(logicExpression, table);
+            case NotExpressionNode notExpression:
+                return BindAndTypeNotExpression(notExpression, table);
             case IdentifierExpressionNode { Identifier: string identifier, Index: int index }:
                 if (!table.IsDeclared(identifier))
                 {
@@ -255,5 +257,37 @@ public sealed partial class Binder
         };
 
         return (table, typedLogicExpression);
+    }
+
+    private (SymbolTable, ExpressionNode) BindAndTypeNotExpression(NotExpressionNode notExpression, SymbolTable table)
+    {
+        (table, ExpressionNode boundInnerExpression) = BindAndTypeExpression(notExpression.InnerExpression, table);
+
+        if (boundInnerExpression is not TypedExpressionNode { SourceType: TypeSymbol innerType })
+        {
+            return (table, notExpression);
+        }
+
+        TypeSymbol booleanType = (TypeSymbol)table["Boolean"];
+
+        if (!TypesAreCompatible(innerType, booleanType))
+        {
+            ErrorFound?.Invoke(Errors.IncompatibleType(innerType, booleanType, "operand", notExpression.InnerExpression.Index));
+            return (table, notExpression);
+        }
+
+        TypedExpressionNode typedInnerExpression = (TypedExpressionNode)boundInnerExpression with { TargetType = booleanType };
+
+        TypedExpressionNode typedNotExpression = new()
+        {
+            Expression = notExpression with
+            {
+                InnerExpression = typedInnerExpression,
+            },
+            SourceType = booleanType,
+            Index = notExpression.Index,
+        };
+
+        return (table, typedNotExpression);
     }
 }

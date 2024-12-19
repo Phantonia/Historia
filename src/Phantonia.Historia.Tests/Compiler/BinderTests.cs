@@ -1939,7 +1939,7 @@ public sealed class BinderTests
                 {
                     output 0;
                 }
-                else if X is C
+                else if not X is C
                 {
                     output 1;
                 }
@@ -2009,5 +2009,28 @@ public sealed class BinderTests
 
         Assert.AreEqual(booleanType, rightHandType);
         Assert.AreEqual(xOutcome, rightHandOutcome);
+
+        IfStatementNode? elseIfStatement = ifStatement.ElseBlock?.Statements[0] as IfStatementNode;
+        Assert.IsNotNull(elseIfStatement);
+
+        if (elseIfStatement.Condition is not TypedExpressionNode
+            {
+                SourceType: TypeSymbol elseConditionType,
+                Expression: NotExpressionNode
+                {
+                    InnerExpression: TypedExpressionNode
+                    {
+                        SourceType: TypeSymbol innerType,
+                        Expression: BoundIsExpressionNode,
+                    },
+                },
+            })
+        {
+            Assert.Fail();
+            return;
+        }
+
+        Assert.AreEqual(booleanType, elseConditionType);
+        Assert.AreEqual(booleanType, innerType);
     }
 }
