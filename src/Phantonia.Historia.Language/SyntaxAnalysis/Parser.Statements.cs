@@ -165,27 +165,17 @@ public sealed partial class Parser
 
         index++;
 
-        string? name = null;
-
-        if (tokens[index].Kind == TokenKind.Identifier)
-        {
-            name = tokens[index].Text;
-            index++;
-        }
-
-        _ = Expect(TokenKind.OpenParenthesis, ref index);
-
         ExpressionNode? expression = ParseExpression(ref index);
+
         if (expression is null)
         {
             return null;
         }
 
-        _ = Expect(TokenKind.ClosedParenthesis, ref index);
-
         _ = Expect(TokenKind.OpenBrace, ref index);
 
-        ImmutableArray<OptionNode>? optionNodes = ParseOptions(allowNames: true, ref index);
+        ImmutableArray<OptionNode>? optionNodes = ParseOptions(ref index);
+
         if (optionNodes is null)
         {
             return null;
@@ -195,15 +185,14 @@ public sealed partial class Parser
 
         return new SwitchStatementNode
         {
-            Name = name,
             OutputExpression = expression,
-            Options = ((ImmutableArray<OptionNode>)optionNodes).Cast<SwitchOptionNode>().ToImmutableArray(),
+            Options = (ImmutableArray<OptionNode>)optionNodes,
             IsCheckpoint = isCheckpoint,
             Index = nodeIndex,
         };
     }
 
-    private StatementNode? ParseChooseStatement(ref int index)
+    private ChooseStatementNode? ParseChooseStatement(ref int index)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.ChooseKeyword);
 
@@ -226,7 +215,8 @@ public sealed partial class Parser
 
         _ = Expect(TokenKind.OpenBrace, ref index);
 
-        ImmutableArray<OptionNode>? optionNodes = ParseOptions(allowNames: false, ref index);
+        ImmutableArray<OptionNode>? optionNodes = ParseOptions(ref index);
+
         if (optionNodes is null)
         {
             return null;
@@ -244,7 +234,7 @@ public sealed partial class Parser
         };
     }
 
-    private ImmutableArray<OptionNode>? ParseOptions(bool allowNames, ref int index)
+    private ImmutableArray<OptionNode>? ParseOptions(ref int index)
     {
         ImmutableArray<OptionNode>.Builder optionBuilder = ImmutableArray.CreateBuilder<OptionNode>();
 
@@ -254,29 +244,12 @@ public sealed partial class Parser
 
             _ = Expect(TokenKind.OptionKeyword, ref index);
 
-            string? name = null;
-
-            if (tokens[index].Kind == TokenKind.Identifier)
-            {
-                if (!allowNames)
-                {
-                    ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index]));
-                }
-
-                name = tokens[index].Text;
-                index++;
-            }
-
-            _ = Expect(TokenKind.OpenParenthesis, ref index);
-
             ExpressionNode? expression = ParseExpression(ref index);
 
             if (expression is null)
             {
                 return null;
             }
-
-            _ = Expect(TokenKind.ClosedParenthesis, ref index);
 
             StatementBodyNode? body = ParseStatementBody(ref index);
 
@@ -287,25 +260,12 @@ public sealed partial class Parser
 
             OptionNode optionNode;
 
-            if (allowNames)
+            optionNode = new OptionNode()
             {
-                optionNode = new SwitchOptionNode()
-                {
-                    Name = name,
-                    Expression = expression,
-                    Body = body,
-                    Index = nodeIndex,
-                };
-            }
-            else
-            {
-                optionNode = new OptionNode()
-                {
-                    Expression = expression,
-                    Body = body,
-                    Index = nodeIndex,
-                };
-            }
+                Expression = expression,
+                Body = body,
+                Index = nodeIndex,
+            };
 
             optionBuilder.Add(optionNode);
         }
@@ -330,6 +290,7 @@ public sealed partial class Parser
         _ = Expect(TokenKind.OpenParenthesis, ref index);
 
         ExpressionNode? expression = ParseExpression(ref index);
+
         if (expression is null)
         {
             return null;
@@ -340,6 +301,7 @@ public sealed partial class Parser
         _ = Expect(TokenKind.OpenBrace, ref index);
 
         ImmutableArray<LoopSwitchOptionNode>? optionNodes = ParseLoopSwitchOptions(ref index);
+
         if (optionNodes is null)
         {
             return null;

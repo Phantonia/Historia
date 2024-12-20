@@ -111,7 +111,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             Kind = FlowVertexKind.Visible,
         });
 
-        foreach (SwitchOptionNode option in switchStatement.Options)
+        foreach (OptionNode option in switchStatement.Options)
         {
             FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body);
 

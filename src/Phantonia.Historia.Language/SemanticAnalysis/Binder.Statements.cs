@@ -111,49 +111,7 @@ public sealed partial class Binder
             }
         }
 
-        if (switchStatement.Name is not null)
-        {
-            if (switchStatement.Options.Any(o => o.Name is null))
-            {
-                ErrorFound?.Invoke(Errors.InconsistentNamedSwitch(switchStatement.Index));
-            }
-            else if (table.IsDeclared(switchStatement.Name))
-            {
-                ErrorFound?.Invoke(Errors.DuplicatedSymbolName(switchStatement.Name, switchStatement.Index));
-            }
-            else
-            {
-                HashSet<string> optionNames = [];
-
-                foreach (SwitchOptionNode option in switchStatement.Options)
-                {
-                    if (!optionNames.Add(option.Name!))
-                    {
-                        ErrorFound?.Invoke(Errors.DuplicatedOptionInOutcomeDeclaration(option.Name!, option.Index));
-                    }
-                }
-
-                OutcomeSymbol symbol = new()
-                {
-                    Name = switchStatement.Name,
-                    OptionNames = [.. optionNames],
-                    AlwaysAssigned = true,
-                    IsPublic = false,
-                    Index = switchStatement.Index,
-                };
-
-                table = table.Declare(symbol);
-            }
-        }
-        else
-        {
-            if (switchStatement.Options.Any(o => o.Name is not null))
-            {
-                ErrorFound?.Invoke(Errors.InconsistentUnnamedSwitch(switchStatement.Index));
-            }
-        }
-
-        List<SwitchOptionNode> boundOptions = [.. switchStatement.Options];
+        List<OptionNode> boundOptions = [.. switchStatement.Options];
 
         for (int i = 0; i < boundOptions.Count; i++)
         {
@@ -185,26 +143,11 @@ public sealed partial class Binder
 
         SwitchStatementNode boundStatement;
 
-        if (switchStatement.Name is not null && table.IsDeclared(switchStatement.Name) && table[switchStatement.Name] is OutcomeSymbol outcome)
+        boundStatement = switchStatement with
         {
-            boundStatement = new BoundNamedSwitchStatementNode
-            {
-                Name = switchStatement.Name,
-                OutputExpression = outputExpression,
-                Options = [.. boundOptions],
-                Outcome = outcome,
-                IsCheckpoint = switchStatement.IsCheckpoint,
-                Index = switchStatement.Index,
-            };
-        }
-        else
-        {
-            boundStatement = switchStatement with
-            {
-                OutputExpression = outputExpression,
-                Options = [.. boundOptions],
-            };
-        }
+            OutputExpression = outputExpression,
+            Options = [.. boundOptions],
+        };
 
         return (table, boundStatement);
     }

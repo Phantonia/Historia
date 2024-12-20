@@ -162,11 +162,27 @@ public sealed class FlowAnalyzerTests
             """
             scene main
             {
-                switch MySwitch (0)
+                outcome MySwitch (A, B, C);
+
+                switch (0)
                 {
-                    option A (3) { output (3); }
-                    option B (4) { output (4); }
-                    option C (5) { output (5); }
+                    option (3)
+                    {
+                        MySwitch = A;
+                        output (3);
+                    }
+
+                    option (4)
+                    {
+                        MySwitch = B;
+                        output (4);
+                    }
+
+                    option (5)
+                    {
+                        MySwitch = C;
+                        output (5);
+                    }
                 }
 
                 output (0);

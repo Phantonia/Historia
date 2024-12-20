@@ -164,57 +164,57 @@ public sealed class ParserTests
                                     Value: 4
                                 },
                                 Options:
-                                    [
-                                        SwitchOptionNode
-                                    {
-                                        Expression: IntegerLiteralExpressionNode
+                                        [
+                                            OptionNode
                                         {
-                                            Value: 5
+                                            Expression: IntegerLiteralExpressionNode
+                                            {
+                                                Value: 5
+                                            },
+                                            Body: StatementBodyNode
+                                            {
+                                                Statements:
+                                                    [
+                                                        OutputStatementNode
+                                                    {
+                                                        OutputExpression: IntegerLiteralExpressionNode
+                                                        {
+                                                            Value: 6
+                                                        }
+                                                    }
+                                                    ]
+                                            }
                                         },
-                                        Body: StatementBodyNode
+                                            OptionNode
                                         {
-                                            Statements:
-                                                [
-                                                    OutputStatementNode
-                                                {
-                                                    OutputExpression: IntegerLiteralExpressionNode
+                                            Expression: IntegerLiteralExpressionNode
+                                            {
+                                                Value: 7
+                                            },
+                                            Body: StatementBodyNode
+                                            {
+                                                Statements:
+                                                    [
+                                                        OutputStatementNode
                                                     {
-                                                        Value: 6
+                                                        OutputExpression: IntegerLiteralExpressionNode
+                                                        {
+                                                            Value: 8
+                                                        }
+                                                    },
+                                                        OutputStatementNode
+                                                    {
+                                                        OutputExpression: IntegerLiteralExpressionNode
+                                                        {
+                                                            Value: 9
+                                                        }
                                                     }
-                                                }
-                                                ]
+                                                    ]
+                                            }
                                         }
-                                    },
-                                        SwitchOptionNode
-                                    {
-                                        Expression: IntegerLiteralExpressionNode
-                                        {
-                                            Value: 7
-                                        },
-                                        Body: StatementBodyNode
-                                        {
-                                            Statements:
-                                                [
-                                                    OutputStatementNode
-                                                {
-                                                    OutputExpression: IntegerLiteralExpressionNode
-                                                    {
-                                                        Value: 8
-                                                    }
-                                                },
-                                                    OutputStatementNode
-                                                {
-                                                    OutputExpression: IntegerLiteralExpressionNode
-                                                    {
-                                                        Value: 9
-                                                    }
-                                                }
-                                                ]
-                                        }
-                                    }
-                                    ]
+                                        ]
                             }
-                            ]
+                                ]
                     }
                 }
                 ]
@@ -222,52 +222,6 @@ public sealed class ParserTests
         {
             Assert.Fail();
         }
-    }
-
-    [TestMethod]
-    public void TestNamedSwitchParsing()
-    {
-        string code =
-            """
-            scene main
-            {
-                switch MySwitch (4)
-                {
-                    option MyOptionA (5)
-                    {
-                        output 6;
-                    }
-
-                    option MyOptionB (7)
-                    {
-                        output 8;
-                        output 9;
-                    }
-                }
-            }
-            """;
-
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
-        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
-
-        StoryNode story = parser.Parse();
-
-        Assert.AreEqual(1, story.TopLevelNodes.Length);
-
-        SceneSymbolDeclarationNode? mainScene = story.TopLevelNodes[0] as SceneSymbolDeclarationNode;
-        Assert.IsNotNull(mainScene);
-        Assert.AreEqual("main", mainScene.Name);
-
-        Assert.AreEqual(1, mainScene.Body.Statements.Length);
-
-        SwitchStatementNode? switchStatement = mainScene.Body.Statements[0] as SwitchStatementNode;
-        Assert.IsNotNull(switchStatement);
-
-        Assert.AreEqual("MySwitch", switchStatement.Name);
-        Assert.AreEqual(2, switchStatement.Options.Length);
-        Assert.AreEqual("MyOptionA", switchStatement.Options[0].Name);
-        Assert.AreEqual("MyOptionB", switchStatement.Options[1].Name);
     }
 
     [TestMethod]
@@ -1395,7 +1349,7 @@ public sealed class ParserTests
                 if not X is A and X is B { }
             }
             """;
-        
+
         Lexer lexer = new(code);
         Parser parser = new(lexer.Lex());
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));

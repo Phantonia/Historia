@@ -152,15 +152,6 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
 
             writer.Indent++;
 
-            if (switchStatement is BoundNamedSwitchStatementNode { Outcome: OutcomeSymbol outcome })
-            {
-                writer.Write("fields.");
-                GeneralEmission.GenerateOutcomeFieldName(outcome, writer);
-                writer.Write(" = ");
-                writer.Write(outcome.OptionNames.IndexOf(switchStatement.Options[i].Name!));
-                writer.WriteLine(';');
-            }
-
             GenerateTransitionTo(edges[i].ToVertex);
 
             writer.Indent--;
