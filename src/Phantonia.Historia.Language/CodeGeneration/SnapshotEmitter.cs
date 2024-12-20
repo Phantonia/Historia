@@ -1,7 +1,6 @@
 ﻿using Phantonia.Historia.Language.FlowAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
-using System;
 using System.CodeDom.Compiler;
 using System.Linq;
 

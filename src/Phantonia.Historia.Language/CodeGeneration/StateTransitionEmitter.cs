@@ -86,6 +86,12 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
                 case BoundChooseStatementNode chooseStatement:
                     GenerateChooseTransition(chooseStatement, edges);
                     break;
+                case IfStatementNode ifStatement:
+                    GenerateIfTransition(ifStatement, edges);
+                    break;
+                default:
+                    Debug.Assert(false);
+                    break;
             }
 
             writer.Indent--;
@@ -145,15 +151,6 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
             writer.WriteLine(':');
 
             writer.Indent++;
-
-            if (switchStatement is BoundNamedSwitchStatementNode { Outcome: OutcomeSymbol outcome })
-            {
-                writer.Write("fields.");
-                GeneralEmission.GenerateOutcomeFieldName(outcome, writer);
-                writer.Write(" = ");
-                writer.Write(outcome.OptionNames.IndexOf(switchStatement.Options[i].Name!));
-                writer.WriteLine(';');
-            }
 
             GenerateTransitionTo(edges[i].ToVertex);
 
@@ -550,6 +547,25 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
         writer.EndBlock(); // switch
 
         writer.EndBlock(); // scope
+    }
+
+    private void GenerateIfTransition(IfStatementNode ifStatement, ImmutableList<FlowEdge> edges)
+    {
+        Debug.Assert(edges.Count == 2);
+
+        writer.Write("if (");
+        GeneralEmission.GenerateExpression(ifStatement.Condition, writer);
+        writer.WriteLine(")");
+
+        writer.BeginBlock();
+        GenerateTransitionTo(edges[0].ToVertex);
+        writer.EndBlock();
+
+        writer.WriteLine("else");
+
+        writer.BeginBlock();
+        GenerateTransitionTo(edges[1].ToVertex);
+        writer.EndBlock();
     }
 
     private void GenerateTransitionTo(int toVertex)

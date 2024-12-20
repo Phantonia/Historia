@@ -164,57 +164,57 @@ public sealed class ParserTests
                                     Value: 4
                                 },
                                 Options:
-                                    [
-                                        SwitchOptionNode
-                                    {
-                                        Expression: IntegerLiteralExpressionNode
+                                        [
+                                            OptionNode
                                         {
-                                            Value: 5
+                                            Expression: IntegerLiteralExpressionNode
+                                            {
+                                                Value: 5
+                                            },
+                                            Body: StatementBodyNode
+                                            {
+                                                Statements:
+                                                    [
+                                                        OutputStatementNode
+                                                    {
+                                                        OutputExpression: IntegerLiteralExpressionNode
+                                                        {
+                                                            Value: 6
+                                                        }
+                                                    }
+                                                    ]
+                                            }
                                         },
-                                        Body: StatementBodyNode
+                                            OptionNode
                                         {
-                                            Statements:
-                                                [
-                                                    OutputStatementNode
-                                                {
-                                                    OutputExpression: IntegerLiteralExpressionNode
+                                            Expression: IntegerLiteralExpressionNode
+                                            {
+                                                Value: 7
+                                            },
+                                            Body: StatementBodyNode
+                                            {
+                                                Statements:
+                                                    [
+                                                        OutputStatementNode
                                                     {
-                                                        Value: 6
+                                                        OutputExpression: IntegerLiteralExpressionNode
+                                                        {
+                                                            Value: 8
+                                                        }
+                                                    },
+                                                        OutputStatementNode
+                                                    {
+                                                        OutputExpression: IntegerLiteralExpressionNode
+                                                        {
+                                                            Value: 9
+                                                        }
                                                     }
-                                                }
-                                                ]
+                                                    ]
+                                            }
                                         }
-                                    },
-                                        SwitchOptionNode
-                                    {
-                                        Expression: IntegerLiteralExpressionNode
-                                        {
-                                            Value: 7
-                                        },
-                                        Body: StatementBodyNode
-                                        {
-                                            Statements:
-                                                [
-                                                    OutputStatementNode
-                                                {
-                                                    OutputExpression: IntegerLiteralExpressionNode
-                                                    {
-                                                        Value: 8
-                                                    }
-                                                },
-                                                    OutputStatementNode
-                                                {
-                                                    OutputExpression: IntegerLiteralExpressionNode
-                                                    {
-                                                        Value: 9
-                                                    }
-                                                }
-                                                ]
-                                        }
-                                    }
-                                    ]
+                                        ]
                             }
-                            ]
+                                ]
                     }
                 }
                 ]
@@ -222,52 +222,6 @@ public sealed class ParserTests
         {
             Assert.Fail();
         }
-    }
-
-    [TestMethod]
-    public void TestNamedSwitchParsing()
-    {
-        string code =
-            """
-            scene main
-            {
-                switch MySwitch (4)
-                {
-                    option MyOptionA (5)
-                    {
-                        output 6;
-                    }
-
-                    option MyOptionB (7)
-                    {
-                        output 8;
-                        output 9;
-                    }
-                }
-            }
-            """;
-
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
-        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
-
-        StoryNode story = parser.Parse();
-
-        Assert.AreEqual(1, story.TopLevelNodes.Length);
-
-        SceneSymbolDeclarationNode? mainScene = story.TopLevelNodes[0] as SceneSymbolDeclarationNode;
-        Assert.IsNotNull(mainScene);
-        Assert.AreEqual("main", mainScene.Name);
-
-        Assert.AreEqual(1, mainScene.Body.Statements.Length);
-
-        SwitchStatementNode? switchStatement = mainScene.Body.Statements[0] as SwitchStatementNode;
-        Assert.IsNotNull(switchStatement);
-
-        Assert.AreEqual("MySwitch", switchStatement.Name);
-        Assert.AreEqual(2, switchStatement.Options.Length);
-        Assert.AreEqual("MyOptionA", switchStatement.Options[0].Name);
-        Assert.AreEqual("MyOptionB", switchStatement.Options[1].Name);
     }
 
     [TestMethod]
@@ -1268,5 +1222,158 @@ public sealed class ParserTests
 
         // we just assert that this goes through without errors or exceptions
         _ = parser.Parse();
+    }
+
+    [TestMethod]
+    public void TestConditions()
+    {
+        string code =
+            """
+            // since there is no valid language construct that accepts conditions
+            // we just cheat and parse something that the binder will spit out
+
+            setting Namespace: A is B and C is D or E is F and G is H and (I is J or K is L);
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = parser.Parse();
+
+        ExpressionNode expression = ((ExpressionSettingDirectiveNode)story.TopLevelNodes[0]).Expression;
+
+        LogicExpressionNode? abcdefghijkl = expression as LogicExpressionNode;
+        Assert.IsNotNull(abcdefghijkl);
+        Assert.AreEqual(LogicOperator.Or, abcdefghijkl.Operator);
+
+        LogicExpressionNode? abcd = abcdefghijkl.LeftExpression as LogicExpressionNode;
+        Assert.IsNotNull(abcd);
+        Assert.AreEqual(LogicOperator.And, abcd.Operator);
+
+        IsExpressionNode? ab = abcd.LeftExpression as IsExpressionNode;
+        Assert.IsNotNull(ab);
+        Assert.AreEqual("A", ab.OutcomeName);
+        Assert.AreEqual("B", ab.OptionName);
+
+        IsExpressionNode? cd = abcd.LeftExpression as IsExpressionNode;
+        Assert.IsNotNull(cd);
+
+        LogicExpressionNode? efghijkl = abcdefghijkl.RightExpression as LogicExpressionNode;
+        Assert.IsNotNull(efghijkl);
+        Assert.AreEqual(LogicOperator.And, efghijkl.Operator);
+
+        IsExpressionNode? ef = efghijkl.LeftExpression as IsExpressionNode;
+        Assert.IsNotNull(ef);
+
+        LogicExpressionNode? ghijkl = efghijkl.RightExpression as LogicExpressionNode;
+        Assert.IsNotNull(ghijkl);
+        Assert.AreEqual(LogicOperator.And, ghijkl.Operator);
+
+        IsExpressionNode? gh = ghijkl.LeftExpression as IsExpressionNode;
+        Assert.IsNotNull(gh);
+
+        LogicExpressionNode? ijkl = ghijkl.RightExpression as LogicExpressionNode;
+        Assert.IsNotNull(ijkl);
+        Assert.AreEqual(LogicOperator.Or, ijkl.Operator);
+
+        IsExpressionNode? ij = ijkl.LeftExpression as IsExpressionNode;
+        Assert.IsNotNull(ij);
+
+        IsExpressionNode? kl = ijkl.RightExpression as IsExpressionNode;
+        Assert.IsNotNull(kl);
+    }
+
+    [TestMethod]
+    public void TestIfStatement()
+    {
+        string code =
+            """
+            outcome X(A, B, C);
+
+            scene main
+            {
+                X = A;
+
+                if X is A
+                {
+                    output 0;
+                }
+                else if X is B
+                {
+                    output 1;
+                }
+                else
+                {
+                    output 2;
+                }
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = parser.Parse();
+
+        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[1];
+
+        Assert.AreEqual(2, mainScene.Body.Statements.Length);
+
+        IfStatementNode? ifStatement = mainScene.Body.Statements[1] as IfStatementNode;
+        Assert.IsNotNull(ifStatement);
+
+        IsExpressionNode? isExpression = ifStatement.Condition as IsExpressionNode;
+        Assert.IsNotNull(isExpression);
+        Assert.AreEqual("X", isExpression.OutcomeName);
+        Assert.AreEqual("A", isExpression.OptionName);
+
+        OutputStatementNode? output0Statement = ifStatement.ThenBlock.Statements[0] as OutputStatementNode;
+        Assert.IsNotNull(output0Statement);
+
+        IfStatementNode? elseIfStatement = ifStatement.ElseBlock?.Statements[0] as IfStatementNode;
+        Assert.IsNotNull(elseIfStatement);
+    }
+
+    [TestMethod]
+    public void TestNot()
+    {
+        string code =
+            """
+            outcome X(A, B);
+
+            scene main
+            {
+                X = A;
+
+                if not X is A and X is B { }
+            }
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+        parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        StoryNode story = parser.Parse();
+
+        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[1];
+
+        Assert.AreEqual(2, mainScene.Body.Statements.Length);
+
+        IfStatementNode? ifStatement = mainScene.Body.Statements[1] as IfStatementNode;
+        Assert.IsNotNull(ifStatement);
+
+        if (ifStatement.Condition is not LogicExpressionNode
+            {
+                Operator: LogicOperator.And,
+                LeftExpression: NotExpressionNode
+                {
+                    InnerExpression: IsExpressionNode,
+                },
+                RightExpression: IsExpressionNode,
+            })
+        {
+            Assert.Fail();
+        }
     }
 }

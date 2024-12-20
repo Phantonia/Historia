@@ -184,7 +184,7 @@ public static class Errors
     {
         return new Error
         {
-            ErrorMessage = $"Symbol named '{symbolName}' is not an outcome or a named switch",
+            ErrorMessage = $"Symbol named '{symbolName}' is not an outcome",
             Index = index
         };
     }
@@ -193,7 +193,7 @@ public static class Errors
     {
         return new Error
         {
-            ErrorMessage = $"The outcome or named switch '{outcomeName}' does not have an option named '{optionName}'",
+            ErrorMessage = $"The outcome '{outcomeName}' does not have an option named '{optionName}'",
             Index = index,
         };
     }
@@ -202,7 +202,7 @@ public static class Errors
     {
         return new Error
         {
-            ErrorMessage = $"The branchon statement for outcome or named switch '{outcomeName}' " +
+            ErrorMessage = $"The branchon statement for outcome '{outcomeName}' " +
                            $"has more than one branch for the option named '{optionName}'",
             Index = index,
         };
@@ -214,7 +214,7 @@ public static class Errors
 
         return new Error
         {
-            ErrorMessage = $"The branchon statement does not cover all options of the outcome or named switch '{outcomeName}' " +
+            ErrorMessage = $"The branchon statement does not cover all options of the outcome '{outcomeName}' " +
                            $"(it is missing the options {string.Join(", ", missingOptionNames)}). " +
                            $"Add an empty other branch if this is intentional, else this is probably an error",
             Index = index,
@@ -225,7 +225,7 @@ public static class Errors
     {
         return new Error
         {
-            ErrorMessage = $"The branchon statement covers every option of the outcome or named switch '{outcomeName}' " +
+            ErrorMessage = $"The branchon statement covers every option of the outcome '{outcomeName}' " +
                            $"but still has an other branch. This branch will never run. You can safely remove it or comment it out " +
                            $"as you will get an error in case the outcome gets more options in the future anyway",
             Index = index,
@@ -268,24 +268,6 @@ public static class Errors
         };
     }
 
-    public static Error InconsistentNamedSwitch(int index)
-    {
-        return new Error
-        {
-            ErrorMessage = "Every option of a named switch must also be named",
-            Index = index,
-        };
-    }
-
-    public static Error InconsistentUnnamedSwitch(int index)
-    {
-        return new Error
-        {
-            ErrorMessage = "No option of an unnamed switch may be named",
-            Index = index,
-        };
-    }
-
     public static Error LoopSwitchHasToTerminate(int index)
     {
         return new Error
@@ -299,7 +281,7 @@ public static class Errors
     {
         return new Error
         {
-            ErrorMessage = $"Option name '{optionName}' appears more than once in outcome declaration or named switch",
+            ErrorMessage = $"Option name '{optionName}' appears more than once in outcome declaration",
             Index = index,
         };
     }
@@ -308,7 +290,7 @@ public static class Errors
     {
         return new Error
         {
-            ErrorMessage = $"An outcome or named switch needs at least one option, outcome '{outcomeName}' has none",
+            ErrorMessage = $"An outcome needs at least one option, outcome '{outcomeName}' has none",
             Index = index,
         };
     }

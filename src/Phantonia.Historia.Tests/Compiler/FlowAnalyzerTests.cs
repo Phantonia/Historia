@@ -162,11 +162,27 @@ public sealed class FlowAnalyzerTests
             """
             scene main
             {
-                switch MySwitch (0)
+                outcome MySwitch (A, B, C);
+
+                switch (0)
                 {
-                    option A (3) { output (3); }
-                    option B (4) { output (4); }
-                    option C (5) { output (5); }
+                    option (3)
+                    {
+                        MySwitch = A;
+                        output (3);
+                    }
+
+                    option (4)
+                    {
+                        MySwitch = B;
+                        output (4);
+                    }
+
+                    option (5)
+                    {
+                        MySwitch = C;
+                        output (5);
+                    }
                 }
 
                 output (0);
@@ -235,14 +251,14 @@ public sealed class FlowAnalyzerTests
 
         FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         flowAnalyzer.ErrorFound += errors.Add;
 
         _ = flowAnalyzer.PerformFlowAnalysis();
 
         Assert.AreEqual(1, errors.Count);
 
-        Error expectedError = Errors.OutcomeNotDefinitelyAssigned("X", new[] { "main" }, code.IndexOf("branchon"));
+        Error expectedError = Errors.OutcomeNotDefinitelyAssigned("X", ["main"], code.IndexOf("branchon"));
 
         Assert.IsTrue(expectedError == errors[0] || expectedError == errors[1]);
     }
@@ -300,14 +316,14 @@ public sealed class FlowAnalyzerTests
 
         FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         flowAnalyzer.ErrorFound += errors.Add;
 
         _ = flowAnalyzer.PerformFlowAnalysis();
 
         Assert.AreEqual(1, errors.Count);
 
-        Error expectedError = Errors.OutcomeMightBeAssignedMoreThanOnce("X", new[] { "main" }, code.IndexOf("X = B"));
+        Error expectedError = Errors.OutcomeMightBeAssignedMoreThanOnce("X", ["main"], code.IndexOf("X = B"));
 
         Assert.IsTrue(expectedError == errors[0] || expectedError == errors[1]);
     }
@@ -337,17 +353,17 @@ public sealed class FlowAnalyzerTests
 
         FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         flowAnalyzer.ErrorFound += errors.Add;
 
         _ = flowAnalyzer.PerformFlowAnalysis();
 
         Assert.AreEqual(2, errors.Count);
 
-        Error expectedError0 = Errors.OutcomeMightBeAssignedMoreThanOnce("X", new[] { "main" }, code.IndexOf("X = B"));
+        Error expectedError0 = Errors.OutcomeMightBeAssignedMoreThanOnce("X", ["main"], code.IndexOf("X = B"));
         Assert.IsTrue(expectedError0 == errors[0] || expectedError0 == errors[1]);
 
-        Error expectedError1 = Errors.OutcomeMightBeAssignedMoreThanOnce("X", new[] { "main" }, code.IndexOf("X = C"));
+        Error expectedError1 = Errors.OutcomeMightBeAssignedMoreThanOnce("X", ["main"], code.IndexOf("X = C"));
         Assert.IsTrue(expectedError1 == errors[0] || expectedError1 == errors[1]);
     }
 
@@ -478,14 +494,14 @@ public sealed class FlowAnalyzerTests
 
         FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         flowAnalyzer.ErrorFound += errors.Add;
 
         _ = flowAnalyzer.PerformFlowAnalysis();
 
         Assert.AreEqual(1, errors.Count);
 
-        Error expectedError = Errors.CyclicSceneDefinition(new[] { "B", "A", "B" }, code.IndexOf("scene B"));
+        Error expectedError = Errors.CyclicSceneDefinition(["B", "A", "B"], code.IndexOf("scene B"));
 
         Assert.AreEqual(expectedError, errors[0]);
     }
@@ -747,15 +763,15 @@ public sealed class FlowAnalyzerTests
 
         FlowAnalyzer analyzer = PrepareFlowAnalyzer(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         analyzer.ErrorFound += errors.Add;
 
         _ = analyzer.PerformFlowAnalysis();
 
         Assert.AreEqual(2, errors.Count);
 
-        Error firstError = Errors.OutcomeMightBeAssignedMoreThanOnce("X", new[] { "A", "B", "main" }, code.IndexOf("X = A; //"));
-        Error secondError = Errors.OutcomeMightBeAssignedMoreThanOnce("X", new[] { "A", "main" }, code.IndexOf("X = A; //"));
+        Error firstError = Errors.OutcomeMightBeAssignedMoreThanOnce("X", ["A", "B", "main"], code.IndexOf("X = A; //"));
+        Error secondError = Errors.OutcomeMightBeAssignedMoreThanOnce("X", ["A", "main"], code.IndexOf("X = A; //"));
 
         Assert.IsTrue(errors[0] == firstError || errors[0] == secondError);
         Assert.IsTrue(errors[1] == firstError || errors[1] == secondError);
@@ -808,12 +824,12 @@ public sealed class FlowAnalyzerTests
 
         FlowAnalyzer analyzer = PrepareFlowAnalyzer(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         analyzer.ErrorFound += errors.Add;
 
         _ = analyzer.PerformFlowAnalysis();
 
-        Error expectedError = Errors.OutcomeNotDefinitelyAssigned("X", new[] { "C", "B", "main" }, code.IndexOf("branchon X"));
+        Error expectedError = Errors.OutcomeNotDefinitelyAssigned("X", ["C", "B", "main"], code.IndexOf("branchon X"));
 
         Assert.AreEqual(1, errors.Count);
         Assert.AreEqual(expectedError, errors[0]);
@@ -912,7 +928,7 @@ public sealed class FlowAnalyzerTests
 
         Assert.AreEqual(1, errors.Count);
 
-        Error expectedError = Errors.OutcomeNotDefinitelyAssigned("X", new[] { "main" }, code.IndexOf("branchon X"));
+        Error expectedError = Errors.OutcomeNotDefinitelyAssigned("X", ["main"], code.IndexOf("branchon X"));
 
         Assert.AreEqual(expectedError, errors[0]);
     }
@@ -967,7 +983,7 @@ public sealed class FlowAnalyzerTests
 
         FlowAnalyzer analyzer = PrepareFlowAnalyzer(code);
 
-        List<Error> errors = new();
+        List<Error> errors = [];
         analyzer.ErrorFound += errors.Add;
 
         _ = analyzer.PerformFlowAnalysis();
@@ -1222,5 +1238,74 @@ public sealed class FlowAnalyzerTests
 
         Assert.IsTrue(result.MainFlowGraph.Vertices.ContainsKey(ioCrouch));
         Assert.IsTrue(result.MainFlowGraph.OutgoingEdges[ioCrouch].Select(e => e.ToVertex).Order().SequenceEqual([FlowGraph.FinalVertex]));
+    }
+
+    [TestMethod]
+    public void TestIfStatements()
+    {
+        string code =
+            """
+            outcome X(A, B, C);
+
+            scene main
+            {
+                X = A;
+
+                if X is A or X is B
+                {
+                    output 0;
+                }
+                else if not X is C
+                {
+                    output 1;
+                }
+            }
+            """;
+
+        FlowAnalyzer analyzer = PrepareFlowAnalyzer(code);
+        analyzer.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        FlowAnalysisResult result = analyzer.PerformFlowAnalysis();
+        Assert.IsNotNull(result.MainFlowGraph);
+
+        int ifIndex = code.IndexOf("if X");
+        int output0Index = code.IndexOf("output 0");
+        int elseIfIndex = code.IndexOf("if not X");
+        int output1Index = code.IndexOf("output 1");
+
+        Assert.IsTrue(result.MainFlowGraph.OutgoingEdges[ifIndex] is [{ ToVertex: int ifToA }, { ToVertex: int ifToB }] && ifToA == output0Index && ifToB == elseIfIndex);
+        Assert.IsTrue(result.MainFlowGraph.OutgoingEdges[output0Index] is [{ ToVertex: FlowGraph.FinalVertex }]);
+        Assert.IsTrue(result.MainFlowGraph.OutgoingEdges[elseIfIndex] is [{ ToVertex: int elseIfToA }, { ToVertex: FlowGraph.FinalVertex }] && elseIfToA == output1Index);
+        Assert.IsTrue(result.MainFlowGraph.OutgoingEdges[output1Index] is [{ ToVertex: FlowGraph.FinalVertex }]);
+    }
+
+    [TestMethod]
+    public void TestIsAndDefiniteAssignment()
+    {
+        string code =
+            """
+            outcome X(A, B);
+            outcome Y(A, B);
+
+            scene main
+            {
+                X = A;
+
+                // very blatant
+                if X is A or Y is B { }
+            }
+            """;
+        
+        FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
+
+        List<Error> errors = [];
+        flowAnalyzer.ErrorFound += errors.Add;
+
+        _ = flowAnalyzer.PerformFlowAnalysis();
+
+        Error expectedError = Errors.OutcomeNotDefinitelyAssigned("Y", ["main"], code.IndexOf("Y is B"));
+
+        Assert.AreEqual(1, errors.Count);
+        Assert.AreEqual(errors[0], expectedError);
     }
 }

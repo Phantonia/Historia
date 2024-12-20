@@ -1,6 +1,7 @@
 ﻿using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -48,6 +49,12 @@ public sealed partial class Binder
                 return BindAndTypeRecordCreationExpression(recordCreationExpression, table);
             case EnumOptionExpressionNode enumOptionExpression:
                 return BindAndTypeEnumOptionExpression(enumOptionExpression, table);
+            case IsExpressionNode isExpression:
+                return BindAndTypeIsExpression(isExpression, table);
+            case LogicExpressionNode logicExpression:
+                return BindAndTypeLogicExpression(logicExpression, table);
+            case NotExpressionNode notExpression:
+                return BindAndTypeNotExpression(notExpression, table);
             case IdentifierExpressionNode { Identifier: string identifier, Index: int index }:
                 if (!table.IsDeclared(identifier))
                 {
@@ -165,5 +172,122 @@ public sealed partial class Binder
         };
 
         return (table, typedExpression);
+    }
+
+    private (SymbolTable, ExpressionNode) BindAndTypeIsExpression(IsExpressionNode expression, SymbolTable table)
+    {
+        if (!table.IsDeclared(expression.OutcomeName))
+        {
+            ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(expression.OutcomeName, expression.Index));
+            return (table, expression);
+        }
+
+        if (table[expression.OutcomeName] is not OutcomeSymbol outcome)
+        {
+            ErrorFound?.Invoke(Errors.SymbolIsNotOutcome(expression.OutcomeName, expression.Index));
+            return (table, expression);
+        }
+
+        if (!outcome.OptionNames.Contains(expression.OptionName))
+        {
+            ErrorFound?.Invoke(Errors.OptionDoesNotExistInOutcome(outcome.Name, expression.OptionName, expression.Index));
+            return (table, expression);
+        }
+
+        TypeSymbol booleanType = (TypeSymbol)table["Boolean"];
+
+        TypedExpressionNode typedExpression = new()
+        {
+            Expression = new BoundIsExpressionNode
+            {
+                Expression = expression,
+                Outcome = outcome,
+                Index = expression.Index,
+            },
+            SourceType = booleanType,
+            Index = expression.Index,
+        };
+
+        return (table, typedExpression);
+    }
+
+    private (SymbolTable, ExpressionNode) BindAndTypeLogicExpression(LogicExpressionNode logicExpression, SymbolTable table)
+    {
+        (table, ExpressionNode boundLeftHandSide) = BindAndTypeExpression(logicExpression.LeftExpression, table);
+        (table, ExpressionNode boundRightHandSide) = BindAndTypeExpression(logicExpression.RightExpression, table);
+
+        if (boundLeftHandSide is not TypedExpressionNode { SourceType: TypeSymbol leftHandType } || boundRightHandSide is not TypedExpressionNode { SourceType: TypeSymbol rightHandType })
+        {
+            return (table, logicExpression);
+        }
+
+        TypeSymbol booleanType = (TypeSymbol)table["Boolean"];
+
+        bool error = false;
+
+        if (!TypesAreCompatible(leftHandType, booleanType))
+        {
+            ErrorFound?.Invoke(Errors.IncompatibleType(leftHandType, booleanType, "operand", logicExpression.LeftExpression.Index));
+            error = true;
+        }
+
+        if (!TypesAreCompatible(rightHandType, booleanType))
+        {
+            ErrorFound?.Invoke(Errors.IncompatibleType(rightHandType, booleanType, "operand", logicExpression.RightExpression.Index));
+            error = true;
+        }
+
+        if (error)
+        {
+            return (table, logicExpression);
+        }
+
+        TypedExpressionNode typedLeftHandSide = (TypedExpressionNode)boundLeftHandSide with { TargetType = booleanType };
+        TypedExpressionNode typedRightHandSide = (TypedExpressionNode)boundRightHandSide with { TargetType = booleanType };
+
+        TypedExpressionNode typedLogicExpression = new()
+        {
+            Expression = logicExpression with
+            {
+                LeftExpression = typedLeftHandSide,
+                RightExpression = typedRightHandSide,
+            },
+            SourceType = booleanType,
+            Index = logicExpression.Index,
+        };
+
+        return (table, typedLogicExpression);
+    }
+
+    private (SymbolTable, ExpressionNode) BindAndTypeNotExpression(NotExpressionNode notExpression, SymbolTable table)
+    {
+        (table, ExpressionNode boundInnerExpression) = BindAndTypeExpression(notExpression.InnerExpression, table);
+
+        if (boundInnerExpression is not TypedExpressionNode { SourceType: TypeSymbol innerType })
+        {
+            return (table, notExpression);
+        }
+
+        TypeSymbol booleanType = (TypeSymbol)table["Boolean"];
+
+        if (!TypesAreCompatible(innerType, booleanType))
+        {
+            ErrorFound?.Invoke(Errors.IncompatibleType(innerType, booleanType, "operand", notExpression.InnerExpression.Index));
+            return (table, notExpression);
+        }
+
+        TypedExpressionNode typedInnerExpression = (TypedExpressionNode)boundInnerExpression with { TargetType = booleanType };
+
+        TypedExpressionNode typedNotExpression = new()
+        {
+            Expression = notExpression with
+            {
+                InnerExpression = typedInnerExpression,
+            },
+            SourceType = booleanType,
+            Index = notExpression.Index,
+        };
+
+        return (table, typedNotExpression);
     }
 }
