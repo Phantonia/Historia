@@ -1,7 +1,9 @@
-﻿namespace Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
+﻿using Phantonia.Historia.Language.LexicalAnalysis;
+
+namespace Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 
 public enum LogicOperator
 {
-    Or,
-    And,
+    Or = TokenKind.OrKeyword,
+    And = TokenKind.AndKeyword,
 }
