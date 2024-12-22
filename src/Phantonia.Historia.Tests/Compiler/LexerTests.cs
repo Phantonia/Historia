@@ -144,7 +144,7 @@ public sealed class LexerTests
         {
             Token t = tokens[i];
             Assert.AreEqual(TokenKind.StringLiteral, t.Kind);
-            Assert.AreEqual(literals[i], tokens[i].Text);
+            Assert.AreEqual(literals[i], tokens[i].StringValue);
         }
     }
 
@@ -185,10 +185,10 @@ public sealed class LexerTests
         Assert.AreEqual(3, tokens.Length);
 
         Assert.AreEqual(TokenKind.StringLiteral, tokens[0].Kind);
-        Assert.AreEqual("That is \"nonsense\" tbh", tokens[0].Text);
+        Assert.AreEqual("That is \"nonsense\" tbh", tokens[0].StringValue);
 
         Assert.AreEqual(TokenKind.StringLiteral, tokens[1].Kind);
-        Assert.AreEqual("Hey, I'm cool", tokens[1].Text);
+        Assert.AreEqual("Hey, I'm cool", tokens[1].StringValue);
     }
 
     [TestMethod]
@@ -205,7 +205,7 @@ public sealed class LexerTests
         Assert.AreEqual(2, tokens.Length);
 
         Assert.AreEqual(TokenKind.StringLiteral, tokens[0].Kind);
-        Assert.AreEqual("A\tB\uDEAD\nC", tokens[0].Text);
+        Assert.AreEqual("A\tB\uDEAD\nC", tokens[0].StringValue);
     }
 
     [TestMethod]
@@ -223,8 +223,8 @@ public sealed class LexerTests
         Lexer lexer = new(code);
         ImmutableArray<Token> tokens = lexer.Lex();
 
-        TokenKind[] expectedKinds = new[]
-        {
+        TokenKind[] expectedKinds =
+        [
             TokenKind.SceneKeyword,
             TokenKind.Identifier,
             TokenKind.OpenBrace,
@@ -233,9 +233,32 @@ public sealed class LexerTests
             TokenKind.Semicolon,
             TokenKind.ClosedBrace,
             TokenKind.EndOfFile,
-        };
+        ];
 
         Assert.IsTrue(tokens.Select(t => t.Kind).SequenceEqual(expectedKinds));
     }
 
+    [TestMethod]
+    public void TestTrivia()
+    {
+        string code =
+            """
+            // a setting
+            setting OutputType: String;
+
+            scene main // this is the main scene
+            {
+                output "Some String";
+                output '''S'more string''';
+            }
+
+            // ending
+            """;
+
+        Lexer lexer = new(code);
+        ImmutableArray<Token> tokens = lexer.Lex();
+
+        string reconstructedCode = string.Concat(tokens.Select(t => t.Reconstruct()));
+        Assert.AreEqual(code, reconstructedCode);
+    }
 }

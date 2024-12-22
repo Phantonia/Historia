@@ -1,0 +1,17 @@
+﻿using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
+using Phantonia.Historia.Language.SyntaxAnalysis;
+using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
+using System.Collections.Generic;
+
+namespace Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
+
+public sealed record BoundIsExpressionNode() : ExpressionNode
+{
+    public required IsExpressionNode Expression { get; init; }
+
+    public required OutcomeSymbol Outcome { get; init; }
+
+    public override IEnumerable<SyntaxNode> Children => [Expression];
+
+    protected internal override string GetDebuggerDisplay() => $"bound {Expression.GetDebuggerDisplay()}";
+}

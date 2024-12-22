@@ -568,62 +568,21 @@ public sealed class BinderTests
     }
 
     [TestMethod]
-    public void TestInconsistentNamedSwitches()
-    {
-        string code =
-            """
-            scene main
-            {
-                switch MySwitch (4)
-                {
-                    option (5)
-                    { }
-
-                    option MyOption (6)
-                    { }
-                }
-
-                switch (7)
-                {
-                    option MyOption (8)
-                    { }
-
-                    option (9)
-                    { }
-                }
-            }
-            """;
-
-        Binder binder = PrepareBinder(code);
-
-        List<Error> errors = [];
-        binder.ErrorFound += errors.Add;
-
-        _ = binder.Bind();
-
-        Assert.AreEqual(2, errors.Count);
-
-        Error firstError = Errors.InconsistentNamedSwitch(code.IndexOf("switch MySwitch (4)"));
-        Error secondError = Errors.InconsistentUnnamedSwitch(code.IndexOf("switch (7)"));
-
-        Assert.AreEqual(firstError, errors[0]);
-        Assert.AreEqual(secondError, errors[1]);
-    }
-
-    [TestMethod]
     public void TestBranchOn()
     {
         string code =
             """
             scene main
             {
-                switch MySwitch (4)
+                outcome MySwitch(A, B, C, D, E);
+
+                switch (4)
                 {
-                    option A (5) { }
-                    option B (6) { }
-                    option C (7) { }
-                    option D (8) { }
-                    option E (9) { }
+                    option (5) { MySwitch = A; }
+                    option (6) { MySwitch = B; }
+                    option (7) { MySwitch = C; }
+                    option (8) { MySwitch = D; }
+                    option (9) { MySwitch = E; }
                 }
 
                 branchon MySwitch
@@ -642,7 +601,7 @@ public sealed class BinderTests
         StoryNode boundStory = binder.Bind().BoundStory!;
 
         SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)((BoundSymbolDeclarationNode)boundStory.TopLevelNodes[0]).Declaration;
-        BoundBranchOnStatementNode branchOnStatement = (BoundBranchOnStatementNode)mainScene.Body.Statements[1];
+        BoundBranchOnStatementNode branchOnStatement = (BoundBranchOnStatementNode)mainScene.Body.Statements[2];
 
         Assert.AreEqual("MySwitch", branchOnStatement.OutcomeName);
         Assert.AreEqual("MySwitch", branchOnStatement.Outcome.Name);
@@ -653,11 +612,11 @@ public sealed class BinderTests
     [TestMethod]
     public void TestWrongBranchOns()
     {
-        void TestForError(string code, Error expectedError)
+        static void TestForError(string code, Error expectedError)
         {
             Binder binder = PrepareBinder(code);
 
-            List<Error> errors = new();
+            List<Error> errors = [];
             binder.ErrorFound += errors.Add;
 
             _ = binder.Bind();
@@ -702,11 +661,9 @@ public sealed class BinderTests
             """
             scene main
             {
-                switch Outcome (0)
-                {
-                    option A (0) { }
-                    option B (0) { }
-                }
+                outcome Outcome (A, B);
+
+                Outcome = A;
 
                 branchon Outcome
                 {
@@ -723,11 +680,9 @@ public sealed class BinderTests
             """
             scene main
             {
-                switch Outcome (0)
-                {
-                    option A (0) { }
-                    option B (0) { }
-                }
+                outcome Outcome (A, B);
+                
+                Outcome = A;
             
                 branchon Outcome
                 {
@@ -744,14 +699,10 @@ public sealed class BinderTests
             """
             scene main
             {
-                switch Outcome (0)
-                {
-                    option A (0) { }
-                    option B (0) { }
-                    option C (0) { }
-                    option D (0) { }
-                }
-            
+                outcome Outcome (A, B, C, D);
+
+                Outcome = A;
+                            
                 branchon Outcome
                 {
                     option A { }
@@ -766,11 +717,9 @@ public sealed class BinderTests
             """
             scene main
             {
-                switch Outcome (0)
-                {
-                    option A (0) { }
-                    option B (0) { }
-                }
+                outcome Outcome (A, B);
+
+                Outcome = A;
             
                 branchon Outcome
                 {
@@ -1922,5 +1871,166 @@ public sealed class BinderTests
         ];
 
         Assert.IsTrue(errors.SequenceEqual(expectedErrors));
+    }
+
+    [TestMethod]
+    public void TestIfStatement()
+    {
+        string code =
+            """
+            outcome X(A, B, C);
+
+            scene main
+            {
+                X = A;
+
+                if X is A or X is B
+                {
+                    output 0;
+                }
+                else if not X is C
+                {
+                    output 1;
+                }
+                else
+                {
+                    output 2;
+                }
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+        binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        BindingResult result = binder.Bind();
+
+        TypeSymbol booleanType = (TypeSymbol)result.SymbolTable!["Boolean"];
+        OutcomeSymbol xOutcome = (OutcomeSymbol)result.SymbolTable["X"];
+
+        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)((BoundSymbolDeclarationNode)result.BoundStory!.TopLevelNodes[1]).Declaration;
+
+        IfStatementNode ifStatement = (IfStatementNode)mainScene.Body.Statements[1];
+
+        if (ifStatement.Condition is not TypedExpressionNode
+            {
+                SourceType: TypeSymbol conditionType,
+                Expression: LogicExpressionNode
+                {
+                    LeftExpression: ExpressionNode leftHandSide,
+                    RightExpression: ExpressionNode rightHandSide,
+                },
+            })
+        {
+            Assert.Fail();
+            return;
+        }
+
+        Assert.AreEqual(booleanType, conditionType);
+
+        if (leftHandSide is not TypedExpressionNode
+            {
+                SourceType: TypeSymbol leftHandType,
+                Expression: BoundIsExpressionNode
+                {
+                    Outcome: OutcomeSymbol leftHandOutcome,
+                },
+            })
+        {
+            Assert.Fail();
+            return;
+        }
+
+        Assert.AreEqual(booleanType, leftHandType);
+        Assert.AreEqual(xOutcome, leftHandOutcome);
+
+        if (rightHandSide is not TypedExpressionNode
+            {
+                SourceType: TypeSymbol rightHandType,
+                Expression: BoundIsExpressionNode
+                {
+                    Outcome: OutcomeSymbol rightHandOutcome,
+                },
+            })
+        {
+            Assert.Fail();
+            return;
+        }
+
+        Assert.AreEqual(booleanType, rightHandType);
+        Assert.AreEqual(xOutcome, rightHandOutcome);
+
+        IfStatementNode? elseIfStatement = ifStatement.ElseBlock?.Statements[0] as IfStatementNode;
+        Assert.IsNotNull(elseIfStatement);
+
+        if (elseIfStatement.Condition is not TypedExpressionNode
+            {
+                SourceType: TypeSymbol elseConditionType,
+                Expression: NotExpressionNode
+                {
+                    InnerExpression: TypedExpressionNode
+                    {
+                        SourceType: TypeSymbol innerType,
+                        Expression: BoundIsExpressionNode,
+                    },
+                },
+            })
+        {
+            Assert.Fail();
+            return;
+        }
+
+        Assert.AreEqual(booleanType, elseConditionType);
+        Assert.AreEqual(booleanType, innerType);
+    }
+
+    [TestMethod]
+    public void TestRemovalOfNamedSwitches()
+    {
+        // I removed the feature 'NamedSwitches' because I don't think it's worth maintaining if the alternative
+        // - just declaring an outcome - is not much more work, it complicates parsing as the choose statement
+        // can't just reuse the parsing logic of switch options verbatim, and it requires parens around
+        // the switch output and the option expressions
+        // look how much cleaner this is:
+        string code =
+            """
+            scene main
+            {
+                // this is good :)
+                switch 0
+                {
+                    option 1
+                    {
+                        output 2;
+                    }
+
+                    option 3
+                    {
+                        output 4;
+                    }
+                }
+
+                // this is now bad :(
+                switch X (0)
+                {
+                    option A (1) { }
+                    option B (2) { }
+                }
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+        
+        List<Error> errors = [];
+        binder.ErrorFound += errors.Add;
+
+        _ = binder.Bind();
+
+        Assert.IsTrue(errors.Count > 0);
+
+        // a funny side effect of this change is that now the parser thinks we want to construct a record
+        // it thinks the output expression of the switch is 'X(0)' where X is a record (that doesn't exist)
+
+        Error expectedError = Errors.RecordDoesNotExist("X", code.IndexOf('X'));
+        Assert.AreEqual(errors[0], expectedError);
     }
 }

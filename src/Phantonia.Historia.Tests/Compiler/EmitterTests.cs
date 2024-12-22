@@ -1414,4 +1414,44 @@ public sealed class EmitterTests
 
         // TODO: I need to proberly test this once I have build time code generation
     }
+
+    [TestMethod]
+    public void TestIfStatement()
+    {
+        string code =
+            """
+            outcome X(A, B);
+            spectrum Y(A <= 1/4, B < 1/2, C <= 3/4, D);
+
+            scene main
+            {
+                X = B;
+                strengthen Y by 1;
+                weaken Y by 1;
+
+                if X is B and Y is C
+                {
+                    output 12;
+                }
+                else
+                {
+                    output 2;
+                }
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
+
+        Assert.IsTrue(stateMachine.TryContinue());
+
+        Assert.AreEqual(12, stateMachine.Output);
+    }
 }

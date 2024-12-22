@@ -398,9 +398,116 @@ public static class GeneralEmission
                 writer.Write('.');
                 writer.Write(enumOptionExpression.OptionName);
                 return;
-        }
+            case LogicExpressionNode logicExpression:
+                writer.Write('(');
+                GenerateExpression(logicExpression.LeftExpression, writer);
+                writer.Write(") && (");
+                GenerateExpression(logicExpression.RightExpression, writer);
+                writer.Write(')');
+                return;
+            case NotExpressionNode notExpression:
+                writer.Write("!(");
+                GenerateExpression(notExpression.InnerExpression, writer);
+                writer.Write(')');
+                return;
+            case BoundIsExpressionNode isExpression:
+                if (isExpression.Outcome is SpectrumSymbol spectrum)
+                {
+                    int intervalIndex = spectrum.OptionNames.IndexOf(isExpression.Expression.OptionName);
 
-        Debug.Assert(false);
+                    if (intervalIndex == 0)
+                    {
+                        SpectrumInterval interval = spectrum.Intervals[isExpression.Expression.OptionName];
+
+                        writer.Write("fields.");
+                        GenerateSpectrumPositiveFieldName(spectrum, writer);
+                        writer.Write(" * ");
+                        writer.Write(interval.UpperDenominator);
+                        writer.Write(" <");
+
+                        if (interval.Inclusive)
+                        {
+                            writer.Write('=');
+                        }
+
+                        writer.Write(" fields.");
+                        GenerateSpectrumTotalFieldName(spectrum, writer);
+                        writer.Write(" * ");
+                        writer.Write(interval.UpperNumerator);
+                    }
+                    else if (intervalIndex == spectrum.OptionNames.Length - 1)
+                    {
+                        SpectrumInterval previousInterval = spectrum.Intervals[spectrum.OptionNames[^2]];
+
+                        // note that they are the other way around from above
+                        writer.Write("fields.");
+                        GenerateSpectrumTotalFieldName(spectrum, writer);
+                        writer.Write(" * ");
+                        writer.Write(previousInterval.UpperNumerator);
+                        writer.Write(" <");
+
+                        // for the previous interval, we want to include its upper point if it excludes it and vice versa
+                        if (!previousInterval.Inclusive)
+                        {
+                            writer.Write('=');
+                        }
+
+                        writer.Write(" fields.");
+                        GenerateSpectrumPositiveFieldName(spectrum, writer);
+                        writer.Write(" * ");
+                        writer.Write(previousInterval.UpperDenominator);
+                    }
+                    else
+                    {
+                        SpectrumInterval previousInterval = spectrum.Intervals[spectrum.OptionNames[intervalIndex - 1]];
+                        SpectrumInterval thisInterval = spectrum.Intervals[isExpression.Expression.OptionName];
+                        
+                        writer.Write("fields.");
+                        GenerateSpectrumTotalFieldName(spectrum, writer);
+                        writer.Write(" * ");
+                        writer.Write(previousInterval.UpperNumerator);
+                        writer.Write(" <");
+
+                        // for the previous interval, we want to include its upper point if it excludes it and vice versa
+                        if (!previousInterval.Inclusive)
+                        {
+                            writer.Write('=');
+                        }
+
+                        writer.Write(" fields.");
+                        GenerateSpectrumPositiveFieldName(spectrum, writer);
+                        writer.Write(" * ");
+                        writer.Write(previousInterval.UpperDenominator);
+
+                        writer.Write(" && fields.");
+                        GenerateSpectrumPositiveFieldName(spectrum, writer);
+                        writer.Write(" * ");
+                        writer.Write(thisInterval.UpperDenominator);
+                        writer.Write(" <");
+
+                        if (thisInterval.Inclusive)
+                        {
+                            writer.Write('=');
+                        }
+
+                        writer.Write(" fields.");
+                        GenerateSpectrumTotalFieldName(spectrum, writer);
+                        writer.Write(" * ");
+                        writer.Write(thisInterval.UpperNumerator);
+                    }
+                }
+                else
+                {
+                    writer.Write("fields.");
+                    GenerateOutcomeFieldName(isExpression.Outcome, writer);
+                    writer.Write(" == ");
+                    writer.Write(isExpression.Outcome.OptionNames.IndexOf(isExpression.Expression.OptionName));
+                }
+                return;
+            default:
+                Debug.Assert(false);
+                return;
+        }
     }
 
     public static void GenerateTrackerFieldName(CallerTrackerSymbol tracker, IndentedTextWriter writer)

@@ -11,7 +11,13 @@ public readonly record struct Token
 
     public required string Text { get; init; }
 
+    public required string PrecedingTrivia { get; init; }
+
     public int? IntegerValue { get; init; }
+
+    public string? StringValue { get; init; }
+
+    public string Reconstruct() => PrecedingTrivia + Text;
 
     private string GetDebuggerDisplay() => $"{Kind} token w/ text ({Text}) @ index {Index}";
 }

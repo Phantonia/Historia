@@ -1,8 +1,10 @@
 ﻿using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
+using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Phantonia.Historia.Language.FlowAnalysis;
@@ -97,89 +99,7 @@ public sealed partial class FlowAnalyzer
 
         foreach ((OutcomeSymbol outcome, OutcomeData outcomeData) in defaultVertexData.Outcomes)
         {
-            bool definitelyAssigned = true;
-            bool possiblyAssigned = false;
-            bool locked = false;
-
-            foreach (VertexData data in previousData)
-            {
-                if (!data.Outcomes[outcome].IsDefinitelyAssigned)
-                {
-                    definitelyAssigned = false;
-                }
-
-                if (data.Outcomes[outcome].IsPossiblyAssigned)
-                {
-                    possiblyAssigned = true;
-                }
-
-                if (data.Outcomes[outcome].IsLocked)
-                {
-                    locked = true;
-                }
-            }
-
-            void ErrorOnLocked(int index)
-            {
-                if (locked)
-                {
-                    if (outcome is SpectrumSymbol)
-                    {
-                        ErrorFound?.Invoke(Errors.SpectrumIsLocked(outcome.Name, callStack.Select(s => s.Name), index));
-                    }
-                    else
-                    {
-                        ErrorFound?.Invoke(Errors.OutcomeIsLocked(outcome.Name, callStack.Select(s => s.Name), index));
-                    }
-                }
-            }
-
-            switch (statement)
-            {
-                case BoundOutcomeAssignmentStatementNode boundAssignment when boundAssignment.Outcome == outcome:
-                    if (possiblyAssigned && flowGraph.Vertices[vertex].IsStory)
-                    {
-                        ErrorFound?.Invoke(Errors.OutcomeMightBeAssignedMoreThanOnce(outcome.Name, callStack.Select(s => s.Name), boundAssignment.Index));
-                    }
-
-                    ErrorOnLocked(boundAssignment.Index);
-
-                    definitelyAssigned = true;
-                    possiblyAssigned = true;
-                    break;
-                case BoundSpectrumAdjustmentStatementNode boundAdjustment when boundAdjustment.Spectrum == outcome:
-                    ErrorOnLocked(boundAdjustment.Index);
-                    definitelyAssigned = true;
-                    break;
-                case BoundBranchOnStatementNode boundBranchOn when boundBranchOn.Outcome == outcome:
-                    if (!definitelyAssigned && boundBranchOn.Outcome.DefaultOption is null && flowGraph.Vertices[vertex].IsStory)
-                    {
-                        if (outcome is SpectrumSymbol)
-                        {
-                            ErrorFound?.Invoke(Errors.SpectrumNotDefinitelyAssigned(outcome.Name, callStack.Select(s => s.Name), boundBranchOn.Index));
-                        }
-                        else
-                        {
-                            ErrorFound?.Invoke(Errors.OutcomeNotDefinitelyAssigned(outcome.Name, callStack.Select(s => s.Name), boundBranchOn.Index));
-                        }
-                    }
-
-                    ErrorOnLocked(boundBranchOn.Index);
-
-                    break;
-            }
-
-            thisVertexData = thisVertexData with
-            {
-                Outcomes = thisVertexData.Outcomes.SetItem(outcome, new OutcomeData
-                {
-                    // this was here for a reason but it's wrong
-                    // investigate further
-                    IsDefinitelyAssigned = /*(vertex == FlowGraph.FinalVertex || flowGraph.Vertices[vertex].IsStory) &&*/ definitelyAssigned,
-                    IsPossiblyAssigned = possiblyAssigned,
-                    IsLocked = locked,
-                }),
-            };
+            thisVertexData = ProcessOutcome(flowGraph, vertex, previousData, callStack, thisVertexData, statement, outcome);
         }
 
         thisVertexData = thisVertexData with
@@ -197,33 +117,7 @@ public sealed partial class FlowAnalyzer
 
         if (statement is IOutputStatementNode { IsCheckpoint: true })
         {
-            thisVertexData = thisVertexData with
-            {
-                DefinitelyAssignedOutcomesAtCheckpoints
-                    = thisVertexData.DefinitelyAssignedOutcomesAtCheckpoints
-                                    .SetItem(vertex, thisVertexData.Outcomes.Keys.Where(o => thisVertexData.Outcomes[o].IsDefinitelyAssigned)),
-            };
-
-            foreach (OutcomeSymbol definitelyAssignedOutcome in thisVertexData.DefinitelyAssignedOutcomesAtCheckpoints[vertex])
-            {
-                if (definitelyAssignedOutcome.IsPublic)
-                {
-                    continue;
-                }
-
-                OutcomeData updatedOutcomeData = thisVertexData.Outcomes[definitelyAssignedOutcome] with
-                {
-                    IsLocked = true,
-                };
-
-                ImmutableDictionary<OutcomeSymbol, OutcomeData> updatedOutcomeTable
-                    = thisVertexData.Outcomes.SetItem(definitelyAssignedOutcome, updatedOutcomeData);
-
-                thisVertexData = thisVertexData with
-                {
-                    Outcomes = updatedOutcomeTable,
-                };
-            }
+            thisVertexData = PerformLocking(vertex, thisVertexData);
         }
 
         if (statement is BoundCallStatementNode { Scene: SceneSymbol calledScene })
@@ -233,6 +127,157 @@ public sealed partial class FlowAnalyzer
             // it is necessary to process it as 'thisVertexData' might differ a lot for different callsites
             // we might optimize this to process local outcomes only once and only process global outcomes multiple times
             return ProcessScene(sceneFlowGraphs[calledScene], thisVertexData, sceneFlowGraphs, callStack.Push(calledScene));
+        }
+
+        return thisVertexData;
+    }
+
+    private VertexData ProcessOutcome(FlowGraph flowGraph, int vertex, IEnumerable<VertexData> previousData, ImmutableStack<SceneSymbol> callStack, VertexData thisVertexData, StatementNode? statement, OutcomeSymbol outcome)
+    {
+        bool definitelyAssigned = true;
+        bool possiblyAssigned = false;
+        bool locked = false;
+
+        foreach (VertexData data in previousData)
+        {
+            if (!data.Outcomes[outcome].IsDefinitelyAssigned)
+            {
+                definitelyAssigned = false;
+            }
+
+            if (data.Outcomes[outcome].IsPossiblyAssigned)
+            {
+                possiblyAssigned = true;
+            }
+
+            if (data.Outcomes[outcome].IsLocked)
+            {
+                locked = true;
+            }
+        }
+
+        void ErrorOnUnassigned(int index)
+        {
+            if (!definitelyAssigned && outcome.DefaultOption is null && flowGraph.Vertices[vertex].IsStory)
+            {
+                if (outcome is SpectrumSymbol)
+                {
+                    ErrorFound?.Invoke(Errors.SpectrumNotDefinitelyAssigned(outcome.Name, callStack.Select(s => s.Name), index));
+                }
+                else
+                {
+                    ErrorFound?.Invoke(Errors.OutcomeNotDefinitelyAssigned(outcome.Name, callStack.Select(s => s.Name), index));
+                }
+            }
+        }
+
+        void ErrorOnLocked(int index)
+        {
+            if (locked)
+            {
+                if (outcome is SpectrumSymbol)
+                {
+                    ErrorFound?.Invoke(Errors.SpectrumIsLocked(outcome.Name, callStack.Select(s => s.Name), index));
+                }
+                else
+                {
+                    ErrorFound?.Invoke(Errors.OutcomeIsLocked(outcome.Name, callStack.Select(s => s.Name), index));
+                }
+            }
+        }
+
+        switch (statement)
+        {
+            case BoundOutcomeAssignmentStatementNode boundAssignment when boundAssignment.Outcome == outcome:
+                if (possiblyAssigned && flowGraph.Vertices[vertex].IsStory)
+                {
+                    ErrorFound?.Invoke(Errors.OutcomeMightBeAssignedMoreThanOnce(outcome.Name, callStack.Select(s => s.Name), boundAssignment.Index));
+                }
+
+                ErrorOnLocked(boundAssignment.Index);
+
+                definitelyAssigned = true;
+                possiblyAssigned = true;
+                break;
+            case BoundSpectrumAdjustmentStatementNode boundAdjustment when boundAdjustment.Spectrum == outcome:
+                ErrorOnLocked(boundAdjustment.Index);
+                definitelyAssigned = true;
+                break;
+            case BoundBranchOnStatementNode boundBranchOn when boundBranchOn.Outcome == outcome:
+                ErrorOnUnassigned(boundBranchOn.Index);
+                ErrorOnLocked(boundBranchOn.Index);
+                break;
+            case IfStatementNode ifStatement:
+                void ProcessExpression(ExpressionNode expression)
+                {
+                    if (expression is not TypedExpressionNode { Expression: ExpressionNode untypedExpression })
+                    {
+                        Debug.Assert(false);
+                        return;
+                    }
+
+                    switch (untypedExpression)
+                    {
+                        case NotExpressionNode { InnerExpression: ExpressionNode innerExpression }:
+                            ProcessExpression(innerExpression);
+                            break;
+                        case LogicExpressionNode { LeftExpression: ExpressionNode leftHandSide, RightExpression: ExpressionNode rightHandSide }:
+                            ProcessExpression(leftHandSide);
+                            ProcessExpression(rightHandSide);
+                            break;
+                        case BoundIsExpressionNode { Outcome: OutcomeSymbol thisOutcome, Index: int index } when thisOutcome == outcome:
+                            ErrorOnUnassigned(index);
+                            ErrorOnLocked(index);
+                            break;
+                    }
+                }
+
+                ProcessExpression(ifStatement.Condition);
+                break;
+        }
+
+        thisVertexData = thisVertexData with
+        {
+            Outcomes = thisVertexData.Outcomes.SetItem(outcome, new OutcomeData
+            {
+                // this was here for a reason but it's wrong
+                // investigate further
+                IsDefinitelyAssigned = /*(vertex == FlowGraph.FinalVertex || flowGraph.Vertices[vertex].IsStory) &&*/ definitelyAssigned,
+                IsPossiblyAssigned = possiblyAssigned,
+                IsLocked = locked,
+            }),
+        };
+        return thisVertexData;
+    }
+
+    private static VertexData PerformLocking(int vertex, VertexData thisVertexData)
+    {
+        thisVertexData = thisVertexData with
+        {
+            DefinitelyAssignedOutcomesAtCheckpoints
+                            = thisVertexData.DefinitelyAssignedOutcomesAtCheckpoints
+                                            .SetItem(vertex, thisVertexData.Outcomes.Keys.Where(o => thisVertexData.Outcomes[o].IsDefinitelyAssigned)),
+        };
+
+        foreach (OutcomeSymbol definitelyAssignedOutcome in thisVertexData.DefinitelyAssignedOutcomesAtCheckpoints[vertex])
+        {
+            if (definitelyAssignedOutcome.IsPublic)
+            {
+                continue;
+            }
+
+            OutcomeData updatedOutcomeData = thisVertexData.Outcomes[definitelyAssignedOutcome] with
+            {
+                IsLocked = true,
+            };
+
+            ImmutableDictionary<OutcomeSymbol, OutcomeData> updatedOutcomeTable
+                = thisVertexData.Outcomes.SetItem(definitelyAssignedOutcome, updatedOutcomeData);
+
+            thisVertexData = thisVertexData with
+            {
+                Outcomes = updatedOutcomeTable,
+            };
         }
 
         return thisVertexData;

@@ -49,6 +49,12 @@ public enum TokenKind
     ChoiceKeyword,
     RunKeyword,
     ChooseKeyword,
+    IsKeyword,
+    AndKeyword,
+    OrKeyword,
+    NotKeyword,
+    IfKeyword,
+    ElseKeyword,
 
     // literals
     Identifier,

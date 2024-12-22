@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public record OptionNode() : SyntaxNode
+public sealed record OptionNode() : SyntaxNode
 {
     public required ExpressionNode Expression { get; init; }
 

@@ -5,28 +5,15 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public record SwitchStatementNode() : StatementNode, IOutputStatementNode
+public sealed record SwitchStatementNode() : StatementNode, IOutputStatementNode
 {
-    public string? Name { get; init; }
-
     public required ExpressionNode OutputExpression { get; init; }
 
-    public required ImmutableArray<SwitchOptionNode> Options { get; init; }
+    public required ImmutableArray<OptionNode> Options { get; init; }
 
     public required bool IsCheckpoint { get; init; }
 
-    public override IEnumerable<SyntaxNode> Children
-    {
-        get
-        {
-            yield return OutputExpression;
+    public override IEnumerable<SyntaxNode> Children => [OutputExpression, .. Options];
 
-            foreach (SwitchOptionNode option in Options)
-            {
-                yield return option;
-            }
-        }
-    }
-
-    protected internal override string GetDebuggerDisplay() => $"switch {Name}{(Name is not null ? " " : "")} {{ {string.Join(", ", Options.Select(o => o.GetDebuggerDisplay()))} }}";
+    protected internal override string GetDebuggerDisplay() => $"switch {{ {string.Join(", ", Options.Select(o => o.GetDebuggerDisplay()))} }}";
 }

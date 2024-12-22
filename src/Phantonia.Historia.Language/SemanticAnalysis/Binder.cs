@@ -82,7 +82,8 @@ public sealed partial class Binder
         SymbolTable symbolTable = new();
         symbolTable = symbolTable.OpenScope()
                                  .Declare(new BuiltinTypeSymbol { Name = "Int", Type = BuiltinType.Int, Index = -1 })
-                                 .Declare(new BuiltinTypeSymbol { Name = "String", Type = BuiltinType.String, Index = -2 });
+                                 .Declare(new BuiltinTypeSymbol { Name = "String", Type = BuiltinType.String, Index = -2 })
+                                 .Declare(new BuiltinTypeSymbol { Name = "Boolean", Type = BuiltinType.Boolean, Index = -3 });
         return symbolTable;
     }
 
