@@ -10,8 +10,6 @@ public sealed record OtherBranchOnOptionNode() : BranchOnOptionNode
 
     public override IEnumerable<SyntaxNode> Children => [Body];
 
-    internal override string ReconstructCore() => OptionKeywordToken.Reconstruct() + OtherKeywordToken.Reconstruct() + Body.Reconstruct();
-
     internal override void ReconstructCore(TextWriter writer)
     {
         writer.Write(OptionKeywordToken.Reconstruct());

@@ -18,8 +18,6 @@ public record EnumOptionExpressionNode() : ExpressionNode
 
     public override IEnumerable<SyntaxNode> Children => [];
 
-    internal override string ReconstructCore() => EnumNameToken.Reconstruct() + DotToken.Reconstruct() + OptionNameToken.Reconstruct();
-
     internal override void ReconstructCore(TextWriter writer)
     {
         writer.Write(EnumNameToken.Reconstruct());

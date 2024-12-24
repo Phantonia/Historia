@@ -17,8 +17,6 @@ public sealed record ExpressionSettingDirectiveNode() : SettingDirectiveNode
 
     public override IEnumerable<SyntaxNode> Children => [Expression];
 
-    internal override string ReconstructCore() => SettingKeywordToken.Reconstruct() + ColonToken.Reconstruct() + Expression.Reconstruct() + SemicolonToken.Reconstruct();
-
     internal override void ReconstructCore(TextWriter writer)
     {
         writer.Write(SettingKeywordToken.Reconstruct());

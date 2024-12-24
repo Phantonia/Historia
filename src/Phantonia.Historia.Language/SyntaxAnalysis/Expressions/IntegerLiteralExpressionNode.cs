@@ -12,8 +12,6 @@ public sealed record IntegerLiteralExpressionNode() : ExpressionNode
 
     public override IEnumerable<SyntaxNode> Children => [];
 
-    internal override string ReconstructCore() => LiteralToken.Reconstruct();
-
     internal override void ReconstructCore(TextWriter writer)
     {
         writer.Write(LiteralToken.Reconstruct());

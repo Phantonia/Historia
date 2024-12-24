@@ -17,8 +17,6 @@ public record AssignmentStatementNode() : StatementNode
 
     public override IEnumerable<SyntaxNode> Children => [AssignedExpression];
 
-    internal override string ReconstructCore() => VariableNameToken.Reconstruct() + EqualsSignToken.Reconstruct() + AssignedExpression.Reconstruct();
-
     internal override void ReconstructCore(TextWriter writer)
     {
         writer.Write(VariableNameToken.Reconstruct());

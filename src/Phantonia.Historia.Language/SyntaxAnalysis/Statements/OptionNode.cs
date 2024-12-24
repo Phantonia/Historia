@@ -15,8 +15,6 @@ public sealed record OptionNode() : SyntaxNode
 
     public override IEnumerable<SyntaxNode> Children => [Expression, Body];
 
-    internal override string ReconstructCore() => OptionKeywordToken.Reconstruct() + Expression.Reconstruct() + Body.Reconstruct();
-
     internal override void ReconstructCore(TextWriter writer)
     {
         writer.Write(OptionKeywordToken.Reconstruct());

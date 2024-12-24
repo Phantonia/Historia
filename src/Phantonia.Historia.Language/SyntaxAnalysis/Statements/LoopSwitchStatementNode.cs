@@ -27,13 +27,6 @@ public sealed record LoopSwitchStatementNode() : StatementNode, IOutputStatement
 
     public override IEnumerable<SyntaxNode> Children => [OutputExpression, .. Options];
 
-    internal override string ReconstructCore()
-    {
-        StringWriter writer = new();
-        ReconstructCore(writer);
-        return writer.ToString();
-    }
-
     internal override void ReconstructCore(TextWriter writer)
     {
         writer.Write(CheckpointKeywordToken?.Reconstruct() ?? "");

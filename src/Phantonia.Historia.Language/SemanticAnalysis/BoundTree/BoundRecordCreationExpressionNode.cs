@@ -17,8 +17,6 @@ public sealed record BoundRecordCreationExpressionNode() : ExpressionNode
 
     public override IEnumerable<SyntaxNode> Children => [Original, .. BoundArguments];
 
-    internal override string ReconstructCore() => Original.ReconstructCore();
-
     internal override void ReconstructCore(TextWriter writer)
     {
         Original.ReconstructCore(writer);

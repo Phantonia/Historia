@@ -12,8 +12,6 @@ public sealed record IdentifierExpressionNode() : ExpressionNode
 
     public override IEnumerable<SyntaxNode> Children => [];
 
-    internal override string ReconstructCore() => IdentifierToken.Reconstruct();
-
     internal override void ReconstructCore(TextWriter writer)
     {
         writer.Write(IdentifierToken.Reconstruct());

@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.IO;
 
 namespace Phantonia.Historia.Language.LexicalAnalysis;
 
@@ -17,7 +18,11 @@ public readonly record struct Token
 
     public string? StringValue { get; init; }
 
-    public string Reconstruct() => PrecedingTrivia + Text;
+    public void Reconstruct(TextWriter writer)
+    {
+        writer.Write(PrecedingTrivia);
+        writer.Write(Text);
+    }
 
     private string GetDebuggerDisplay() => $"{Kind} token w/ text ({Text}) @ index {Index}";
 }

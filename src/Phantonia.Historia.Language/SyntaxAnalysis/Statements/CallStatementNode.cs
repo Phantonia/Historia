@@ -16,8 +16,6 @@ public record CallStatementNode() : StatementNode
 
     public override IEnumerable<SyntaxNode> Children => [];
 
-    internal override string ReconstructCore() => CallKeywordToken.Reconstruct() + SceneNameToken.Reconstruct() + SemicolonToken.Reconstruct();
-
     internal override void ReconstructCore(TextWriter writer)
     {
         writer.Write(CallKeywordToken.Reconstruct());

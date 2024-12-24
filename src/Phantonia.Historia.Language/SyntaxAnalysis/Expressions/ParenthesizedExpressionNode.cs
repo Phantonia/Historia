@@ -14,8 +14,6 @@ public sealed record ParenthesizedExpressionNode : ExpressionNode
 
     public override IEnumerable<SyntaxNode> Children => [InnerExpression];
 
-    internal override string ReconstructCore() => OpenParenthesisToken.Reconstruct() + InnerExpression.Reconstruct() + ClosedParenthesisToken.Reconstruct();
-
     internal override void ReconstructCore(TextWriter writer)
     {
         writer.Write(OpenParenthesisToken.Reconstruct());

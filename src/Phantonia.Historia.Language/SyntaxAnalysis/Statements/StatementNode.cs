@@ -1,6 +1,3 @@
 ﻿namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public abstract record StatementNode : SyntaxNode
-{
-    protected StatementNode() { }
-}
+public abstract record StatementNode() : SyntaxNode { }

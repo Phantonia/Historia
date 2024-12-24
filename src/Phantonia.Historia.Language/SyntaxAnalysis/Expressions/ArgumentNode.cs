@@ -16,8 +16,6 @@ public record ArgumentNode() : SyntaxNode
 
     public override IEnumerable<SyntaxNode> Children => [Expression];
 
-    internal override string ReconstructCore() => PropertyNameToken?.Reconstruct() + EqualsToken?.Reconstruct() + Expression.Reconstruct();
-
     internal override void ReconstructCore(TextWriter writer)
     {
         writer.Write(PropertyNameToken?.Reconstruct() ?? "");

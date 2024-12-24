@@ -16,8 +16,6 @@ public sealed record BoundTypeNode : TypeNode
 
     public override IEnumerable<SyntaxNode> Children => [Original];
 
-    internal override string ReconstructCore() => Original.ReconstructCore();
-
     internal override void ReconstructCore(TextWriter writer)
     {
         Original.ReconstructCore(writer);

@@ -20,8 +20,6 @@ public sealed record BoundRunStatementNode() : StatementNode
 
     public override IEnumerable<SyntaxNode> Children => [Original, .. Arguments];
 
-    internal override string ReconstructCore() => Original.ReconstructCore();
-
     internal override void ReconstructCore(TextWriter writer)
     {
         Original.ReconstructCore(writer);

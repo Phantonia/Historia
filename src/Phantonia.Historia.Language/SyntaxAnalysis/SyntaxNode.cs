@@ -35,7 +35,16 @@ public abstract record SyntaxNode : ISyntaxNode
 
     public string Reconstruct()
     {
-        return string.Concat(PrecedingTokens.Select(t => t.Reconstruct())) + ReconstructCore();
+        StringWriter writer = new();
+
+        foreach (Token precedingToken in PrecedingTokens)
+        {
+            writer.Write(precedingToken.Reconstruct());
+        }
+
+        ReconstructCore(writer);
+
+        return writer.ToString();
     }
 
     public void Reconstruct(TextWriter writer)
@@ -47,8 +56,6 @@ public abstract record SyntaxNode : ISyntaxNode
 
         ReconstructCore(writer);
     }
-
-    internal abstract string ReconstructCore();
 
     internal abstract void ReconstructCore(TextWriter writer);
 

@@ -28,13 +28,6 @@ public abstract record MethodCallStatementNode() : StatementNode, IArgumentConta
 
     public override IEnumerable<SyntaxNode> Children => Arguments;
 
-    internal override string ReconstructCore()
-    {
-        StringWriter writer = new();
-        ReconstructCore(writer);
-        return writer.ToString();
-    }
-
     internal override void ReconstructCore(TextWriter writer)
     {
         writer.Write(RunOrChooseKeywordToken.Reconstruct());

@@ -20,13 +20,6 @@ public sealed record RecordCreationExpressionNode() : ExpressionNode, IArgumentC
 
     public override IEnumerable<SyntaxNode> Children => Arguments;
 
-    internal override string ReconstructCore()
-    {
-        StringWriter writer = new();
-        ReconstructCore(writer);
-        return writer.ToString();
-    }
-
     internal override void ReconstructCore(TextWriter writer)
     {
         writer.Write(RecordNameToken.Reconstruct());

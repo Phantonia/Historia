@@ -16,8 +16,6 @@ public sealed record LogicExpressionNode() : ExpressionNode
 
     public override IEnumerable<SyntaxNode> Children => [LeftExpression, RightExpression];
 
-    internal override string ReconstructCore() => LeftExpression.Reconstruct() + OperatorToken.Reconstruct() + RightExpression.Reconstruct();
-
     internal override void ReconstructCore(TextWriter writer)
     {
         LeftExpression.Reconstruct(writer);

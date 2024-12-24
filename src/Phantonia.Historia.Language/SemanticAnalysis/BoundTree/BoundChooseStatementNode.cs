@@ -22,8 +22,6 @@ public sealed record BoundChooseStatementNode() : StatementNode
 
     public override IEnumerable<SyntaxNode> Children => [Original, .. Arguments, .. Options];
 
-    internal override string ReconstructCore() => Original.ReconstructCore();
-
     internal override void ReconstructCore(TextWriter writer)
     {
         Original.ReconstructCore(writer);

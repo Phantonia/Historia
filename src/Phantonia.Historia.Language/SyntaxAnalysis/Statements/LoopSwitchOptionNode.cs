@@ -19,8 +19,6 @@ public sealed record LoopSwitchOptionNode() : SyntaxNode
 
     public override IEnumerable<SyntaxNode> Children => [Expression, Body];
 
-    internal override string ReconstructCore() => KindToken?.Reconstruct() ?? "" + OptionKeywordToken.Reconstruct() + Expression.Reconstruct() + Body.Reconstruct();
-
     internal override void ReconstructCore(TextWriter writer)
     {
         writer.Write(KindToken?.Reconstruct() ?? "");

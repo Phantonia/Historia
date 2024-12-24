@@ -35,13 +35,6 @@ public record OutcomeDeclarationStatementNode() : StatementNode, IOutcomeDeclara
 
     public override IEnumerable<SyntaxNode> Children => [];
 
-    internal override string ReconstructCore()
-    {
-        StringWriter writer = new();
-        ReconstructCore(writer);
-        return writer.ToString();
-    }
-
     internal override void ReconstructCore(TextWriter writer)
     {
         writer.Write(OutcomeKeywordToken.Reconstruct());

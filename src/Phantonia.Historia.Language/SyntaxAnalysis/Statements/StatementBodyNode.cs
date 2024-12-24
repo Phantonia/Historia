@@ -15,13 +15,6 @@ public sealed record StatementBodyNode() : SyntaxNode
 
     public override IEnumerable<SyntaxNode> Children => Statements;
 
-    internal override string ReconstructCore()
-    {
-        StringWriter writer = new();
-        ReconstructCore(writer);
-        return writer.ToString();
-    }
-
     internal override void ReconstructCore(TextWriter writer)
     {
         writer.Write(OpenBraceToken.Reconstruct());

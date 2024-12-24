@@ -19,13 +19,6 @@ public sealed record IfStatementNode() : StatementNode
 
     public override IEnumerable<SyntaxNode> Children => ElseBlock is null ? [Condition, ThenBlock] : [Condition, ThenBlock, ElseBlock];
 
-    internal override string ReconstructCore()
-    {
-        StringWriter writer = new();
-        ReconstructCore(writer);
-        return writer.ToString();
-    }
-
     internal override void ReconstructCore(TextWriter writer)
     {
         writer.Write(IfKeywordToken.Reconstruct());

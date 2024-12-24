@@ -12,8 +12,6 @@ public sealed record NotExpressionNode() : ExpressionNode
 
     public override IEnumerable<SyntaxNode> Children => [InnerExpression];
 
-    internal override string ReconstructCore() => NotKeywordToken.Reconstruct() + InnerExpression.Reconstruct();
-
     internal override void ReconstructCore(TextWriter writer)
     {
         writer.Write(NotKeywordToken.Reconstruct());

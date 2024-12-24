@@ -13,8 +13,6 @@ public sealed record CallerTrackerStatementNode() : StatementNode
 
     public override IEnumerable<SyntaxNode> Children => [];
 
-    internal override string ReconstructCore() => "";
-
     internal override void ReconstructCore(TextWriter writer) { }
 
     protected internal override string GetDebuggerDisplay() => $"track scene {Tracker.CalledScene.Name} @ callsite {CallSiteIndex}";

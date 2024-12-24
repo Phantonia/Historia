@@ -22,13 +22,6 @@ public record BranchOnStatementNode() : StatementNode
 
     public override IEnumerable<SyntaxNode> Children => Options;
 
-    internal override string ReconstructCore()
-    {
-        StringWriter writer = new();
-        ReconstructCore(writer);
-        return writer.ToString();
-    }
-
     internal override void ReconstructCore(TextWriter writer)
     {
         writer.Write(BranchOnKeywordToken.Reconstruct());

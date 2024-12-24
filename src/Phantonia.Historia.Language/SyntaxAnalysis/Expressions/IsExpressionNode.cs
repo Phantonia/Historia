@@ -18,8 +18,6 @@ public sealed record IsExpressionNode() : ExpressionNode
 
     public override IEnumerable<SyntaxNode> Children => [];
 
-    internal override string ReconstructCore() => OutcomeNameToken.Reconstruct() + IsKeywordToken.Reconstruct() + OptionNameToken.Reconstruct();
-
     internal override void ReconstructCore(TextWriter writer)
     {
         writer.Write(OutcomeNameToken.Reconstruct());

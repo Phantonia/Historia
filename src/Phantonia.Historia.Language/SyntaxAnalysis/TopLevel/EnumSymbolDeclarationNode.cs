@@ -25,33 +25,26 @@ public sealed record EnumSymbolDeclarationNode() : TypeSymbolDeclarationNode
 
     public override IEnumerable<SyntaxNode> Children => [];
 
-    public override string ReconstructCore()
+    internal override void ReconstructCore(TextWriter writer)
     {
-        StringWriter writer = new();
-        ReconstructCore(writer);
-        return writer.ToString();
-    }
-
-    public override void ReconstructCore(TextWriter writer)
-    {
-        writer.Write(EnumKeywordToken.Reconstruct());
-        writer.Write(OpenParenthesisToken.Reconstruct());
+        EnumKeywordToken.Reconstruct(writer);
+        OpenParenthesisToken.Reconstruct(writer);
 
         Debug.Assert(OptionTokens.Length - CommaTokens.Length is 1 or 0);
 
         foreach ((Token option, Token comma) in OptionTokens.Zip(CommaTokens))
         {
-            writer.Write(option.Reconstruct());
-            writer.Write(comma.Reconstruct());
+            option.Reconstruct(writer);
+            comma.Reconstruct(writer);
         }
 
         if (OptionTokens.Length - CommaTokens.Length is 1)
         {
-            writer.Write(OptionTokens[^1].Reconstruct());
+            OptionTokens[^1].Reconstruct(writer);
         }
 
-        writer.Write(ClosedParenthesisToken.Reconstruct());
-        writer.Write(SemicolonToken.Reconstruct());
+        ClosedParenthesisToken.Reconstruct(writer);
+        SemicolonToken.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"enum type {Name} ({string.Join(", ", Options)})";
