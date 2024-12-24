@@ -4,7 +4,7 @@ namespace Phantonia.Historia.Language.SyntaxAnalysis;
 
 public interface IOutcomeDeclarationNode : ISyntaxNode
 {
-    bool Public { get; }
+    bool IsPublic { get; }
 
     string Name { get; }
 

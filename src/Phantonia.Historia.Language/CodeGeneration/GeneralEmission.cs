@@ -413,11 +413,11 @@ public static class GeneralEmission
             case BoundIsExpressionNode isExpression:
                 if (isExpression.Outcome is SpectrumSymbol spectrum)
                 {
-                    int intervalIndex = spectrum.OptionNames.IndexOf(isExpression.Expression.OptionName);
+                    int intervalIndex = spectrum.OptionNames.IndexOf(isExpression.Original.OptionName);
 
                     if (intervalIndex == 0)
                     {
-                        SpectrumInterval interval = spectrum.Intervals[isExpression.Expression.OptionName];
+                        SpectrumInterval interval = spectrum.Intervals[isExpression.Original.OptionName];
 
                         writer.Write("fields.");
                         GenerateSpectrumPositiveFieldName(spectrum, writer);
@@ -460,7 +460,7 @@ public static class GeneralEmission
                     else
                     {
                         SpectrumInterval previousInterval = spectrum.Intervals[spectrum.OptionNames[intervalIndex - 1]];
-                        SpectrumInterval thisInterval = spectrum.Intervals[isExpression.Expression.OptionName];
+                        SpectrumInterval thisInterval = spectrum.Intervals[isExpression.Original.OptionName];
                         
                         writer.Write("fields.");
                         GenerateSpectrumTotalFieldName(spectrum, writer);
@@ -501,7 +501,7 @@ public static class GeneralEmission
                     writer.Write("fields.");
                     GenerateOutcomeFieldName(isExpression.Outcome, writer);
                     writer.Write(" == ");
-                    writer.Write(isExpression.Outcome.OptionNames.IndexOf(isExpression.Expression.OptionName));
+                    writer.Write(isExpression.Outcome.OptionNames.IndexOf(isExpression.Original.OptionName));
                 }
                 return;
             default:

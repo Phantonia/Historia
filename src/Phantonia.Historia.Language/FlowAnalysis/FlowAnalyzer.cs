@@ -26,7 +26,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
         {
             if (symbolDeclaration is BoundSymbolDeclarationNode
                 {
-                    Declaration: SceneSymbolDeclarationNode
+                    Original: SceneSymbolDeclarationNode
                     {
                         Body: StatementBodyNode body,
                     },

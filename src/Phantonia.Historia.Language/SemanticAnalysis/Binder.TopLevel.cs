@@ -15,7 +15,7 @@ public sealed partial class Binder
 {
     private (SymbolTable, TopLevelNode) BindTopLevelNode(TopLevelNode declaration, Settings settings, SymbolTable table)
     {
-        if (declaration is BoundSymbolDeclarationNode { Declaration: SymbolDeclarationNode innerDeclaration })
+        if (declaration is BoundSymbolDeclarationNode { Original: SymbolDeclarationNode innerDeclaration })
         {
             return BindTopLevelNode(innerDeclaration, settings, table);
         }
@@ -34,7 +34,7 @@ public sealed partial class Binder
                     and (OutcomeSymbolDeclarationNode or SpectrumSymbolDeclarationNode or ReferenceSymbolDeclarationNode or InterfaceSymbolDeclarationNode):
                 return (table, new BoundSymbolDeclarationNode
                 {
-                    Declaration = symbolDeclaration,
+                    Original = symbolDeclaration,
                     Symbol = table[symbolDeclaration.Name],
                     Name = symbolDeclaration.Name,
                     Index = symbolDeclaration.Index,
@@ -97,7 +97,7 @@ public sealed partial class Binder
         BoundSymbolDeclarationNode boundRecordDeclaration = new()
         {
             Name = recordDeclaration.Name,
-            Declaration = recordDeclaration with
+            Original = recordDeclaration with
             {
                 Properties = boundPropertyDeclarations.MoveToImmutable(),
             },
@@ -136,7 +136,7 @@ public sealed partial class Binder
         {
             Debug.Assert(type is BoundTypeNode);
 
-            string identifier = ((IdentifierTypeNode)((BoundTypeNode)type).Node).Identifier;
+            string identifier = ((IdentifierTypeNode)((BoundTypeNode)type).Original).Identifier;
 
             // spec 1.2.1.4: "Due to technical reasons, no subtype of a union may have any of the following names: [...]"
             if (bannedMemberNames.Contains(identifier))
@@ -148,7 +148,7 @@ public sealed partial class Binder
         BoundSymbolDeclarationNode boundUnionDeclaration = new()
         {
             Name = unionDeclaration.Name,
-            Declaration = unionDeclaration,
+            Original = unionDeclaration,
             Symbol = unionSymbol,
             Index = unionDeclaration.Index,
         };
@@ -174,7 +174,7 @@ public sealed partial class Binder
         BoundSymbolDeclarationNode boundEnumDeclaration = new()
         {
             Name = enumDeclaration.Name,
-            Declaration = enumDeclaration,
+            Original = enumDeclaration,
             Symbol = symbol,
             Index = enumDeclaration.Index,
         };
@@ -192,7 +192,7 @@ public sealed partial class Binder
 
         BoundSymbolDeclarationNode boundSceneDeclaration = new()
         {
-            Declaration = sceneDeclaration with
+            Original = sceneDeclaration with
             {
                 Body = boundBody,
             },

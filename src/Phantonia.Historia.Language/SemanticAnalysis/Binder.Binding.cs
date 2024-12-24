@@ -53,7 +53,7 @@ public sealed partial class Binder
                         return (table, type);
                     }
 
-                    BoundTypeNode boundType = new() { Node = type, Symbol = typeSymbol, Index = type.Index };
+                    BoundTypeNode boundType = new() { Original = type, Symbol = typeSymbol, Index = type.Index };
                     return (table, boundType);
                 }
             default:

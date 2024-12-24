@@ -40,7 +40,7 @@ public sealed partial class Parser
                         Name = name,
                         Options = options,
                         DefaultOption = defaultOption,
-                        Public = false,
+                        IsPublic = false,
                         Index = nodeIndex,
                     };
                 }
@@ -53,7 +53,7 @@ public sealed partial class Parser
                         Name = name,
                         Options = options,
                         DefaultOption = defaultOption,
-                        Public = false,
+                        IsPublic = false,
                         Index = nodeIndex,
                     };
                 }
@@ -329,7 +329,7 @@ public sealed partial class Parser
                         Name = name,
                         Options = options,
                         DefaultOption = defaultOption,
-                        Public = true,
+                        IsPublic = true,
                         Index = nodeIndex,
                     };
                 }
@@ -342,7 +342,7 @@ public sealed partial class Parser
                         Name = name,
                         Options = options,
                         DefaultOption = defaultOption,
-                        Public = true,
+                        IsPublic = true,
                         Index = nodeIndex,
                     };
                 }

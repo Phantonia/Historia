@@ -53,7 +53,7 @@ public sealed partial class Binder
 
         BoundSymbolDeclarationNode boundDeclaration = new()
         {
-            Declaration = referenceDeclaration,
+            Original = referenceDeclaration,
             Name = referenceDeclaration.Name,
             Symbol = table[referenceDeclaration.Name],
             Index = referenceDeclaration.Index,
@@ -74,7 +74,7 @@ public sealed partial class Binder
         BoundSymbolDeclarationNode boundDeclaration = new()
         {
             Name = interfaceDeclaration.Name,
-            Declaration = interfaceDeclaration with
+            Original = interfaceDeclaration with
             {
                 Methods = [.. methods],
             },
@@ -122,7 +122,7 @@ public sealed partial class Binder
         BoundSymbolDeclarationNode boundDeclaration = new()
         {
             Name = recordDeclaration.Name,
-            Declaration = recordDeclaration with
+            Original = recordDeclaration with
             {
                 Properties = [.. properties],
             },
@@ -146,7 +146,7 @@ public sealed partial class Binder
         BoundSymbolDeclarationNode boundDeclaration = new()
         {
             Name = unionDeclaration.Name,
-            Declaration = unionDeclaration with
+            Original = unionDeclaration with
             {
                 Subtypes = [.. subtypes],
             },
@@ -162,7 +162,7 @@ public sealed partial class Binder
         BoundSymbolDeclarationNode boundDeclaration = new()
         {
             Name = enumDeclaration.Name,
-            Declaration = enumDeclaration,
+            Original = enumDeclaration,
             Symbol = table[enumDeclaration.Name],
             Index = enumDeclaration.Index,
         };

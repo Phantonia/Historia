@@ -106,7 +106,7 @@ public sealed partial class Binder
         {
             BoundRecordCreationExpressionNode boundRecordCreation = new()
             {
-                CreationExpression = recordCreation,
+                Original = recordCreation,
                 BoundArguments = boundArguments.Cast<BoundArgumentNode>().ToImmutableArray(),
                 Record = recordSymbol,
                 Index = recordCreation.Index,
@@ -200,7 +200,7 @@ public sealed partial class Binder
         {
             Expression = new BoundIsExpressionNode
             {
-                Expression = expression,
+                Original = expression,
                 Outcome = outcome,
                 Index = expression.Index,
             },

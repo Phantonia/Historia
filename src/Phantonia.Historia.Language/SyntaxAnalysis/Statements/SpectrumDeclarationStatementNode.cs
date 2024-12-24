@@ -29,5 +29,5 @@ public record SpectrumDeclarationStatementNode() : StatementNode, ISpectrumDecla
 
     protected internal override string GetDebuggerDisplay() => $"declare spectrum {Name} ({string.Join(", ", Options.Select(o => o.GetDebuggerDisplay()))}) {(DefaultOption is not null ? "default " : "")}{DefaultOption}";
 
-    bool IOutcomeDeclarationNode.Public => false;
+    bool IOutcomeDeclarationNode.IsPublic => false;
 }

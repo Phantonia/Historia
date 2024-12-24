@@ -2,16 +2,24 @@
 using Phantonia.Historia.Language.SyntaxAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using System.Collections.Generic;
+using System.IO;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 
 public sealed record BoundIsExpressionNode() : ExpressionNode
 {
-    public required IsExpressionNode Expression { get; init; }
+    public required IsExpressionNode Original { get; init; }
 
     public required OutcomeSymbol Outcome { get; init; }
 
-    public override IEnumerable<SyntaxNode> Children => [Expression];
+    public override IEnumerable<SyntaxNode> Children => [Original];
 
-    protected internal override string GetDebuggerDisplay() => $"bound {Expression.GetDebuggerDisplay()}";
+    internal override string ReconstructCore() => Original.ReconstructCore();
+
+    internal override void ReconstructCore(TextWriter writer)
+    {
+        Original.ReconstructCore(writer);
+    }
+
+    protected internal override string GetDebuggerDisplay() => $"bound {Original.GetDebuggerDisplay()}";
 }

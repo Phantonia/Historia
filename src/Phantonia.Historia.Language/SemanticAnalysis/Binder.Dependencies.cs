@@ -22,7 +22,7 @@ public sealed partial class Binder
 
         foreach (TopLevelNode declaration in story.TopLevelNodes)
         {
-            if (declaration is not BoundSymbolDeclarationNode { Declaration: SymbolDeclarationNode innerDeclaration, Symbol: Symbol symbol }
+            if (declaration is not BoundSymbolDeclarationNode { Original: SymbolDeclarationNode innerDeclaration, Symbol: Symbol symbol }
                 || !NeedsDependencyAnalysis(innerDeclaration))
             {
                 continue;
@@ -61,7 +61,7 @@ public sealed partial class Binder
                 {
                     Debug.Assert(propertyDeclaration.Type is BoundTypeNode);
 
-                    switch (((BoundTypeNode)propertyDeclaration.Type).Node)
+                    switch (((BoundTypeNode)propertyDeclaration.Type).Original)
                     {
                         case IdentifierTypeNode { Identifier: string identifier }:
                             // we don't need dependencies on built in type symbols as they can never reference user defined type symbols
@@ -81,7 +81,7 @@ public sealed partial class Binder
                 // spec 1.2.1.5: "A type A is directly depends on another type B, [if] [...] A is a union and B is a subtype of this union"
                 foreach (TypeNode subtype in unionDeclaration.Subtypes)
                 {
-                    if (((BoundTypeNode)subtype).Node is IdentifierTypeNode { Identifier: string identifier })
+                    if (((BoundTypeNode)subtype).Original is IdentifierTypeNode { Identifier: string identifier })
                     {
                         if (table[identifier] is not BuiltinTypeSymbol)
                         {
@@ -105,7 +105,7 @@ public sealed partial class Binder
                 {
                     Debug.Assert(type is BoundTypeNode);
 
-                    switch (((BoundTypeNode)type).Node)
+                    switch (((BoundTypeNode)type).Original)
                     {
                         case IdentifierTypeNode { Identifier: string identifier }:
                             // we don't need dependencies on built in type symbols as they can never reference user defined type symbols
