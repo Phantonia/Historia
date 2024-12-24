@@ -1,63 +1,32 @@
 ﻿using Phantonia.Historia.Language;
-using System.Diagnostics;
 
 namespace Phantonia.Historia.Build;
 
 internal static class Program
 {
-    private static int Main(string[] args)
+    private static void Main(string[] args)
     {
-        if (args.Length == 0)
+        const string InputPath = @"C:\Users\User\Documents\Projects\Stories\AntiFairytale\Historia\Ch1_FreedomBreaksFree.hstr";
+        const string OutputPath = @"C:\Users\User\Documents\Godot\AntiFairytaleTextAdventure\Historia.cs";
+
+        using TextReader inputReader = new StreamReader(InputPath);
+        using TextWriter outputWriter = new StreamWriter(OutputPath);
+
+        Compiler compiler = new(inputReader, outputWriter);
+        CompilationResult result = compiler.Compile();
+
+        if (result.IsValid)
         {
-            Console.Error.WriteLine("Error: no Historia code file was provided");
-            Console.Write("Press any key to exit...");
-            _ = Console.ReadKey();
-            return 2;
+            Console.WriteLine("Compilation successful!");
+            return;
         }
 
-        CompilationResult result;
+        string code = File.ReadAllText(InputPath);
 
-        try
+        foreach (Error error in result.Errors)
         {
-            using StreamReader streamReader = new(args[0]);
-
-            string? path = Path.GetDirectoryName(args[0]);
-            Debug.Assert(path is not null);
-
-            string outputPath = Path.Combine(path, "HistoriaStory.cs");
-
-            using StreamWriter streamWriter = new(outputPath);
-
-            Compiler compiler = new(streamReader, streamWriter);
-
-            result = compiler.Compile();
+            Console.WriteLine(Errors.GenerateFullMessage(code, error));
+            Console.WriteLine();
         }
-        catch (IOException)
-        {
-            Console.Error.WriteLine($"Something went wrong with loading the file {args[0]}");
-            Console.Write("Press any key to exit...");
-            _ = Console.ReadKey();
-            return 2;
-        }
-
-        if (result.Errors.Length > 0)
-        {
-            // i should probably rework how errors work
-
-            using StreamReader streamReader = new(args[0]);
-            string code = streamReader.ReadToEnd();
-
-            foreach (Error error in result.Errors)
-            {
-                Console.Error.WriteLine(Errors.GenerateFullMessage(code, error));
-            }
-
-            Console.Write("Press any key to exit...");
-            _ = Console.ReadKey();
-
-            return 1;
-        }
-
-        return 0;
     }
 }

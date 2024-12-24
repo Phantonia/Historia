@@ -12,21 +12,6 @@ namespace Phantonia.Historia.Tests.Compiler;
 [TestClass]
 public sealed class EmitterTests
 {
-    // debug this to generate the class
-    // less than ideal i know
-    //[TestMethod] // emitter not ready for this
-    public void PrivateClassGenerator()
-    {
-        string code = "insert code here";
-
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
-
-        Assert.IsTrue(result.IsValid);
-
-        string csharpText = sw.ToString();
-    }
-
     [TestMethod]
     public void TestEmittedCode()
     {
