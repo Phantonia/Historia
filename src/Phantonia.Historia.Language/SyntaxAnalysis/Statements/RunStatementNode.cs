@@ -8,10 +8,10 @@ public sealed record RunStatementNode() : MethodCallStatementNode
 {
     public required Token SemicolonToken { get; init; }
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
         base.ReconstructCore(writer);
-        writer.Write(SemicolonToken.Reconstruct());
+        SemicolonToken.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"run {ReferenceName}.{MethodName}({string.Join(", ", Arguments.Select(a => a.GetDebuggerDisplay()))})";

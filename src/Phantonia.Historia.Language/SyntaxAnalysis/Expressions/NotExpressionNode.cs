@@ -12,9 +12,9 @@ public sealed record NotExpressionNode() : ExpressionNode
 
     public override IEnumerable<SyntaxNode> Children => [InnerExpression];
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(NotKeywordToken.Reconstruct());
+        NotKeywordToken.Reconstruct(writer);
         InnerExpression.Reconstruct(writer);
     }
 

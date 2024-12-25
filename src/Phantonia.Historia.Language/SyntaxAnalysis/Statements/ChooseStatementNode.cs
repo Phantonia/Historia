@@ -16,17 +16,17 @@ public sealed record ChooseStatementNode() : MethodCallStatementNode
 
     public override IEnumerable<SyntaxNode> Children => [.. base.Children, .. Options];
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
         base.ReconstructCore(writer);
-        writer.Write(OpenBraceToken.Reconstruct());
+        OpenBraceToken.Reconstruct(writer);
 
         foreach (OptionNode option in Options)
         {
             option.Reconstruct(writer);
         }
 
-        writer.Write(ClosedBraceToken.Reconstruct());
+        ClosedBraceToken.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay()

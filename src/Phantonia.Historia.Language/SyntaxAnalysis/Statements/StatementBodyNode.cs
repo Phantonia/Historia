@@ -15,16 +15,16 @@ public sealed record StatementBodyNode() : SyntaxNode
 
     public override IEnumerable<SyntaxNode> Children => Statements;
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(OpenBraceToken.Reconstruct());
+        OpenBraceToken.Reconstruct(writer);
 
         foreach (StatementNode statement in Statements)
         {
             statement.Reconstruct(writer);
         }
 
-        writer.Write(ClosedBraceToken.Reconstruct());
+        ClosedBraceToken.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"body w/ {Statements.Length} statements";

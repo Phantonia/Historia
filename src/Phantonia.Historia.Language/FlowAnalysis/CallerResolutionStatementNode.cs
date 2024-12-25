@@ -11,7 +11,7 @@ public sealed record CallerResolutionStatementNode() : StatementNode
 
     public override IEnumerable<SyntaxNode> Children => [];
 
-    internal override void ReconstructCore(TextWriter writer) { }
+    protected override void ReconstructCore(TextWriter writer) { }
 
     protected internal override string GetDebuggerDisplay() => $"resolve tracker for scene {Tracker.CalledScene.Name}";
 }

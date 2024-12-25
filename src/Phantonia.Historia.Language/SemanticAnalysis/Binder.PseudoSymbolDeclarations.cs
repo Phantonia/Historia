@@ -87,7 +87,7 @@ public sealed partial class Binder
 
     private (SymbolTable, InterfaceMethodDeclarationNode) BindPseudoInterfaceMethodDeclaration(InterfaceMethodDeclarationNode methodDeclaration, SymbolTable table)
     {
-        List<PropertyDeclarationNode> parameters = [.. methodDeclaration.Parameters];
+        List<ParameterDeclarationNode> parameters = [.. methodDeclaration.Parameters];
 
         for (int i = 0; i < parameters.Count; i++)
         {
@@ -108,7 +108,7 @@ public sealed partial class Binder
 
     private (SymbolTable, TopLevelNode) BindPseudoRecordDeclaration(RecordSymbolDeclarationNode recordDeclaration, SymbolTable table)
     {
-        List<PropertyDeclarationNode> properties = [.. recordDeclaration.Properties];
+        List<ParameterDeclarationNode> properties = [.. recordDeclaration.Properties];
 
         for (int i = 0; i < properties.Count; i++)
         {

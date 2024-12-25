@@ -18,11 +18,11 @@ public sealed record IsExpressionNode() : ExpressionNode
 
     public override IEnumerable<SyntaxNode> Children => [];
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(OutcomeNameToken.Reconstruct());
-        writer.Write(IsKeywordToken.Reconstruct());
-        writer.Write(OptionNameToken.Reconstruct());
+        OutcomeNameToken.Reconstruct(writer);
+        IsKeywordToken.Reconstruct(writer);
+        OptionNameToken.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"{OutcomeName} is {OptionName}";

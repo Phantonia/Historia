@@ -51,7 +51,7 @@ public sealed partial class Binder
 
         RecordTypeSymbol recordSymbol = (RecordTypeSymbol)table[recordDeclaration.Name];
 
-        ImmutableArray<PropertyDeclarationNode>.Builder boundPropertyDeclarations = ImmutableArray.CreateBuilder<PropertyDeclarationNode>(recordDeclaration.Properties.Length);
+        ImmutableArray<ParameterDeclarationNode>.Builder boundPropertyDeclarations = ImmutableArray.CreateBuilder<ParameterDeclarationNode>(recordDeclaration.Properties.Length);
 
         string[] bannedMemberNames =
         [
@@ -68,7 +68,7 @@ public sealed partial class Binder
 
         HashSet<string> propertyNames = [];
 
-        foreach ((PropertyDeclarationNode propertyDeclaration, PropertySymbol propertySymbol) in recordDeclaration.Properties.Zip(recordSymbol.Properties))
+        foreach ((ParameterDeclarationNode propertyDeclaration, PropertySymbol propertySymbol) in recordDeclaration.Properties.Zip(recordSymbol.Properties))
         {
             Debug.Assert(propertyDeclaration.Name == propertySymbol.Name);
             Debug.Assert(propertyDeclaration.Index == propertySymbol.Index);

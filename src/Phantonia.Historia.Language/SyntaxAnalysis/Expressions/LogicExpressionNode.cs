@@ -16,10 +16,10 @@ public sealed record LogicExpressionNode() : ExpressionNode
 
     public override IEnumerable<SyntaxNode> Children => [LeftExpression, RightExpression];
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
         LeftExpression.Reconstruct(writer);
-        writer.Write(OperatorToken.Reconstruct());
+        OperatorToken.Reconstruct(writer);
         RightExpression.Reconstruct(writer);
     }
 

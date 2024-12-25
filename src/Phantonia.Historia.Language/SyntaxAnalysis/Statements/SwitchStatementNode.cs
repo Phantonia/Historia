@@ -25,19 +25,19 @@ public sealed record SwitchStatementNode() : StatementNode, IOutputStatementNode
 
     public override IEnumerable<SyntaxNode> Children => [OutputExpression, .. Options];
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(CheckpointKeywordToken?.Reconstruct() ?? "");
-        writer.Write(SwitchKeywordToken.Reconstruct());
+        CheckpointKeywordToken?.Reconstruct(writer);
+        SwitchKeywordToken.Reconstruct(writer);
         OutputExpression.Reconstruct(writer);
-        writer.Write(OpenBraceToken.Reconstruct());
+        OpenBraceToken.Reconstruct(writer);
 
         foreach (OptionNode option in Options)
         {
             option.Reconstruct(writer);
         }
 
-        writer.Write(ClosedBraceToken.Reconstruct());
+        ClosedBraceToken.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"switch {{ {string.Join(", ", Options.Select(o => o.GetDebuggerDisplay()))} }}";

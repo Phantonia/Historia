@@ -25,7 +25,7 @@ public sealed record EnumSymbolDeclarationNode() : TypeSymbolDeclarationNode
 
     public override IEnumerable<SyntaxNode> Children => [];
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
         EnumKeywordToken.Reconstruct(writer);
         OpenParenthesisToken.Reconstruct(writer);

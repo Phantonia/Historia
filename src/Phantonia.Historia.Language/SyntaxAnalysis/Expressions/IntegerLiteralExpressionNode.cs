@@ -12,9 +12,9 @@ public sealed record IntegerLiteralExpressionNode() : ExpressionNode
 
     public override IEnumerable<SyntaxNode> Children => [];
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(LiteralToken.Reconstruct());
+        LiteralToken.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"integer {Value}";

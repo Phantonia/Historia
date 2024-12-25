@@ -25,13 +25,13 @@ public record SpectrumAdjustmentStatementNode() : StatementNode
 
     public override IEnumerable<SyntaxNode> Children => [AdjustmentAmount];
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(StrengthenOrWeakenKeywordToken.Reconstruct());
-        writer.Write(SpectrumNameToken.Reconstruct());
-        writer.Write(ByKeywordToken.Reconstruct());
+        StrengthenOrWeakenKeywordToken.Reconstruct(writer);
+        SpectrumNameToken.Reconstruct(writer);
+        ByKeywordToken.Reconstruct(writer);
         AdjustmentAmount.Reconstruct();
-        writer.Write(SemicolonToken.Reconstruct());
+        SemicolonToken.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"{(Strengthens ? "strengthen" : "weaken")} {SpectrumName} by {AdjustmentAmount.GetDebuggerDisplay()}";

@@ -17,9 +17,9 @@ public sealed record BoundRecordCreationExpressionNode() : ExpressionNode
 
     public override IEnumerable<SyntaxNode> Children => [Original, .. BoundArguments];
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        Original.ReconstructCore(writer);
+        Original.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"{Original.GetDebuggerDisplay()} bound @ {Record.GetDebuggerDisplay()}";

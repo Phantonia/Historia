@@ -18,11 +18,11 @@ public record EnumOptionExpressionNode() : ExpressionNode
 
     public override IEnumerable<SyntaxNode> Children => [];
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(EnumNameToken.Reconstruct());
-        writer.Write(DotToken.Reconstruct());
-        writer.Write(OptionNameToken.Reconstruct());
+        EnumNameToken.Reconstruct(writer);
+        DotToken.Reconstruct(writer);
+        OptionNameToken.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"enum option {EnumName}.{OptionName}";

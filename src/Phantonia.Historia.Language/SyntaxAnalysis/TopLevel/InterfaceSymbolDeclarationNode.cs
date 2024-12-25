@@ -18,7 +18,7 @@ public sealed record InterfaceSymbolDeclarationNode() : SymbolDeclarationNode
 
     public override IEnumerable<SyntaxNode> Children => Methods;
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
         InterfaceKeywordToken.Reconstruct(writer);
         NameToken.Reconstruct(writer);

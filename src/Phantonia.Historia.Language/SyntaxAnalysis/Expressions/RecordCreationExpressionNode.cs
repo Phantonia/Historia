@@ -20,17 +20,17 @@ public sealed record RecordCreationExpressionNode() : ExpressionNode, IArgumentC
 
     public override IEnumerable<SyntaxNode> Children => Arguments;
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(RecordNameToken.Reconstruct());
-        writer.Write(OpenParenthesisToken.Reconstruct());
+        RecordNameToken.Reconstruct(writer);
+        OpenParenthesisToken.Reconstruct(writer);
 
         foreach (ArgumentNode argument in Arguments)
         {
             argument.Reconstruct(writer);
         }
 
-        writer.Write(ClosedParenthesisToken.Reconstruct());
+        ClosedParenthesisToken.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"creation {RecordName}({string.Join(", ", Arguments.Select(a => a.GetDebuggerDisplay()))})";

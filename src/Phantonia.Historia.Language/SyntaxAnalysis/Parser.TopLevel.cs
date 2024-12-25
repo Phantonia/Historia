@@ -157,7 +157,7 @@ public sealed partial class Parser
 
         Token identifierToken = Expect(TokenKind.Identifier, ref index);
 
-        ImmutableArray<PropertyDeclarationNode>? propertyDeclarations = ParsePropertyDeclarationList(ref index);
+        ImmutableArray<ParameterDeclarationNode>? propertyDeclarations = ParsePropertyDeclarationList(ref index);
 
         if (propertyDeclarations is null)
         {
@@ -169,16 +169,16 @@ public sealed partial class Parser
         return new RecordSymbolDeclarationNode
         {
             Name = identifierToken.Text,
-            Properties = (ImmutableArray<PropertyDeclarationNode>)propertyDeclarations,
+            Properties = (ImmutableArray<ParameterDeclarationNode>)propertyDeclarations,
             Index = nodeIndex,
         };
     }
 
-    private ImmutableArray<PropertyDeclarationNode>? ParsePropertyDeclarationList(ref int index)
+    private ImmutableArray<ParameterDeclarationNode>? ParsePropertyDeclarationList(ref int index)
     {
         _ = Expect(TokenKind.OpenParenthesis, ref index);
 
-        ImmutableArray<PropertyDeclarationNode>.Builder propertyDeclarations = ImmutableArray.CreateBuilder<PropertyDeclarationNode>();
+        ImmutableArray<ParameterDeclarationNode>.Builder propertyDeclarations = ImmutableArray.CreateBuilder<ParameterDeclarationNode>();
 
         while (tokens[index] is not { Kind: TokenKind.ClosedParenthesis })
         {
@@ -191,7 +191,7 @@ public sealed partial class Parser
                 return null;
             }
 
-            propertyDeclarations.Add(new PropertyDeclarationNode
+            propertyDeclarations.Add(new ParameterDeclarationNode
             {
                 Name = propertyIdentifierToken.Text,
                 Type = type,
@@ -418,7 +418,7 @@ public sealed partial class Parser
 
         string name = Expect(TokenKind.Identifier, ref index).Text;
 
-        ImmutableArray<PropertyDeclarationNode>? parameterList = ParsePropertyDeclarationList(ref index);
+        ImmutableArray<ParameterDeclarationNode>? parameterList = ParsePropertyDeclarationList(ref index);
 
         if (parameterList is null)
         {
@@ -429,7 +429,7 @@ public sealed partial class Parser
         {
             Name = name,
             Kind = kind,
-            Parameters = (ImmutableArray<PropertyDeclarationNode>)parameterList,
+            Parameters = (ImmutableArray<ParameterDeclarationNode>)parameterList,
             Index = nodeIndex,
         };
     }

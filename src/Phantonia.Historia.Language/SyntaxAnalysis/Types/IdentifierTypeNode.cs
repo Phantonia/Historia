@@ -10,7 +10,7 @@ public sealed record IdentifierTypeNode() : TypeNode
 
     public string Identifier => IdentifierToken.Text;
 
-    internal override void ReconstructCore(TextWriter writer) => writer.Write(IdentifierToken.Reconstruct());
+    protected override void ReconstructCore(TextWriter writer) => IdentifierToken.Reconstruct(writer);
 
     public override IEnumerable<SyntaxNode> Children => [];
 

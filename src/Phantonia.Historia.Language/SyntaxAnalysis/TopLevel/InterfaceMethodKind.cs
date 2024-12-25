@@ -1,7 +1,9 @@
-﻿namespace Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
+﻿using Phantonia.Historia.Language.LexicalAnalysis;
+
+namespace Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 
 public enum InterfaceMethodKind
 {
-    Action,
-    Choice,
+    Action = TokenKind.ActionKeyword,
+    Choice = TokenKind.ChoiceKeyword,
 }

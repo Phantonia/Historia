@@ -39,7 +39,7 @@ public abstract record SyntaxNode : ISyntaxNode
 
         foreach (Token precedingToken in PrecedingTokens)
         {
-            writer.Write(precedingToken.Reconstruct());
+            precedingToken.Reconstruct(writer);
         }
 
         ReconstructCore(writer);
@@ -51,13 +51,13 @@ public abstract record SyntaxNode : ISyntaxNode
     {
         foreach (Token token in PrecedingTokens)
         {
-            writer.Write(token.Reconstruct());
+            token.Reconstruct(writer);
         }
 
         ReconstructCore(writer);
     }
 
-    internal abstract void ReconstructCore(TextWriter writer);
+    protected abstract void ReconstructCore(TextWriter writer);
 
     protected internal abstract string GetDebuggerDisplay();
 }

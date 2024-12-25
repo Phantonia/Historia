@@ -210,7 +210,7 @@ public sealed partial class FlowAnalyzer
             case IfStatementNode ifStatement:
                 void ProcessExpression(ExpressionNode expression)
                 {
-                    if (expression is not TypedExpressionNode { Expression: ExpressionNode untypedExpression })
+                    if (expression is not TypedExpressionNode { Original: ExpressionNode untypedExpression })
                     {
                         Debug.Assert(false);
                         return;

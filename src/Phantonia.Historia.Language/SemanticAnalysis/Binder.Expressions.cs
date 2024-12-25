@@ -23,7 +23,7 @@ public sealed partial class Binder
 
                     TypedExpressionNode typedExpression = new()
                     {
-                        Expression = expression,
+                        Original = expression,
                         SourceType = intType,
                         Index = expression.Index,
                     };
@@ -38,7 +38,7 @@ public sealed partial class Binder
 
                     TypedExpressionNode typedExpression = new()
                     {
-                        Expression = expression,
+                        Original = expression,
                         SourceType = stringType,
                         Index = expression.Index,
                     };
@@ -92,7 +92,7 @@ public sealed partial class Binder
 
             TypedExpressionNode incompleteTypedExpression = new()
             {
-                Expression = recordCreation,
+                Original = recordCreation,
                 SourceType = recordSymbol,
                 Index = recordCreation.Index,
             };
@@ -114,7 +114,7 @@ public sealed partial class Binder
 
             TypedExpressionNode typedRecordCreation = new()
             {
-                Expression = boundRecordCreation,
+                Original = boundRecordCreation,
                 SourceType = recordSymbol,
                 Index = boundRecordCreation.Index,
             };
@@ -125,7 +125,7 @@ public sealed partial class Binder
         {
             TypedExpressionNode typedRecordCreation = new()
             {
-                Expression = recordCreation,
+                Original = recordCreation,
                 SourceType = recordSymbol,
                 Index = recordCreation.Index,
             };
@@ -166,7 +166,7 @@ public sealed partial class Binder
 
         TypedExpressionNode typedExpression = new()
         {
-            Expression = boundExpression,
+            Original = boundExpression,
             SourceType = enumSymbol,
             Index = boundExpression.Index,
         };
@@ -198,7 +198,7 @@ public sealed partial class Binder
 
         TypedExpressionNode typedExpression = new()
         {
-            Expression = new BoundIsExpressionNode
+            Original = new BoundIsExpressionNode
             {
                 Original = expression,
                 Outcome = outcome,
@@ -247,7 +247,7 @@ public sealed partial class Binder
 
         TypedExpressionNode typedLogicExpression = new()
         {
-            Expression = logicExpression with
+            Original = logicExpression with
             {
                 LeftExpression = typedLeftHandSide,
                 RightExpression = typedRightHandSide,
@@ -280,7 +280,7 @@ public sealed partial class Binder
 
         TypedExpressionNode typedNotExpression = new()
         {
-            Expression = notExpression with
+            Original = notExpression with
             {
                 InnerExpression = typedInnerExpression,
             },

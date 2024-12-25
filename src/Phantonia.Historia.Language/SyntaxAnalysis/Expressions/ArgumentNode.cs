@@ -16,10 +16,10 @@ public record ArgumentNode() : SyntaxNode
 
     public override IEnumerable<SyntaxNode> Children => [Expression];
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(PropertyNameToken?.Reconstruct() ?? "");
-        writer.Write(EqualsToken?.Reconstruct() ?? "");
+        PropertyNameToken?.Reconstruct(writer);
+        EqualsToken?.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"argument {PropertyName ?? ""}{EqualsToken?.Text ?? ""}{Expression.GetDebuggerDisplay()}";

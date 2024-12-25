@@ -19,12 +19,12 @@ public sealed record IfStatementNode() : StatementNode
 
     public override IEnumerable<SyntaxNode> Children => ElseBlock is null ? [Condition, ThenBlock] : [Condition, ThenBlock, ElseBlock];
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(IfKeywordToken.Reconstruct());
+        IfKeywordToken.Reconstruct(writer);
         Condition.Reconstruct(writer);
         ThenBlock.Reconstruct(writer);
-        writer.Write(ElseKeywordToken?.Reconstruct() ?? "");
+        ElseKeywordToken?.Reconstruct(writer);
         ElseBlock?.Reconstruct(writer);
     }
 

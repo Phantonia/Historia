@@ -177,7 +177,7 @@ public sealed class InterpreterStateMachine : IStoryStateMachine
                     Strengthens: bool strengthens,
                     AdjustmentAmount: TypedExpressionNode
                     {
-                        Expression: IntegerLiteralExpressionNode { Value: int amount },
+                        Original: IntegerLiteralExpressionNode { Value: int amount },
                     },
                 }:
                     {
@@ -352,7 +352,7 @@ public sealed class InterpreterStateMachine : IStoryStateMachine
     {
         Debug.Assert(expression is TypedExpressionNode);
 
-        expression = ((TypedExpressionNode)expression).Expression;
+        expression = ((TypedExpressionNode)expression).Original;
 
         switch (expression)
         {

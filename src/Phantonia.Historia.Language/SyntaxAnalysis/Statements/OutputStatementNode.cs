@@ -19,12 +19,12 @@ public sealed record OutputStatementNode() : StatementNode, IOutputStatementNode
 
     public override IEnumerable<SyntaxNode> Children => [OutputExpression];
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(CheckpointKeywordToken?.Reconstruct() ?? "");
-        writer.Write(OutputKeywordToken.Reconstruct());
+        CheckpointKeywordToken?.Reconstruct(writer);
+        OutputKeywordToken.Reconstruct(writer);
         OutputExpression.Reconstruct(writer);
-        writer.Write(SemicolonToken.Reconstruct());
+        SemicolonToken.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"output {OutputExpression.GetDebuggerDisplay()}";

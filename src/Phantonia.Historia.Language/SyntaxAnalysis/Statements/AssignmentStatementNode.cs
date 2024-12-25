@@ -17,10 +17,10 @@ public record AssignmentStatementNode() : StatementNode
 
     public override IEnumerable<SyntaxNode> Children => [AssignedExpression];
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(VariableNameToken.Reconstruct());
-        writer.Write(EqualsSignToken.Reconstruct());
+        VariableNameToken.Reconstruct(writer);
+        EqualsSignToken.Reconstruct(writer);
         AssignedExpression.Reconstruct();
     }
 

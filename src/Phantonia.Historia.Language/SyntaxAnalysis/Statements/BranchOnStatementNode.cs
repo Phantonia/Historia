@@ -22,18 +22,18 @@ public record BranchOnStatementNode() : StatementNode
 
     public override IEnumerable<SyntaxNode> Children => Options;
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(BranchOnKeywordToken.Reconstruct());
-        writer.Write(OutcomeNameToken.Reconstruct());
-        writer.Write(OpenBraceToken.Reconstruct());
+        BranchOnKeywordToken.Reconstruct(writer);
+        OutcomeNameToken.Reconstruct(writer);
+        OpenBraceToken.Reconstruct(writer);
 
         foreach (BranchOnOptionNode option in Options)
         {
             option.Reconstruct(writer);
         }
 
-        writer.Write(ClosedBraceToken.Reconstruct());
+        ClosedBraceToken.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"branchon {OutcomeName} {{ {string.Join(", ", Options.Select(o => o.GetDebuggerDisplay()))} }}";

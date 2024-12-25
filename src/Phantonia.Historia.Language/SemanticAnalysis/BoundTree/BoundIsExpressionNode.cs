@@ -14,9 +14,9 @@ public sealed record BoundIsExpressionNode() : ExpressionNode
 
     public override IEnumerable<SyntaxNode> Children => [Original];
     
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        Original.ReconstructCore(writer);
+        Original.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"bound {Original.GetDebuggerDisplay()}";

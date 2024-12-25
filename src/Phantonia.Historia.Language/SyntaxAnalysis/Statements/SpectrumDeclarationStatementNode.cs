@@ -43,21 +43,21 @@ public record SpectrumDeclarationStatementNode() : StatementNode, ISpectrumDecla
 
     ImmutableArray<string> IOutcomeDeclarationNode.Options => stringOptions;
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(SpectrumKeywordToken.Reconstruct());
-        writer.Write(NameToken.Reconstruct());
-        writer.Write(OpenParenthesisToken.Reconstruct());
+        SpectrumKeywordToken.Reconstruct(writer);
+        NameToken.Reconstruct(writer);
+        OpenParenthesisToken.Reconstruct(writer);
 
         foreach (SpectrumOptionNode option in Options)
         {
             option.Reconstruct(writer);
         }
 
-        writer.Write(ClosedParenthesisToken.Reconstruct());
-        writer.Write(DefaultKeywordToken?.Reconstruct() ?? "");
-        writer.Write(DefaultOptionToken?.Reconstruct() ?? "");
-        writer.Write(SemicolonToken.Reconstruct());
+        ClosedParenthesisToken.Reconstruct(writer);
+        DefaultKeywordToken?.Reconstruct(writer);
+        DefaultOptionToken?.Reconstruct(writer);
+        SemicolonToken.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"declare spectrum {Name} ({string.Join(", ", Options.Select(o => o.GetDebuggerDisplay()))}) {(DefaultOption is not null ? "default " : "")}{DefaultOption}";

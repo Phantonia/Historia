@@ -146,7 +146,7 @@ public sealed partial class Binder
     {
         ImmutableArray<PseudoPropertySymbol>.Builder properties = ImmutableArray.CreateBuilder<PseudoPropertySymbol>();
 
-        foreach (PropertyDeclarationNode propertyDeclaration in recordDeclaration.Properties)
+        foreach (ParameterDeclarationNode propertyDeclaration in recordDeclaration.Properties)
         {
             properties.Add(new PseudoPropertySymbol
             {
@@ -380,7 +380,7 @@ public sealed partial class Binder
 
             ImmutableArray<PseudoPropertySymbol>.Builder parameters = ImmutableArray.CreateBuilder<PseudoPropertySymbol>();
 
-            foreach (PropertyDeclarationNode propertyDeclaration in methodDeclaration.Parameters)
+            foreach (ParameterDeclarationNode propertyDeclaration in methodDeclaration.Parameters)
             {
                 parameters.Add(new PseudoPropertySymbol
                 {

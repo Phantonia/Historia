@@ -14,11 +14,11 @@ public sealed record ParenthesizedExpressionNode : ExpressionNode
 
     public override IEnumerable<SyntaxNode> Children => [InnerExpression];
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(OpenParenthesisToken.Reconstruct());
+        OpenParenthesisToken.Reconstruct(writer);
         InnerExpression.Reconstruct(writer);
-        writer.Write(ClosedParenthesisToken.Reconstruct());
+        ClosedParenthesisToken.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"({InnerExpression.GetDebuggerDisplay()})";

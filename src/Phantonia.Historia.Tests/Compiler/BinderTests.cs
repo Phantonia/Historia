@@ -211,11 +211,11 @@ public sealed class BinderTests
                 Name: "Line",
                 Properties:
                 [
-                    PropertyDeclarationNode
+                    ParameterDeclarationNode
                 {
                     Type: BoundTypeNode
                 },
-                    PropertyDeclarationNode
+                    ParameterDeclarationNode
                 {
                     Type: BoundTypeNode
                 }
@@ -483,7 +483,7 @@ public sealed class BinderTests
                 Properties.Length: 2,
             });
 
-            Assert.IsTrue(typedExpression.Expression is BoundRecordCreationExpressionNode
+            Assert.IsTrue(typedExpression.Original is BoundRecordCreationExpressionNode
             {
                 Record: RecordTypeSymbol
                 {
@@ -494,7 +494,7 @@ public sealed class BinderTests
                 {
                     Expression: TypedExpressionNode
                     {
-                        Expression: StringLiteralExpressionNode,
+                        Original: StringLiteralExpressionNode,
                         SourceType: BuiltinTypeSymbol
                         {
                             Type: BuiltinType.String,
@@ -1665,7 +1665,7 @@ public sealed class BinderTests
             Assert.AreEqual(characterType, typedExpression.SourceType);
             Assert.AreEqual(characterType, typedExpression.TargetType);
 
-            BoundEnumOptionExpressionNode enumOptionExpression = (BoundEnumOptionExpressionNode)typedExpression.Expression;
+            BoundEnumOptionExpressionNode enumOptionExpression = (BoundEnumOptionExpressionNode)typedExpression.Original;
 
             Assert.AreEqual("Character", enumOptionExpression.EnumName);
             Assert.AreEqual(optionNames[i], enumOptionExpression.OptionName);
@@ -1914,7 +1914,7 @@ public sealed class BinderTests
         if (ifStatement.Condition is not TypedExpressionNode
             {
                 SourceType: TypeSymbol conditionType,
-                Expression: LogicExpressionNode
+                Original: LogicExpressionNode
                 {
                     LeftExpression: ExpressionNode leftHandSide,
                     RightExpression: ExpressionNode rightHandSide,
@@ -1930,7 +1930,7 @@ public sealed class BinderTests
         if (leftHandSide is not TypedExpressionNode
             {
                 SourceType: TypeSymbol leftHandType,
-                Expression: BoundIsExpressionNode
+                Original: BoundIsExpressionNode
                 {
                     Outcome: OutcomeSymbol leftHandOutcome,
                 },
@@ -1946,7 +1946,7 @@ public sealed class BinderTests
         if (rightHandSide is not TypedExpressionNode
             {
                 SourceType: TypeSymbol rightHandType,
-                Expression: BoundIsExpressionNode
+                Original: BoundIsExpressionNode
                 {
                     Outcome: OutcomeSymbol rightHandOutcome,
                 },
@@ -1965,12 +1965,12 @@ public sealed class BinderTests
         if (elseIfStatement.Condition is not TypedExpressionNode
             {
                 SourceType: TypeSymbol elseConditionType,
-                Expression: NotExpressionNode
+                Original: NotExpressionNode
                 {
                     InnerExpression: TypedExpressionNode
                     {
                         SourceType: TypeSymbol innerType,
-                        Expression: BoundIsExpressionNode,
+                        Original: BoundIsExpressionNode,
                     },
                 },
             })

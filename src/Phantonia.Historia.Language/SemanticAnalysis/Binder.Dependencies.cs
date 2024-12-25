@@ -57,7 +57,7 @@ public sealed partial class Binder
         {
             case RecordSymbolDeclarationNode recordDeclaration:
                 // spec 1.2.1.5: "A type A is directly depends on another type B, if A is a record and B is the type of any of its properties [...]"
-                foreach (PropertyDeclarationNode propertyDeclaration in recordDeclaration.Properties)
+                foreach (ParameterDeclarationNode propertyDeclaration in recordDeclaration.Properties)
                 {
                     Debug.Assert(propertyDeclaration.Type is BoundTypeNode);
 

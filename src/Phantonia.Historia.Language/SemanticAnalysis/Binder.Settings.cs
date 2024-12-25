@@ -101,7 +101,7 @@ public sealed partial class Binder
                 Expression: TypedExpressionNode
                 {
                     SourceType: TypeSymbol expressionType,
-                    Expression: ExpressionNode expressionNode,
+                    Original: ExpressionNode expressionNode,
                 }
             }:
                 return EvaluateNamespaceSetting(expressionNode, expressionType, previousSettings, table);
@@ -111,7 +111,7 @@ public sealed partial class Binder
                 Expression: TypedExpressionNode
                 {
                     SourceType: TypeSymbol expressionType,
-                    Expression: ExpressionNode expressionNode,
+                    Original: ExpressionNode expressionNode,
                 }
             }:
                 return EvaluateStoryNameSetting(expressionNode, expressionType, previousSettings, table);

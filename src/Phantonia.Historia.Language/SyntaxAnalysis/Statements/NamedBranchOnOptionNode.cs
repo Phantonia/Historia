@@ -9,10 +9,10 @@ public sealed record NamedBranchOnOptionNode() : BranchOnOptionNode
 
     public string OptionName => OptionNameToken.Text;
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(OptionKeywordToken.Reconstruct());
-        writer.Write(OptionNameToken.Reconstruct());
+        OptionKeywordToken.Reconstruct(writer);
+        OptionNameToken.Reconstruct(writer);
         Body.Reconstruct(writer);
     }
 

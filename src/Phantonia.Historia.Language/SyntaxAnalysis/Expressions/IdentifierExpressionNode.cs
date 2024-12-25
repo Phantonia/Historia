@@ -12,9 +12,9 @@ public sealed record IdentifierExpressionNode() : ExpressionNode
 
     public override IEnumerable<SyntaxNode> Children => [];
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(IdentifierToken.Reconstruct());
+        IdentifierToken.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"identifier {Identifier}";

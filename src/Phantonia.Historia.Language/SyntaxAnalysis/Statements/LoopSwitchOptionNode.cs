@@ -19,12 +19,12 @@ public sealed record LoopSwitchOptionNode() : SyntaxNode
 
     public override IEnumerable<SyntaxNode> Children => [Expression, Body];
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(KindToken?.Reconstruct() ?? "");
-        writer.Write(OptionKeywordToken.Reconstruct());
-        writer.Write(Expression.Reconstruct());
-        writer.Write(Body.Reconstruct());
+        KindToken?.Reconstruct(writer);
+        OptionKeywordToken.Reconstruct(writer);
+        Expression.Reconstruct(writer);
+        Body.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay()

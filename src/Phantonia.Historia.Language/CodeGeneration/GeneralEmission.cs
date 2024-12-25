@@ -373,7 +373,7 @@ public static class GeneralEmission
             return;
         }
 
-        switch (typedExpression.Expression)
+        switch (typedExpression.Original)
         {
             case IntegerLiteralExpressionNode { Value: int intValue }:
                 writer.Write(intValue);

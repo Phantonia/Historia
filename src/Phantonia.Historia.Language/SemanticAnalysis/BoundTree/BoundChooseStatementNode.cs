@@ -22,9 +22,9 @@ public sealed record BoundChooseStatementNode() : StatementNode
 
     public override IEnumerable<SyntaxNode> Children => [Original, .. Arguments, .. Options];
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        Original.ReconstructCore(writer);
+        Original.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay()

@@ -16,11 +16,11 @@ public record CallStatementNode() : StatementNode
 
     public override IEnumerable<SyntaxNode> Children => [];
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(CallKeywordToken.Reconstruct());
-        writer.Write(SceneNameToken.Reconstruct());
-        writer.Write(SemicolonToken.Reconstruct());
+        CallKeywordToken.Reconstruct(writer);
+        SceneNameToken.Reconstruct(writer);
+        SemicolonToken.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"call {SceneName}";

@@ -109,7 +109,7 @@ public sealed class FlowAnalyzerTests
                 {
                     OutputExpression: TypedExpressionNode
                     {
-                        Expression: IntegerLiteralExpressionNode { Value: var val }
+                        Original: IntegerLiteralExpressionNode { Value: var val }
                     }
                 }:
                     Assert.AreEqual(value, val);
@@ -118,7 +118,7 @@ public sealed class FlowAnalyzerTests
                 {
                     OutputExpression: TypedExpressionNode
                     {
-                        Expression: IntegerLiteralExpressionNode { Value: var val }
+                        Original: IntegerLiteralExpressionNode { Value: var val }
                     }
                 }:
                     Assert.AreEqual(value, val);
@@ -581,7 +581,7 @@ public sealed class FlowAnalyzerTests
             {
                 OutputExpression: TypedExpressionNode
                 {
-                    Expression: IntegerLiteralExpressionNode
+                    Original: IntegerLiteralExpressionNode
                     {
                         Value: int value,
                     }
@@ -597,7 +597,7 @@ public sealed class FlowAnalyzerTests
             {
                 OutputExpression: TypedExpressionNode
                 {
-                    Expression: IntegerLiteralExpressionNode
+                    Original: IntegerLiteralExpressionNode
                     {
                         Value: int value,
                     }

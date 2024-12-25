@@ -20,9 +20,9 @@ public sealed record BoundRunStatementNode() : StatementNode
 
     public override IEnumerable<SyntaxNode> Children => [Original, .. Arguments];
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        Original.ReconstructCore(writer);
+        Original.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"run {Reference.Name}.{Method.Name}({string.Join(", ", Arguments.Select(a => a.GetDebuggerDisplay()))})";

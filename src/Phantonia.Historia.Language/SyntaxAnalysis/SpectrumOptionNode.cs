@@ -28,13 +28,13 @@ public sealed record SpectrumOptionNode() : SyntaxNode
 
     public override IEnumerable<SyntaxNode> Children => [];
 
-    public override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(NameToken.Reconstruct());
-        writer.Write(InequalitySignToken.Reconstruct());
-        writer.Write(NumeratorToken.Reconstruct());
-        writer.Write(SlashToken.Reconstruct());
-        writer.Write(DenominatorToken.Reconstruct());
+        NameToken.Reconstruct(writer);
+        InequalitySignToken.Reconstruct(writer);
+        NumeratorToken.Reconstruct(writer);
+        SlashToken.Reconstruct(writer);
+        DenominatorToken.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"spectrum option {Name} <{(Inclusive ? "=" : "")} {Numerator}/{Denominator}";

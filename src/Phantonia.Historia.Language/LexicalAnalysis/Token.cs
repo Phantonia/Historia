@@ -4,7 +4,7 @@ using System.IO;
 namespace Phantonia.Historia.Language.LexicalAnalysis;
 
 [DebuggerDisplay($"{{{nameof(GetDebuggerDisplay)}(),nq}}")]
-public readonly record struct Token
+public readonly record struct Token : IReconstructable
 {
     public required TokenKind Kind { get; init; }
 

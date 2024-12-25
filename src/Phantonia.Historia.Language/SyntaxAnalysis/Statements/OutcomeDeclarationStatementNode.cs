@@ -35,23 +35,23 @@ public record OutcomeDeclarationStatementNode() : StatementNode, IOutcomeDeclara
 
     public override IEnumerable<SyntaxNode> Children => [];
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(OutcomeKeywordToken.Reconstruct());
-        writer.Write(NameToken.Reconstruct());
-        writer.Write(OpenParenthesisToken.Reconstruct());
+        OutcomeKeywordToken.Reconstruct(writer);
+        NameToken.Reconstruct(writer);
+        OpenParenthesisToken.Reconstruct(writer);
 
         Debug.Assert(OptionNameTokens.Length - CommaTokens.Length is 1 or 0);
 
         foreach ((Token optionNameToken, Token commaToken) in OptionNameTokens.Zip(CommaTokens))
         {
-            writer.Write(optionNameToken.Reconstruct());
-            writer.Write(commaToken.Reconstruct());
+            optionNameToken.Reconstruct(writer);
+            commaToken.Reconstruct(writer);
         }
 
         if (OptionNameTokens.Length > CommaTokens.Length)
         {
-            writer.Write(OptionNameTokens[^1].Text);
+            OptionNameTokens[^1].Reconstruct(writer);
         }
     }
 

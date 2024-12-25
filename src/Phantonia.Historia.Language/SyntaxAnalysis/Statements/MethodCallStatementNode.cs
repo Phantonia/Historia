@@ -28,13 +28,13 @@ public abstract record MethodCallStatementNode() : StatementNode, IArgumentConta
 
     public override IEnumerable<SyntaxNode> Children => Arguments;
 
-    internal override void ReconstructCore(TextWriter writer)
+    protected override void ReconstructCore(TextWriter writer)
     {
-        writer.Write(RunOrChooseKeywordToken.Reconstruct());
-        writer.Write(ReferenceNameToken.Reconstruct());
-        writer.Write(DotToken.Reconstruct());
-        writer.Write(MethodNameToken.Reconstruct());
-        writer.Write(OpenParenthesisToken.Reconstruct());
+        RunOrChooseKeywordToken.Reconstruct(writer);
+        ReferenceNameToken.Reconstruct(writer);
+        DotToken.Reconstruct(writer);
+        MethodNameToken.Reconstruct(writer);
+        OpenParenthesisToken.Reconstruct(writer);
 
         foreach (ArgumentNode argument in Arguments)
         {
