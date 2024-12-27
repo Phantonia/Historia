@@ -1,4 +1,5 @@
 ﻿using Phantonia.Historia.Language;
+using System.Diagnostics;
 
 namespace Phantonia.Historia.Build;
 
@@ -12,14 +13,18 @@ internal static class Program
         using TextReader inputReader = new StreamReader(InputPath);
         using TextWriter outputWriter = new StreamWriter(OutputPath);
 
+        Stopwatch sw = Stopwatch.StartNew();
         Compiler compiler = new(inputReader, outputWriter);
         CompilationResult result = compiler.Compile();
+        sw.Stop();
 
         if (result.IsValid)
         {
-            Console.WriteLine("Compilation successful!");
+            Console.WriteLine($"Compilation successful after {sw.Elapsed.TotalSeconds} seconds!");
             return;
         }
+
+        Console.WriteLine($"Compilation did not succeed after {sw.Elapsed.TotalSeconds} seconds.");
 
         string code = File.ReadAllText(InputPath);
 
