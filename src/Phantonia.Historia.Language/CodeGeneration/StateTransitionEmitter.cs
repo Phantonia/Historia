@@ -59,14 +59,14 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
                 case OutputStatementNode:
                     GenerateOutputTransition(index, edges);
                     break;
-                case SwitchStatementNode switchStatement:
-                    GenerateSwitchTransition(switchStatement, edges);
+                case FlowBranchingStatementNode { Original: SwitchStatementNode switchStatement, OutgoingEdges: ImmutableList<FlowEdge> outgoingEdges }:
+                    GenerateSwitchTransition(switchStatement, outgoingEdges);
                     break;
-                case LoopSwitchStatementNode loopSwitchStatement:
-                    GenerateLoopSwitchTransition(loopSwitchStatement, edges);
+                case FlowBranchingStatementNode { Original: LoopSwitchStatementNode loopSwitchStatement, OutgoingEdges: ImmutableList<FlowEdge> outgoingEdges }:
+                    GenerateLoopSwitchTransition(loopSwitchStatement, outgoingEdges);
                     break;
-                case BoundBranchOnStatementNode branchOnStatement:
-                    GenerateBranchOnTransition(branchOnStatement, edges);
+                case FlowBranchingStatementNode { Original: BoundBranchOnStatementNode branchOnStatement, OutgoingEdges: ImmutableList<FlowEdge> outgoingEdges }:
+                    GenerateBranchOnTransition(branchOnStatement, outgoingEdges);
                     break;
                 case BoundOutcomeAssignmentStatementNode outcomeAssignment:
                     GenerateOutcomeAssignmentTransition(outcomeAssignment, edges);
@@ -83,11 +83,11 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
                 case BoundRunStatementNode runStatement:
                     GenerateRunTransition(runStatement, edges);
                     break;
-                case BoundChooseStatementNode chooseStatement:
-                    GenerateChooseTransition(chooseStatement, edges);
+                case FlowBranchingStatementNode { Original: BoundChooseStatementNode chooseStatement, OutgoingEdges: ImmutableList<FlowEdge> outgoingEdges }:
+                    GenerateChooseTransition(chooseStatement, outgoingEdges);
                     break;
-                case IfStatementNode ifStatement:
-                    GenerateIfTransition(ifStatement, edges);
+                case FlowBranchingStatementNode { Original: IfStatementNode ifStatement, OutgoingEdges: ImmutableList<FlowEdge> outgoingEdges }:
+                    GenerateIfTransition(ifStatement, outgoingEdges);
                     break;
                 default:
                     Debug.Assert(false);

@@ -203,11 +203,11 @@ public sealed partial class FlowAnalyzer
                 ErrorOnLocked(boundAdjustment.Index);
                 definitelyAssigned = true;
                 break;
-            case BoundBranchOnStatementNode boundBranchOn when boundBranchOn.Outcome == outcome:
+            case FlowBranchingStatementNode { Original: BoundBranchOnStatementNode boundBranchOn } when boundBranchOn.Outcome == outcome:
                 ErrorOnUnassigned(boundBranchOn.Index);
                 ErrorOnLocked(boundBranchOn.Index);
                 break;
-            case IfStatementNode ifStatement:
+            case FlowBranchingStatementNode { Original: IfStatementNode ifStatement }:
                 void ProcessExpression(ExpressionNode expression)
                 {
                     if (expression is not TypedExpressionNode { Expression: ExpressionNode untypedExpression })

@@ -82,6 +82,16 @@ public sealed record FlowGraph
         }
     }
 
+    public FlowGraph SetVertex(int index, FlowVertex newVertex)
+    {
+        Debug.Assert(Vertices.ContainsKey(index));
+
+        return this with
+        {
+            Vertices = Vertices.SetItem(index, newVertex),
+        };
+    }
+
     public FlowGraph Append(FlowGraph graph)
     {
         // this method generates a huge amount of waste - can we optimize this?

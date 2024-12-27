@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public sealed record IfStatementNode() : StatementNode
+public sealed record IfStatementNode() : StatementNode, IBranchingStatementNode
 {
     public required ExpressionNode Condition { get; init; }
 
@@ -15,4 +15,6 @@ public sealed record IfStatementNode() : StatementNode
 
     protected internal override string GetDebuggerDisplay()
         => $"if ({Condition.GetDebuggerDisplay()}) run {ThenBlock.Statements.Length} statement(s), else run {ElseBlock?.Statements.Length ?? 0} statement(s)";
+
+    IEnumerable<StatementBodyNode> IBranchingStatementNode.Bodies => [ThenBlock, ElseBlock];
 }

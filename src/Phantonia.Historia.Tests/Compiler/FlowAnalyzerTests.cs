@@ -114,11 +114,14 @@ public sealed class FlowAnalyzerTests
                 }:
                     Assert.AreEqual(value, val);
                     break;
-                case SwitchStatementNode
-                {
-                    OutputExpression: TypedExpressionNode
+                case FlowBranchingStatementNode
+                { 
+                    Original: SwitchStatementNode
                     {
-                        Expression: IntegerLiteralExpressionNode { Value: var val }
+                        OutputExpression: TypedExpressionNode
+                        {
+                            Expression: IntegerLiteralExpressionNode { Value: var val }
+                        }
                     }
                 }:
                     Assert.AreEqual(value, val);

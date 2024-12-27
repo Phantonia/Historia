@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 
-public sealed record BoundChooseStatementNode() : StatementNode
+public sealed record BoundChooseStatementNode() : StatementNode, IBranchingStatementNode
 {
     public required ReferenceSymbol Reference { get; init; }
 
@@ -22,4 +22,5 @@ public sealed record BoundChooseStatementNode() : StatementNode
     protected internal override string GetDebuggerDisplay()
         => $"choose {Reference.Name}.{Method.Name}({string.Join(", ", Arguments.Select(a => a.GetDebuggerDisplay()))}) {{ {string.Join(", ", Options.Select(o => o.GetDebuggerDisplay()))} }}";
 
+    IEnumerable<StatementBodyNode> IBranchingStatementNode.Bodies => Options.Select(o => o.Body);
 }

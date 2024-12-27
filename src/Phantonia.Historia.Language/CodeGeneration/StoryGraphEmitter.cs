@@ -81,7 +81,12 @@ public sealed class StoryGraphEmitter(FlowGraph flowGraph, Settings settings, In
 
         writer.BeginBlock();
 
-        IOutputStatementNode outputStatement = (IOutputStatementNode)vertex.AssociatedStatement;
+        IOutputStatementNode outputStatement = vertex.AssociatedStatement switch
+        {
+            IOutputStatementNode os => os,
+            FlowBranchingStatementNode { Original: IOutputStatementNode os } => os,
+            _ => throw new InvalidOperationException(),
+        };
 
         GenerateOptions(outputStatement); // includes writer.WriteLine()
 

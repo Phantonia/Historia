@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public sealed record SwitchStatementNode() : StatementNode, IOutputStatementNode
+public sealed record SwitchStatementNode() : StatementNode, IOutputStatementNode, IBranchingStatementNode
 {
     public required ExpressionNode OutputExpression { get; init; }
 
@@ -16,4 +16,6 @@ public sealed record SwitchStatementNode() : StatementNode, IOutputStatementNode
     public override IEnumerable<SyntaxNode> Children => [OutputExpression, .. Options];
 
     protected internal override string GetDebuggerDisplay() => $"switch {{ {string.Join(", ", Options.Select(o => o.GetDebuggerDisplay()))} }}";
+
+    IEnumerable<StatementBodyNode> IBranchingStatementNode.Bodies => Options.Select(o => o.Body);
 }

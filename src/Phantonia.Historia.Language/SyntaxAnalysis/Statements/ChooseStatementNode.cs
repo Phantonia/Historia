@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public sealed record ChooseStatementNode() : MethodCallStatementNode
+public sealed record ChooseStatementNode() : MethodCallStatementNode, IBranchingStatementNode
 {
     public required ImmutableArray<OptionNode> Options { get; init; }
 
@@ -12,4 +12,6 @@ public sealed record ChooseStatementNode() : MethodCallStatementNode
 
     protected internal override string GetDebuggerDisplay()
         => $"choose {ReferenceName}.{MethodName}({string.Join(", ", Arguments.Select(a => a.GetDebuggerDisplay()))}) {{ {string.Join(", ", Options.Select(o => o.GetDebuggerDisplay()))} }}";
+
+    IEnumerable<StatementBodyNode> IBranchingStatementNode.Bodies => Options.Select(o => o.Body);
 }

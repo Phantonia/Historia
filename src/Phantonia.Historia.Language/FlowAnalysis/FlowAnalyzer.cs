@@ -114,9 +114,20 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
         foreach (OptionNode option in switchStatement.Options)
         {
             FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body);
-
             flowGraph = flowGraph.AppendToVertex(switchStatement.Index, nestedFlowGraph);
         }
+
+        FlowBranchingStatementNode flowBranchingStatement = new()
+        {
+            Original = switchStatement,
+            OutgoingEdges = flowGraph.OutgoingEdges[switchStatement.Index],
+            Index = switchStatement.Index,
+        };
+
+        flowGraph = flowGraph.SetVertex(switchStatement.Index, flowGraph.Vertices[switchStatement.Index] with
+        {
+            AssociatedStatement = flowBranchingStatement,
+        });
 
         return flowGraph;
     }
@@ -228,6 +239,18 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             StartEdges = flowGraph.StartEdges.Add(FlowEdge.CreateWeakTo(startVertex)),
         };
 
+        FlowBranchingStatementNode flowBranchingStatement = new()
+        {
+            Original = loopSwitchStatement,
+            OutgoingEdges = flowGraph.OutgoingEdges[loopSwitchStatement.Index],
+            Index = loopSwitchStatement.Index,
+        };
+
+        flowGraph = flowGraph.SetVertex(loopSwitchStatement.Index, flowGraph.Vertices[loopSwitchStatement.Index] with
+        {
+            AssociatedStatement = flowBranchingStatement,
+        });
+
         return flowGraph;
     }
 
@@ -294,6 +317,18 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             flowGraph = flowGraph.AppendToVertex(branchOnStatement.Index, nestedFlowGraph);
         }
 
+        FlowBranchingStatementNode flowBranchingStatement = new()
+        {
+            Original = branchOnStatement,
+            OutgoingEdges = flowGraph.OutgoingEdges[branchOnStatement.Index],
+            Index = branchOnStatement.Index,
+        };
+
+        flowGraph = flowGraph.SetVertex(branchOnStatement.Index, flowGraph.Vertices[branchOnStatement.Index] with
+        {
+            AssociatedStatement = flowBranchingStatement,
+        });
+
         return flowGraph;
     }
 
@@ -312,6 +347,18 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
 
             flowGraph = flowGraph.AppendToVertex(chooseStatement.Index, nestedFlowGraph);
         }
+
+        FlowBranchingStatementNode flowBranchingStatement = new()
+        {
+            Original = chooseStatement,
+            OutgoingEdges = flowGraph.OutgoingEdges[chooseStatement.Index],
+            Index = chooseStatement.Index,
+        };
+
+        flowGraph = flowGraph.SetVertex(chooseStatement.Index, flowGraph.Vertices[chooseStatement.Index] with
+        {
+            AssociatedStatement = flowBranchingStatement,
+        });
 
         return flowGraph;
     }
@@ -342,6 +389,18 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
                 OutgoingEdges = flowGraph.OutgoingEdges.SetItem(ifStatement.Index, flowGraph.OutgoingEdges[ifStatement.Index].Add(FlowEdge.CreateStrongTo(FlowGraph.FinalVertex))),
             };
         }
+
+        FlowBranchingStatementNode flowBranchingStatement = new()
+        {
+            Original = ifStatement,
+            OutgoingEdges = flowGraph.OutgoingEdges[ifStatement.Index],
+            Index = ifStatement.Index,
+        };
+
+        flowGraph = flowGraph.SetVertex(ifStatement.Index, flowGraph.Vertices[ifStatement.Index] with
+        {
+            AssociatedStatement = flowBranchingStatement,
+        });
 
         return flowGraph;
     }
