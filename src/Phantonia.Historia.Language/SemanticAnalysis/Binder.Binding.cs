@@ -118,9 +118,9 @@ public sealed partial class Binder
 
         for (int i = 0; i < argumentContainer.Arguments.Length; i++)
         {
-            if (argumentContainer.Arguments[i].PropertyName != null && argumentContainer.Arguments[i].PropertyName != properties[i].Name)
+            if (argumentContainer.Arguments[i].ParameterName != null && argumentContainer.Arguments[i].ParameterName != properties[i].Name)
             {
-                ErrorFound?.Invoke(Errors.WrongPropertyInRecordCreation(argumentContainer.Arguments[i].PropertyName!, argumentContainer.Arguments[i].Index));
+                ErrorFound?.Invoke(Errors.WrongPropertyInRecordCreation(argumentContainer.Arguments[i].ParameterName!, argumentContainer.Arguments[i].Index));
 
                 continue;
             }
@@ -148,7 +148,7 @@ public sealed partial class Binder
             BoundArgumentNode boundArgument = new()
             {
                 Expression = typedExpression,
-                PropertyName = argumentContainer.Arguments[i].PropertyName,
+                PropertyName = argumentContainer.Arguments[i].ParameterName,
                 Property = properties[i],
                 Index = argumentContainer.Index,
             };

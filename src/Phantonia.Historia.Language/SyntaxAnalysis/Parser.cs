@@ -44,7 +44,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
             ErrorFound?.Invoke(Errors.ExpectedToken(tokens[index], kind));
             return new Token
             {
-                Kind = TokenKind.Empty,
+                Kind = TokenKind.Missing,
                 Index = tokens[index].Index,
                 Text = "",
                 PrecedingTrivia = "",
@@ -52,54 +52,59 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
         }
     }
 
-    private (string name, ImmutableArray<string> options, string? defaultOption, int nodeIndex) ParseOutcomeDeclaration(ref int index)
+    private OutcomeDeclarationInfo ParseOutcomeDeclaration(ref int index)
     {
-        Debug.Assert(tokens[index] is { Kind: TokenKind.OutcomeKeyword });
+        Debug.Assert(tokens[index] is TokenKind.OutcomeKeyword);
+        Token outcomeKeyword = tokens[index];
 
         int nodeIndex = tokens[index].Index;
         index++;
 
-        string name = Expect(TokenKind.Identifier, ref index).Text;
+        Token name = Expect(TokenKind.Identifier, ref index);
+        Token openParenthesis = Expect(TokenKind.OpenParenthesis, ref index);
 
-        _ = Expect(TokenKind.OpenParenthesis, ref index);
-
-        ImmutableArray<string>.Builder optionsBuilder = ImmutableArray.CreateBuilder<string>();
+        ImmutableArray<Token>.Builder optionsBuilder = ImmutableArray.CreateBuilder<Token>();
+        ImmutableArray<Token>.Builder commaBuilder = ImmutableArray.CreateBuilder<Token>();
 
         while (tokens[index] is { Kind: TokenKind.Identifier, Text: string option })
         {
-            optionsBuilder.Add(option);
+            optionsBuilder.Add(tokens[index]);
 
             index++;
 
-            if (tokens[index] is not { Kind: TokenKind.Comma })
+            if (tokens[index] is not TokenKind.Comma)
             {
                 break;
             }
             else
             {
+                commaBuilder.Add(tokens[index]);
                 index++;
             }
         }
 
-        _ = Expect(TokenKind.ClosedParenthesis, ref index);
+        Token closedParenthesis = Expect(TokenKind.ClosedParenthesis, ref index);
 
-        string? defaultOption = null;
+        Token? defaultKeyword = null;
+        Token? defaultOption = null;
 
-        if (tokens[index] is { Kind: TokenKind.DefaultKeyword })
+        if (tokens[index] is TokenKind.DefaultKeyword)
         {
+            defaultKeyword = tokens[index];
+
             index++;
 
-            defaultOption = Expect(TokenKind.Identifier, ref index).Text;
+            defaultOption = Expect(TokenKind.Identifier, ref index);
         }
 
-        _ = Expect(TokenKind.Semicolon, ref index);
+        Token semicolon = Expect(TokenKind.Semicolon, ref index);
 
-        return (name, optionsBuilder.ToImmutable(), defaultOption, nodeIndex);
+        return new OutcomeDeclarationInfo(outcomeKeyword, name, openParenthesis, optionsBuilder.ToImmutable(), commaBuilder.ToImmutable(), defaultKeyword, defaultOption, semicolon, nodeIndex);
     }
 
     private (string name, ImmutableArray<SpectrumOptionNode> options, string? defaultOption, int nodeIndex) ParseSpectrumDeclaration(ref int index)
     {
-        Debug.Assert(tokens[index] is { Kind: TokenKind.SpectrumKeyword });
+        Debug.Assert(tokens[index] is TokenKind.SpectrumKeyword);
 
         int nodeIndex = tokens[index].Index;
         index++;
@@ -110,7 +115,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
 
         ImmutableArray<SpectrumOptionNode>.Builder optionBuilder = ImmutableArray.CreateBuilder<SpectrumOptionNode>();
 
-        while (tokens[index] is { Kind: TokenKind.Identifier })
+        while (tokens[index] is TokenKind.Identifier)
         {
             string optionName = tokens[index].Text;
             int optionIndex = tokens[index].Index;
@@ -130,7 +135,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
                 break;
             }
 
-            bool inclusive = tokens[index] is { Kind: TokenKind.LessThanOrEquals };
+            bool inclusive = tokens[index] is TokenKind.LessThanOrEquals;
             index++;
 
             int? numerator = Expect(TokenKind.IntegerLiteral, ref index).IntegerValue;
@@ -158,7 +163,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
 
         string? defaultOption = null;
 
-        if (tokens[index] is { Kind: TokenKind.DefaultKeyword })
+        if (tokens[index] is TokenKind.DefaultKeyword)
         {
             index++;
             defaultOption = Expect(TokenKind.Identifier, ref index).Text;
@@ -260,7 +265,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
                 };
             case { Kind: TokenKind.Identifier, Text: string identifier }:
                 return ParseIdentifierExpression(ref index);
-            case { Kind: TokenKind.OpenParenthesis }:
+            case TokenKind.OpenParenthesis:
                 {
                     index++;
 
@@ -274,9 +279,9 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
 
                     return expression;
                 }
-            case { Kind: TokenKind.NotKeyword }:
+            case TokenKind.NotKeyword:
                 return ParseNotExpression(ref index);
-            case { Kind: TokenKind.EndOfFile }:
+            case TokenKind.EndOfFile:
                 ErrorFound?.Invoke(Errors.UnexpectedEndOfFile(tokens[index]));
                 return null;
             default:
@@ -290,7 +295,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
 
     private ExpressionNode? ParseIdentifierExpression(ref int index)
     {
-        Debug.Assert(tokens[index] is { Kind: TokenKind.Identifier });
+        Debug.Assert(tokens[index] is TokenKind.Identifier);
 
         string name = tokens[index].Text;
         int nodeIndex = tokens[index].Index;
@@ -349,51 +354,63 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
         }
     }
 
-    private ImmutableArray<ArgumentNode>? ParseArgumentList(ref int index)
+    private (Token openParenthesis, ImmutableArray<ArgumentNode>, Token closedParenthesis) ParseArgumentList(ref int index)
     {
-        _ = Expect(TokenKind.OpenParenthesis, ref index);
+        Token openParenthesis = Expect(TokenKind.OpenParenthesis, ref index);
 
         ImmutableArray<ArgumentNode>.Builder arguments = ImmutableArray.CreateBuilder<ArgumentNode>();
 
-        while (tokens[index] is not { Kind: TokenKind.ClosedParenthesis })
+        while (tokens[index].Kind is not TokenKind.ClosedParenthesis)
         {
             int argumentIndex = tokens[index].Index;
 
             if (index < tokens.Length - 1 && tokens[index].Kind == TokenKind.Identifier && tokens[index + 1].Kind == TokenKind.Equals)
             {
                 // named argument
-                string argumentName = tokens[index].Text;
+                Token argumentName = tokens[index];
+                Token equals = tokens[index + 1];
                 index += 2;
 
-                ExpressionNode? expression = ParseExpression(ref index);
-                if (expression is null)
-                {
-                    return null;
-                }
+                ExpressionNode expression = ParseExpression(ref index);
 
+                Token? comma = null;
+
+                if (tokens[index].Kind is TokenKind.Comma)
+                {
+                    comma = tokens[index];
+                }
+                
                 arguments.Add(new ArgumentNode
                 {
+                    ParameterNameToken = argumentName,
+                    EqualsToken = equals,
                     Expression = expression,
-                    PropertyName = argumentName,
+                    CommaToken = comma,
                     Index = argumentIndex,
                 });
             }
             else
             {
-                ExpressionNode? expression = ParseExpression(ref index);
-                if (expression is null)
+                ExpressionNode expression = ParseExpression(ref index);
+
+                Token? comma = null;
+
+                if (tokens[index].Kind is TokenKind.Comma)
                 {
-                    return null;
+                    comma = tokens[index];
                 }
 
                 arguments.Add(new ArgumentNode
                 {
+                    ParameterNameToken = null,
+                    EqualsToken = null,
                     Expression = expression,
+                    CommaToken = comma,
                     Index = expression.Index,
                 });
             }
 
-            if (tokens[index] is not { Kind: TokenKind.Comma })
+            if (tokens[index].Kind is not TokenKind.Comma)
             {
                 break;
             }
@@ -403,9 +420,9 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
 
         // in case of no trailing comma, just expect a closed parenthesis
         // else this is redundant and just does index++
-        _ = Expect(TokenKind.ClosedParenthesis, ref index);
+        Token closedParenthesis = Expect(TokenKind.ClosedParenthesis, ref index);
 
-        return arguments.ToImmutable();
+        return (openParenthesis, arguments.ToImmutable(), closedParenthesis);
     }
 
     private NotExpressionNode? ParseNotExpression(ref int index)
@@ -435,7 +452,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
         {
             case { Kind: TokenKind.Identifier, Text: string identifier }:
                 return new IdentifierTypeNode { Identifier = identifier, Index = tokens[index++].Index };
-            case { Kind: TokenKind.EndOfFile }:
+            case TokenKind.EndOfFile:
                 ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index]));
                 return null;
             default:

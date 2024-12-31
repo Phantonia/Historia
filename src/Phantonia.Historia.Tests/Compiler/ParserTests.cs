@@ -454,13 +454,13 @@ public sealed class ParserTests
         Assert.IsTrue(recordCreation.Arguments[0] is
         {
             Expression: StringLiteralExpressionNode,
-            PropertyName: null,
+            ParameterName: null,
         });
 
         Assert.IsTrue(recordCreation.Arguments[1] is
         {
             Expression: IntegerLiteralExpressionNode,
-            PropertyName: "Character",
+            ParameterName: "Character",
         });
 
         Assert.IsTrue(recordCreation.Arguments[2] is
@@ -469,7 +469,7 @@ public sealed class ParserTests
             {
                 Arguments.Length: 2,
             },
-            PropertyName: null,
+            ParameterName: null,
         });
     }
 

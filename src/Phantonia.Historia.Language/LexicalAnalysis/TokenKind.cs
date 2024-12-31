@@ -5,7 +5,7 @@ public enum TokenKind
     // general
     Unknown,
     EndOfFile,
-    Empty,
+    Missing,
 
     // punctuation
     OpenBrace, // {

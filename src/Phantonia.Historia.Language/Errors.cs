@@ -38,7 +38,7 @@ public static class Errors
 
     public static Error BrokenStringLiteral(Token brokenToken)
     {
-        Debug.Assert(brokenToken is { Kind: TokenKind.BrokenStringLiteral });
+        Debug.Assert(brokenToken is TokenKind.BrokenStringLiteral);
 
         return new Error
         {
@@ -88,7 +88,7 @@ public static class Errors
 
     public static Error SettingDoesNotExist(Token identifierToken)
     {
-        Debug.Assert(identifierToken is { Kind: TokenKind.Identifier });
+        Debug.Assert(identifierToken is TokenKind.Identifier);
 
         return new Error
         {
@@ -99,7 +99,7 @@ public static class Errors
 
     public static Error UnexpectedEndOfFile(Token endOfFileToken)
     {
-        Debug.Assert(endOfFileToken is { Kind: TokenKind.EndOfFile });
+        Debug.Assert(endOfFileToken is TokenKind.EndOfFile);
 
         return new Error
         {

@@ -6,21 +6,25 @@ namespace Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 
 public record ArgumentNode() : SyntaxNode
 {
-    public required Token? PropertyNameToken { get; init; }
+    public required Token? ParameterNameToken { get; init; }
 
-    public string? PropertyName => PropertyNameToken?.Text;
+    public string? ParameterName => ParameterNameToken?.Text;
 
     public required Token? EqualsToken { get; init; }
 
     public required ExpressionNode Expression { get; init; }
 
+    public required Token? CommaToken { get; init; }
+
     public override IEnumerable<SyntaxNode> Children => [Expression];
 
     protected override void ReconstructCore(TextWriter writer)
     {
-        PropertyNameToken?.Reconstruct(writer);
+        ParameterNameToken?.Reconstruct(writer);
         EqualsToken?.Reconstruct(writer);
+        Expression.Reconstruct(writer);
+        CommaToken?.Reconstruct(writer);
     }
 
-    protected internal override string GetDebuggerDisplay() => $"argument {PropertyName ?? ""}{EqualsToken?.Text ?? ""}{Expression.GetDebuggerDisplay()}";
+    protected internal override string GetDebuggerDisplay() => $"argument {ParameterName ?? ""}{EqualsToken?.Text ?? ""}{Expression.GetDebuggerDisplay()}";
 }

@@ -15,23 +15,23 @@ public sealed partial class Parser
     {
         switch (tokens[index])
         {
-            case { Kind: TokenKind.SceneKeyword }:
+            case TokenKind.SceneKeyword:
                 // if parse scene symbol returns null
                 // we have an eof too early
                 // however this still means we can return null here
                 // which means we are done parsing
                 return ParseSceneSymbolDeclaration(ref index);
-            case { Kind: TokenKind.RecordKeyword }:
+            case TokenKind.RecordKeyword:
                 return ParseRecordSymbolDeclaration(ref index);
-            case { Kind: TokenKind.UnionKeyword }:
+            case TokenKind.UnionKeyword:
                 return ParseUnionSymbolDeclaration(ref index);
-            case { Kind: TokenKind.EnumKeyword }:
+            case TokenKind.EnumKeyword:
                 return ParseEnumSymbolDeclaration(ref index);
-            case { Kind: TokenKind.SettingKeyword }:
+            case TokenKind.SettingKeyword:
                 return ParseSettingDirective(ref index);
-            case { Kind: TokenKind.PublicKeyword }:
+            case TokenKind.PublicKeyword:
                 return ParsePublicTopLevelNode(ref index);
-            case { Kind: TokenKind.OutcomeKeyword }:
+            case TokenKind.OutcomeKeyword:
                 {
                     (string name, ImmutableArray<string> options, string? defaultOption, int nodeIndex) = ParseOutcomeDeclaration(ref index);
 
@@ -44,7 +44,7 @@ public sealed partial class Parser
                         Index = nodeIndex,
                     };
                 }
-            case { Kind: TokenKind.SpectrumKeyword }:
+            case TokenKind.SpectrumKeyword:
                 {
                     (string name, ImmutableArray<SpectrumOptionNode> options, string? defaultOption, int nodeIndex) = ParseSpectrumDeclaration(ref index);
 
@@ -57,11 +57,11 @@ public sealed partial class Parser
                         Index = nodeIndex,
                     };
                 }
-            case { Kind: TokenKind.InterfaceKeyword }:
+            case TokenKind.InterfaceKeyword:
                 return ParseInterfaceDeclaration(ref index);
-            case { Kind: TokenKind.ReferenceKeyword }:
+            case TokenKind.ReferenceKeyword:
                 return ParseReferenceDeclaration(ref index);
-            case { Kind: TokenKind.EndOfFile }:
+            case TokenKind.EndOfFile:
                 return null;
             default:
                 {
@@ -97,7 +97,7 @@ public sealed partial class Parser
 
     private UnionSymbolDeclarationNode? ParseUnionSymbolDeclaration(ref int index)
     {
-        Debug.Assert(tokens[index] is { Kind: TokenKind.UnionKeyword });
+        Debug.Assert(tokens[index] is TokenKind.UnionKeyword);
 
         int nodeIndex = tokens[index].Index;
         index++;
@@ -108,7 +108,7 @@ public sealed partial class Parser
 
         ImmutableArray<TypeNode>.Builder subtypeBuilder = ImmutableArray.CreateBuilder<TypeNode>();
 
-        while (tokens[index] is not { Kind: TokenKind.ClosedParenthesis })
+        while (tokens[index] is not TokenKind.ClosedParenthesis)
         {
             TypeNode? subtype = ParseType(ref index);
 
@@ -119,7 +119,7 @@ public sealed partial class Parser
 
             subtypeBuilder.Add(subtype);
 
-            if (tokens[index] is not { Kind: TokenKind.Comma })
+            if (tokens[index] is not TokenKind.Comma)
             {
                 break;
             }
@@ -149,7 +149,7 @@ public sealed partial class Parser
             PropertyDeclaration: identifier ':' Type;
          */
 
-        Debug.Assert(tokens[index] is { Kind: TokenKind.RecordKeyword });
+        Debug.Assert(tokens[index] is TokenKind.RecordKeyword);
 
         int nodeIndex = tokens[index].Index;
 
@@ -180,7 +180,7 @@ public sealed partial class Parser
 
         ImmutableArray<ParameterDeclarationNode>.Builder propertyDeclarations = ImmutableArray.CreateBuilder<ParameterDeclarationNode>();
 
-        while (tokens[index] is not { Kind: TokenKind.ClosedParenthesis })
+        while (tokens[index] is not TokenKind.ClosedParenthesis)
         {
             Token propertyIdentifierToken = Expect(TokenKind.Identifier, ref index);
             _ = Expect(TokenKind.Colon, ref index);
@@ -198,7 +198,7 @@ public sealed partial class Parser
                 Index = propertyIdentifierToken.Index,
             });
 
-            if (tokens[index] is not { Kind: TokenKind.Comma })
+            if (tokens[index] is not TokenKind.Comma)
             {
                 break;
             }
@@ -217,7 +217,7 @@ public sealed partial class Parser
     {
         // spec 1.3.1.2:
         // EnumDeclaration : 'enum' identifier '(' (identifier (',' identifier)* ','?)? ')' ';';
-        Debug.Assert(tokens[index] is { Kind: TokenKind.EnumKeyword });
+        Debug.Assert(tokens[index] is TokenKind.EnumKeyword);
 
         int nodeIndex = tokens[index].Index;
         index++;
@@ -234,7 +234,7 @@ public sealed partial class Parser
 
             index++;
 
-            if (tokens[index] is not { Kind: TokenKind.Comma })
+            if (tokens[index] is not TokenKind.Comma)
             {
                 break;
             }
@@ -313,14 +313,14 @@ public sealed partial class Parser
 
     private TopLevelNode? ParsePublicTopLevelNode(ref int index)
     {
-        Debug.Assert(tokens[index] is { Kind: TokenKind.PublicKeyword });
+        Debug.Assert(tokens[index] is TokenKind.PublicKeyword);
 
         int nodeIndex = tokens[index].Index;
         index++;
 
         switch (tokens[index])
         {
-            case { Kind: TokenKind.SpectrumKeyword }:
+            case TokenKind.SpectrumKeyword:
                 {
                     (string name, ImmutableArray<SpectrumOptionNode> options, string? defaultOption, _) = ParseSpectrumDeclaration(ref index);
 
@@ -333,7 +333,7 @@ public sealed partial class Parser
                         Index = nodeIndex,
                     };
                 }
-            case { Kind: TokenKind.OutcomeKeyword }:
+            case TokenKind.OutcomeKeyword:
                 {
                     (string name, ImmutableArray<string> options, string? defaultOption, _) = ParseOutcomeDeclaration(ref index);
 
@@ -365,7 +365,7 @@ public sealed partial class Parser
 
         ImmutableArray<InterfaceMethodDeclarationNode>.Builder methods = ImmutableArray.CreateBuilder<InterfaceMethodDeclarationNode>();
 
-        while (tokens[index] is not { Kind: TokenKind.ClosedParenthesis })
+        while (tokens[index].Kind is not TokenKind.ClosedParenthesis)
         {
             var nextMethod = ParseInterfaceMethodDeclaration(ref index);
 
@@ -376,7 +376,7 @@ public sealed partial class Parser
 
             methods.Add(nextMethod);
 
-            if (tokens[index] is not { Kind: TokenKind.Comma })
+            if (tokens[index].Kind is not TokenKind.Comma)
             {
                 break;
             }
