@@ -32,12 +32,14 @@ public sealed class CheckpointEmitter(
         GenerateConstructor(settings, writer);
 
         writer.WriteLine();
-        writer.Write("public int Index { get; }");
+        writer.WriteLine("public int Index { get; }");
         writer.WriteLine();
 
         GenerateOutcomeProperties();
 
         GenerateGetForIndexMethod();
+
+        writer.WriteLine();
 
         GenerateIsReadyMethod();
 
