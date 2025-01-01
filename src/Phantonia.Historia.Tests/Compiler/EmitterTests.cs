@@ -1489,4 +1489,95 @@ public sealed class EmitterTests
 
         Assert.AreEqual(12, stateMachine.Output);
     }
+
+    [TestMethod]
+    public void TestCallsInSwitch()
+    {
+        // regression test
+        string code =
+            """
+            scene main
+            {
+                outcome X(A, B);
+
+                switch 0
+                {
+                    option 1
+                    {
+                        call A;
+                        X = A;
+                    }
+
+                    option 2
+                    {
+                        call B;
+                        X = B;
+                    }
+                }
+
+                branchon X
+                {
+                    option A
+                    {
+                        call C;
+                    }
+
+                    option B
+                    {
+                        call D;
+                    }
+                }
+
+                if X is A
+                {
+                    call D;
+                }
+                else
+                {
+                    call C;
+                }
+            }
+
+            scene A
+            {
+                output 3;
+            }
+
+            scene B
+            {
+                output 4;
+            }
+
+            scene C
+            {
+                output 5;
+            }
+
+            scene D
+            {
+                output 6;
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
+
+        Assert.IsTrue(stateMachine.TryContinue());
+        Assert.IsTrue(stateMachine.TryContinueWithOption(0));
+
+        Assert.AreEqual(3, stateMachine.Output);
+        Assert.IsTrue(stateMachine.TryContinue());
+        Assert.AreEqual(5, stateMachine.Output);
+        Assert.IsTrue(stateMachine.TryContinue());
+        Assert.AreEqual(6, stateMachine.Output);
+        Assert.IsTrue(stateMachine.TryContinue());
+        Assert.IsTrue(stateMachine.FinishedStory);
+    }
 }

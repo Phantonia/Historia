@@ -142,10 +142,6 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
             // we also know that the order that the options appear in the switch statement node is exactly how each one will be indexed
             // plus we know that the outgoing edges are in exactly the right order
 
-            // here we assert that the index of the vertex equals the index of the first statement of the option
-            // however we ignore the case where the option's body is empty - there it would be impossible to get the next statement
-            Debug.Assert(switchStatement.Options[i].Body.Statements.Length == 0 || switchStatement.Options[i].Body.Statements[0].Index == edges[i].ToVertex);
-
             writer.Write("case ");
             writer.Write(i);
             writer.WriteLine(':');

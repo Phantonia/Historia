@@ -109,6 +109,33 @@ public sealed partial class FlowAnalyzer
                                          .Remove(FlowEdge.CreateStrongTo(callVertex)) // there are no weak edges to call vertices (only weak edges back to loop switches)
                                          .AddRange(sceneFlowGraph.StartEdges)),
                 };
+
+                if (mainFlowGraph.Vertices[vertex.Index].AssociatedStatement is FlowBranchingStatementNode branchingStatement)
+                {
+                    int edgeIndex = -1;
+
+                    for (int i = 0; i < branchingStatement.OutgoingEdges.Count; i++)
+                    {
+                        if (branchingStatement.OutgoingEdges[i].ToVertex == callVertex)
+                        {
+                            edgeIndex = i;
+                            break;
+                        }
+                    }
+
+                    Debug.Assert(edgeIndex >= 0);
+                    Debug.Assert(sceneFlowGraph.IsConformable);
+
+                    branchingStatement = branchingStatement with
+                    {
+                        OutgoingEdges = branchingStatement.OutgoingEdges.SetItem(edgeIndex, sceneFlowGraph.StartEdges.Single()),
+                    };
+
+                    mainFlowGraph = mainFlowGraph.SetVertex(vertex.Index, mainFlowGraph.Vertices[vertex.Index] with
+                    {
+                        AssociatedStatement = branchingStatement,
+                    });
+                }
             }
         }
 
@@ -184,6 +211,10 @@ public sealed partial class FlowAnalyzer
                     vertex.Index,
                     [.. sceneFlowGraph.StartEdges]),
             };
+
+            // flow branching statements are fine because they used to point to the call statement
+            // but since the index of the tracker statement is the same as of the call statement
+            // nothing needs to be changed
         }
 
         // 3. synthesize resolution statement
