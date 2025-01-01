@@ -42,7 +42,10 @@ public sealed partial class FlowAnalyzer
             return (null, finalReferenceCounts);
         }
 
-        IEnumerable<SceneSymbol> topologicalOrder = dependencyGraph.TopologicalSort().Select(i => (SceneSymbol)dependencyGraph.Symbols[i]);
+        IEnumerable<SceneSymbol> topologicalOrder =
+            dependencyGraph.TopologicalSort()
+                           .Select(i => (SceneSymbol)dependencyGraph.Symbols[i])
+                           .SkipWhile(s => s.Name != "main"); // when we have uncalled scenes they might appear before "main" here. we can just ignore them
 
         return (topologicalOrder, finalReferenceCounts);
     }

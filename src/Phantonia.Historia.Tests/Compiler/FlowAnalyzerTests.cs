@@ -1314,4 +1314,27 @@ public sealed class FlowAnalyzerTests
         Assert.AreEqual(1, errors.Count);
         Assert.AreEqual(errors[0], expectedError);
     }
+
+    [TestMethod]
+    public void TestNeverCalledScene()
+    {
+        string code =
+            """
+            scene main
+            {
+                output 0;
+            }
+
+            scene A
+            {
+
+            }
+            """;
+
+        FlowAnalyzer analyzer = PrepareFlowAnalyzer(code);
+        analyzer.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        FlowAnalysisResult result = analyzer.PerformFlowAnalysis();
+        Assert.IsNotNull(result.MainFlowGraph);
+    }
 }
