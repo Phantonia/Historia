@@ -1632,4 +1632,38 @@ public sealed class EmitterTests
         Assert.IsTrue(stateMachine.TryContinue());
         Assert.IsTrue(stateMachine.FinishedStory);
     }
+
+    [TestMethod]
+    public void TestEmptyScenes()
+    {
+        string code =
+            """
+            scene main
+            {
+                switch 0
+                {
+                    option 1
+                    {
+                        call A;
+                    }
+
+                    option 2
+                    {
+                        call B;
+                    }
+                }
+
+                call B;
+            }
+
+            scene A { }
+            scene B { }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+    }
 }
