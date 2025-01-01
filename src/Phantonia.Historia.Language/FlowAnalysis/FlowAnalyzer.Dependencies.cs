@@ -53,7 +53,8 @@ public sealed partial class FlowAnalyzer
 
         foreach (FlowVertex vertex in flowGraph.Vertices.Values)
         {
-            if (vertex.AssociatedStatement is BoundCallStatementNode { Scene: SceneSymbol calledScene })
+            // skip purely semantic vertices
+            if (vertex.IsStory && vertex.AssociatedStatement is BoundCallStatementNode { Scene: SceneSymbol calledScene })
             {
                 referenceCounts.TryAdd(calledScene.Index, 0);
                 referenceCounts[calledScene.Index]++;

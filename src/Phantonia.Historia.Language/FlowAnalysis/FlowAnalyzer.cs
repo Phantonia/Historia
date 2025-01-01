@@ -72,6 +72,37 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             graph = graph.Append(statementGraph);
         }
 
+        graph = UpdateLoopSwitchLastEdges(graph);
+
+        return graph;
+    }
+
+    private static FlowGraph UpdateLoopSwitchLastEdges(FlowGraph graph)
+    {
+        // the flow branching statement for loop switches always ends in a final edge because it is not updated in FlowGraph.Append
+        // so we do that here
+
+        foreach (FlowVertex vertex in graph.Vertices.Values)
+        {
+            if (vertex.AssociatedStatement is not FlowBranchingStatementNode { Original: LoopSwitchStatementNode, OutgoingEdges: ImmutableList<FlowEdge> outgoingEdges } flowBranchingStatement)
+            {
+                continue;
+            }
+
+            FlowEdge lastEdge = graph.OutgoingEdges[vertex.Index][^1];
+
+            if (lastEdge != FlowGraph.FinalEdge)
+            {
+                graph = graph.SetVertex(vertex.Index, vertex with
+                {
+                    AssociatedStatement = flowBranchingStatement with
+                    {
+                        OutgoingEdges = [.. outgoingEdges.RemoveAt(outgoingEdges.Count - 1), lastEdge],
+                    }
+                });
+            }
+        }
+
         return graph;
     }
 

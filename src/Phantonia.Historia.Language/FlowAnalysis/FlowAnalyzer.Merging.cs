@@ -45,7 +45,7 @@ public sealed partial class FlowAnalyzer
             }
         }
 
-        Debug.Assert(mainFlowGraph.Vertices.Values.All(v => v.AssociatedStatement is not BoundCallStatementNode));
+        Debug.Assert(mainFlowGraph.Vertices.Values.All(v => !v.IsStory || v.AssociatedStatement is not BoundCallStatementNode));
 
         return (mainFlowGraph, symbolTable);
     }
@@ -68,15 +68,15 @@ public sealed partial class FlowAnalyzer
 
         foreach (FlowVertex vertex in mainFlowGraph.Vertices.Values)
         {
-            if (vertex.AssociatedStatement is not BoundCallStatementNode { Scene: SceneSymbol calledScene } || calledScene != scene)
+            if (!vertex.IsStory || (vertex.AssociatedStatement is not BoundCallStatementNode { Scene: SceneSymbol calledScene } || calledScene != scene))
             {
                 continue;
             }
 
             callVertex = vertex.Index;
 
-            Debug.Assert(mainFlowGraph.OutgoingEdges[vertex.Index].Count == 1); // assert vertex is infact linear
-            nextVertex = mainFlowGraph.OutgoingEdges[vertex.Index][0].ToVertex;
+            Debug.Assert(mainFlowGraph.OutgoingEdges[vertex.Index].Where(e => e.IsStory).Count() == 1); // assert vertex is infact linear
+            nextVertex = mainFlowGraph.OutgoingEdges[vertex.Index].First(e => e.IsStory).ToVertex;
             break;
         }
 

@@ -1580,4 +1580,56 @@ public sealed class EmitterTests
         Assert.IsTrue(stateMachine.TryContinue());
         Assert.IsTrue(stateMachine.FinishedStory);
     }
+
+    [TestMethod]
+    public void TestCallsInLoopSwitch()
+    {
+        string code =
+            """
+            scene main
+            {
+                loop switch (0)
+                {
+                    option (1)
+                    {
+                        call A;
+                    }
+            
+                    option (2)
+                    {
+                        call B;
+                    }
+                }
+            }
+            
+            scene A
+            {
+                output 3;
+            }
+            
+            scene B
+            {
+                output 4;
+            }
+            """;
+        
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
+
+        Assert.IsTrue(stateMachine.TryContinue());
+        Assert.IsTrue(stateMachine.TryContinueWithOption(1));
+        Assert.AreEqual(4, stateMachine.Output);
+        Assert.IsTrue(stateMachine.TryContinue());
+        Assert.IsTrue(stateMachine.TryContinueWithOption(0));
+        Assert.AreEqual(3, stateMachine.Output);
+        Assert.IsTrue(stateMachine.TryContinue());
+        Assert.IsTrue(stateMachine.FinishedStory);
+    }
 }

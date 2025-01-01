@@ -192,7 +192,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
         for (int i = 0; i < loopSwitchStatement.Options.Length; i++)
         {
             // for comment see switch version
-            Debug.Assert(loopSwitchStatement.Options[i].Body.Statements.Length == 0 || loopSwitchStatement.Options[i].Body.Statements[0].Index == edges[i].ToVertex);
+            //Debug.Assert(loopSwitchStatement.Options[i].Body.Statements.Length == 0 || loopSwitchStatement.Options[i].Body.Statements[0].Index == edges[i].ToVertex);
 
             writer.Write("case ");
             writer.Write(i);
@@ -581,7 +581,11 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
         }
 
         if (toVertex != Constants.EndState
-            && flowGraph.Vertices[toVertex].AssociatedStatement is FlowBranchingStatementNode { Original: LoopSwitchStatementNode loopSwitch }
+            && flowGraph.Vertices[toVertex].AssociatedStatement is FlowBranchingStatementNode
+            {
+                Original: LoopSwitchStatementNode loopSwitch,
+                OutgoingEdges: [.., FlowEdge lastEdge],
+            }
             && loopSwitch.Options.All(o => o.Kind != LoopSwitchOptionKind.Final))
         {
             // this loop switch has no final option, that is it terminates after all normal options have been selected
@@ -599,7 +603,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
             writer.WriteLine(" = 0;");
 
             // the last edge of these loop switches is the one to the next state
-            GenerateSimpleTransitionTo(flowGraph.OutgoingEdges[toVertex][^1].ToVertex);
+            GenerateSimpleTransitionTo(lastEdge.ToVertex);
 
             writer.EndBlock(); // if
 

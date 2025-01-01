@@ -13,5 +13,5 @@ public sealed record FlowBranchingStatementNode() : StatementNode
 
     public override IEnumerable<SyntaxNode> Children => [(SyntaxNode)Original];
 
-    protected internal override string GetDebuggerDisplay() => ((SyntaxNode)Original).GetDebuggerDisplay();
+    protected internal override string GetDebuggerDisplay() => $"flow branching: {((SyntaxNode)Original).GetDebuggerDisplay()}";
 }
