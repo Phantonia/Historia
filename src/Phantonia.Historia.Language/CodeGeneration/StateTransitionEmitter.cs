@@ -100,7 +100,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
         writer.EndBlock(); // switch
 
         writer.WriteLine();
-        writer.WriteLine(@"throw new global::System.InvalidOperationException(""Fatal internal error: Invalid state"");");
+        writer.WriteLine(@"throw new global::System.InvalidOperationException(""Fatal internal error: Invalid state (StateTransition)"");");
     }
 
     private void GenerateStartTransition()
@@ -585,7 +585,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
         }
 
         if (toVertex != Constants.EndState
-            && flowGraph.Vertices[toVertex].AssociatedStatement is LoopSwitchStatementNode loopSwitch
+            && flowGraph.Vertices[toVertex].AssociatedStatement is FlowBranchingStatementNode { Original: LoopSwitchStatementNode loopSwitch }
             && loopSwitch.Options.All(o => o.Kind != LoopSwitchOptionKind.Final))
         {
             // this loop switch has no final option, that is it terminates after all normal options have been selected

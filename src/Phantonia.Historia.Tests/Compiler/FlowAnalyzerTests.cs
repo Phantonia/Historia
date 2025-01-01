@@ -596,13 +596,16 @@ public sealed class FlowAnalyzerTests
         {
             StatementNode statement = mainFlowGraph.Vertices[index].AssociatedStatement;
 
-            Assert.IsTrue(statement is SwitchStatementNode
+            Assert.IsTrue(statement is FlowBranchingStatementNode
             {
-                OutputExpression: TypedExpressionNode
+                Original: SwitchStatementNode
                 {
-                    Expression: IntegerLiteralExpressionNode
+                    OutputExpression: TypedExpressionNode
                     {
-                        Value: int value,
+                        Expression: IntegerLiteralExpressionNode
+                        {
+                            Value: int value,
+                        }
                     }
                 }
             } && value == expectedOutputValue);

@@ -104,7 +104,9 @@ public sealed class EmitterTests
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
 
-        IStoryStateMachine<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString(), "HistoriaStoryStateMachine");
+        string resultCode = sw.ToString();
+
+        IStoryStateMachine<int, int> story = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
 
         Assert.IsTrue(story.NotStartedStory);
         Assert.IsFalse(story.FinishedStory);
