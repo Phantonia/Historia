@@ -29,6 +29,11 @@ public sealed class HeartEmitter(FlowGraph flowGraph, StoryNode boundStory, Sett
 
     private void GenerateOptionsPool(Settings settings, IndentedTextWriter writer)
     {
+        if (boundStory.FlattenHierarchie().All(n => n is not BoundChooseStatementNode))
+        {
+            return;
+        }
+
         void GenerateThreadLocalType()
         {
             writer.Write("global::");
