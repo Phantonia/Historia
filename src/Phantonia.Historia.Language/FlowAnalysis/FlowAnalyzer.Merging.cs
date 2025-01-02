@@ -53,7 +53,7 @@ public sealed partial class FlowAnalyzer
     private static FlowGraph EmbedSingleReferenceScene(FlowGraph mainFlowGraph, FlowGraph sceneFlowGraph, SceneSymbol scene)
     {
         // 1. add all scene vertices
-        foreach (int vertex in sceneFlowGraph.Vertices.Keys)
+        foreach (long vertex in sceneFlowGraph.Vertices.Keys)
         {
             mainFlowGraph = mainFlowGraph with
             {
@@ -63,8 +63,8 @@ public sealed partial class FlowAnalyzer
         }
 
         // 2. find callVertex and nextVertex (the single vertex that callVertex points to, since it's linear)
-        int callVertex = int.MinValue;
-        int nextVertex = int.MinValue;
+        long callVertex = int.MinValue;
+        long nextVertex = int.MinValue;
 
         foreach (FlowVertex vertex in mainFlowGraph.Vertices.Values)
         {
@@ -128,7 +128,7 @@ public sealed partial class FlowAnalyzer
 
                     branchingStatement = branchingStatement with
                     {
-                        OutgoingEdges = branchingStatement.OutgoingEdges.SetItem(edgeIndex, sceneFlowGraph.StartEdges.Single()),
+                        OutgoingEdges = branchingStatement.OutgoingEdges.SetItem(edgeIndex, sceneFlowGraph.StartEdges.Single(e => e.IsStory)),
                     };
 
                     mainFlowGraph = mainFlowGraph.SetVertex(vertex.Index, mainFlowGraph.Vertices[vertex.Index] with
@@ -168,7 +168,7 @@ public sealed partial class FlowAnalyzer
     private static FlowGraph EmbedMultiReferenceScene(FlowGraph mainFlowGraph, FlowGraph sceneFlowGraph, SceneSymbol scene, CallerTrackerSymbol tracker)
     {
         // 1. add all scene vertices
-        foreach (int vertex in sceneFlowGraph.Vertices.Keys)
+        foreach (long vertex in sceneFlowGraph.Vertices.Keys)
         {
             mainFlowGraph = mainFlowGraph with
             {
@@ -178,8 +178,8 @@ public sealed partial class FlowAnalyzer
         }
 
         // 2. find all callsites, replace them with tracker statements and redirect them correctly
-        Dictionary<int, int> nextVertices = [];
-        List<int> callSites = [];
+        Dictionary<long, long> nextVertices = [];
+        List<long> callSites = [];
 
         foreach (FlowVertex vertex in mainFlowGraph.Vertices.Values)
         {
@@ -233,7 +233,7 @@ public sealed partial class FlowAnalyzer
 
         ImmutableList<FlowEdge>.Builder edgesBuilder = ImmutableList.CreateBuilder<FlowEdge>();
 
-        foreach (int site in callSites)
+        foreach (long site in callSites)
         {
             edgesBuilder.Add(FlowEdge.CreateStrongTo(nextVertices[site]));
         }

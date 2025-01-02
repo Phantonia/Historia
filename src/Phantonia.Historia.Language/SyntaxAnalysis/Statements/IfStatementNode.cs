@@ -16,5 +16,5 @@ public sealed record IfStatementNode() : StatementNode, IBranchingStatementNode
     protected internal override string GetDebuggerDisplay()
         => $"if ({Condition.GetDebuggerDisplay()}) run {ThenBlock.Statements.Length} statement(s), else run {ElseBlock?.Statements.Length ?? 0} statement(s)";
 
-    IEnumerable<StatementBodyNode> IBranchingStatementNode.Bodies => [ThenBlock, ElseBlock];
+    IEnumerable<StatementBodyNode> IBranchingStatementNode.Bodies => ElseBlock is null ? [ThenBlock] : [ThenBlock, ElseBlock];
 }

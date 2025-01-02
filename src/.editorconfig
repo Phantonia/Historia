@@ -1,0 +1,4 @@
+﻿[*.cs]
+
+# IDE0220: Add explicit cast
+dotnet_diagnostic.IDE0220.severity = error

@@ -2,5 +2,5 @@
 
 public interface ISyntaxNode
 {
-    int Index { get; }
+    long Index { get; }
 }

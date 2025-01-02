@@ -50,7 +50,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             };
         }
 
-        PerformReachabilityAnalysis(sceneFlowGraphs, out ImmutableDictionary<int, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtCheckpoints);
+        PerformReachabilityAnalysis(sceneFlowGraphs, out ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtCheckpoints);
 
         (FlowGraph mainFlowGraph, SymbolTable updatedSymbolTable) = MergeFlowGraphs(topologicalOrder, sceneFlowGraphs, referenceCounts);
 
@@ -181,8 +181,8 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             Kind = FlowVertexKind.PurelySemantic,
         });
 
-        List<int> nonFinalEndVertices = [];
-        List<int> finalStartVertices = [];
+        List<long> nonFinalEndVertices = [];
+        List<long> finalStartVertices = [];
 
         foreach (LoopSwitchOptionNode option in loopSwitchStatement.Options)
         {
@@ -196,7 +196,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             if (option.Kind != LoopSwitchOptionKind.Final)
             {
                 // redirect final edges as weak edges back up
-                foreach (int vertex in flowGraph.OutgoingEdges.Where(p => p.Value.Contains(FlowGraph.FinalEdge)).Select(p => p.Key))
+                foreach (long vertex in flowGraph.OutgoingEdges.Where(p => p.Value.Contains(FlowGraph.FinalEdge)).Select(p => p.Key))
                 {
                     flowGraph = flowGraph with
                     {
@@ -220,12 +220,12 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             }
         }
 
-        foreach (int nonFinalEndVertex in nonFinalEndVertices)
+        foreach (long nonFinalEndVertex in nonFinalEndVertices)
         {
             if (hasFinalOption)
             {
                 // add purely semantic edge from all end vertices of non final options to all start vertices of final options
-                foreach (int finalStartVertex in finalStartVertices)
+                foreach (long finalStartVertex in finalStartVertices)
                 {
                     flowGraph = flowGraph with
                     {
@@ -262,7 +262,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
         }
 
         Debug.Assert(flowGraph.IsConformable);
-        int startVertex = flowGraph.GetStoryStartVertex();
+        long startVertex = flowGraph.GetStoryStartVertex();
 
         flowGraph = semanticCopy.Append(flowGraph);
         flowGraph = flowGraph with
@@ -293,7 +293,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             Index = vertex.Index != FlowGraph.FinalVertex ? vertex.Index - 1 : FlowGraph.FinalVertex,
         };
 
-        ImmutableDictionary<int, FlowVertex> vertices
+        ImmutableDictionary<long, FlowVertex> vertices
             = flowGraph.Vertices.Select(p => KeyValuePair.Create(p.Key - 1, SemantifyVertex(p.Value)))
                                 .ToImmutableDictionary();
 
@@ -318,7 +318,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             }
         }
 
-        ImmutableDictionary<int, ImmutableList<FlowEdge>> edges
+        ImmutableDictionary<long, ImmutableList<FlowEdge>> edges
             = flowGraph.OutgoingEdges.Select(p => KeyValuePair.Create(p.Key - 1, p.Value.Select(e => SemantifyEdge(e)).ToImmutableList()))
                                      .ToImmutableDictionary();
 

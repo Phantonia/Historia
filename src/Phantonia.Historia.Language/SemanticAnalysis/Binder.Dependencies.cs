@@ -17,8 +17,8 @@ public sealed partial class Binder
 
     private DependencyGraph? BuildTypeDependencyGraph(StoryNode story, SymbolTable table)
     {
-        Dictionary<int, Symbol> symbols = [];
-        Dictionary<int, IReadOnlySet<int>> dependencies = [];
+        Dictionary<long, Symbol> symbols = [];
+        Dictionary<long, IReadOnlySet<long>> dependencies = [];
 
         foreach (TopLevelNode declaration in story.TopLevelNodes)
         {
@@ -39,7 +39,7 @@ public sealed partial class Binder
         };
 
         // spec 1.2.1.5: "No type may ever directly or indirectly depend on itself."
-        if (dependencyGraph.IsCyclic(out IEnumerable<int>? cycle))
+        if (dependencyGraph.IsCyclic(out IEnumerable<long>? cycle))
         {
             ErrorFound?.Invoke(Errors.CyclicTypeDefinition(cycle.Select(i => dependencyGraph.Symbols[i].Name), dependencyGraph.Symbols[cycle.First()].Index));
 
@@ -49,9 +49,9 @@ public sealed partial class Binder
         return dependencyGraph;
     }
 
-    private static IReadOnlySet<int> GetDependencies(SymbolDeclarationNode declaration, SymbolTable table)
+    private static IReadOnlySet<long> GetDependencies(SymbolDeclarationNode declaration, SymbolTable table)
     {
-        SortedSet<int> dependencies = [];
+        SortedSet<long> dependencies = [];
 
         switch (declaration)
         {
@@ -132,7 +132,7 @@ public sealed partial class Binder
 
     private SymbolTable FixPseudoSymbols(DependencyGraph dependencyGraph, SymbolTable table)
     {
-        IEnumerable<int> order = dependencyGraph.GetDependencyRespectingOrder();
+        IEnumerable<long> order = dependencyGraph.GetDependencyRespectingOrder();
 
         foreach (Symbol symbol in order.Select(i => dependencyGraph.Symbols[i]))
         {

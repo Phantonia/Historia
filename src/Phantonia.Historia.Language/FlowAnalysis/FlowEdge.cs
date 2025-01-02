@@ -2,25 +2,25 @@
 
 public readonly record struct FlowEdge
 {
-    public static FlowEdge CreateStrongTo(int toVertex) => new()
+    public static FlowEdge CreateStrongTo(long toVertex) => new()
     {
         ToVertex = toVertex,
         Kind = FlowEdgeKind.Strong,
     };
 
-    public static FlowEdge CreateWeakTo(int toVertex) => new()
+    public static FlowEdge CreateWeakTo(long toVertex) => new()
     {
         ToVertex = toVertex,
         Kind = FlowEdgeKind.Weak,
     };
 
-    public static FlowEdge CreatePurelySemanticTo(int toVertex) => new()
+    public static FlowEdge CreatePurelySemanticTo(long toVertex) => new()
     {
         ToVertex = toVertex,
         Kind = FlowEdgeKind.Semantic,
     };
 
-    public int ToVertex { get; init; }
+    public long ToVertex { get; init; }
 
     public FlowEdgeKind Kind { get; init; }
 

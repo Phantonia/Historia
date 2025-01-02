@@ -15,7 +15,7 @@ public readonly record struct FlowAnalysisResult
 
     public required SymbolTable? SymbolTable { get; init; }
 
-    public required ImmutableDictionary<int, IEnumerable<OutcomeSymbol>>? DefinitelyAssignedOutcomesAtCheckpoints { get; init; }
+    public required ImmutableDictionary<long, IEnumerable<OutcomeSymbol>>? DefinitelyAssignedOutcomesAtCheckpoints { get; init; }
 
     public void Deconstruct(out FlowGraph? mainFlowGraph, out SymbolTable? symbolTable)
     {

@@ -5,10 +5,10 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using Edges = System.Collections.Immutable.ImmutableDictionary<
-    int, System.Collections.Immutable.ImmutableList<
+    long, System.Collections.Immutable.ImmutableList<
         Phantonia.Historia.Language.FlowAnalysis.FlowEdge>>;
 using MutEdges = System.Collections.Generic.Dictionary<
-    int, System.Collections.Generic.List<
+    long, System.Collections.Generic.List<
         Phantonia.Historia.Language.FlowAnalysis.FlowEdge>>;
 
 namespace Phantonia.Historia.Language.FlowAnalysis;
@@ -41,13 +41,13 @@ public sealed record FlowGraph
 
     public ImmutableArray<FlowEdge> StartEdges { get; init; } = [FinalEdge];
 
-    public ImmutableDictionary<int, FlowVertex> Vertices { get; init; } = ImmutableDictionary<int, FlowVertex>.Empty;
+    public ImmutableDictionary<long, FlowVertex> Vertices { get; init; } = ImmutableDictionary<long, FlowVertex>.Empty;
 
     // a flow graph is conformable if it only has a single start edge which is a story edge
     // what used to be StartVertex
     public bool IsConformable => StartEdges.Where(e => e.IsStory).Count() == 1;
 
-    public int GetStoryStartVertex()
+    public long GetStoryStartVertex()
     {
         if (!IsConformable)
         {
@@ -83,7 +83,7 @@ public sealed record FlowGraph
         }
     }
 
-    public FlowGraph SetVertex(int index, FlowVertex newVertex)
+    public FlowGraph SetVertex(long index, FlowVertex newVertex)
     {
         Debug.Assert(Vertices.ContainsKey(index));
 
@@ -98,9 +98,9 @@ public sealed record FlowGraph
         // this method generates a huge amount of waste - can we optimize this?
 
         MutEdges tempEdges = OutgoingEdges.ToDictionary(p => p.Key, p => p.Value.ToList());
-        Dictionary<int, FlowVertex> tempVertices = Vertices.ToDictionary(p => p.Key, p => p.Value);
+        Dictionary<long, FlowVertex> tempVertices = Vertices.ToDictionary(p => p.Key, p => p.Value);
 
-        foreach ((int currentVertex, List<FlowEdge> edges) in tempEdges)
+        foreach ((long currentVertex, List<FlowEdge> edges) in tempEdges)
         {
             FlowEdgeKind outgoingKind = FlowEdgeKind.None;
 
@@ -139,7 +139,7 @@ public sealed record FlowGraph
             }
         }
 
-        foreach ((int currentVertex, ImmutableList<FlowEdge> edges) in graph.OutgoingEdges)
+        foreach ((long currentVertex, ImmutableList<FlowEdge> edges) in graph.OutgoingEdges)
         {
             if (tempEdges.ContainsKey(currentVertex))
             {
@@ -166,7 +166,7 @@ public sealed record FlowGraph
         };
     }
 
-    public FlowGraph AppendToVertex(int vertex, FlowGraph graph)
+    public FlowGraph AppendToVertex(long vertex, FlowGraph graph)
     {
         // this method generates a huge amount of waste - can we optimize this?
 
@@ -176,10 +176,10 @@ public sealed record FlowGraph
         }
 
         MutEdges tempEdges = OutgoingEdges.ToDictionary(p => p.Key, p => p.Value.ToList());
-        Dictionary<int, FlowVertex> tempVertices = Vertices.ToDictionary(p => p.Key, p => p.Value);
+        Dictionary<long, FlowVertex> tempVertices = Vertices.ToDictionary(p => p.Key, p => p.Value);
 
         // add 'graph' into this graph
-        foreach ((int currentVertex, ImmutableList<FlowEdge> edges) in graph.OutgoingEdges)
+        foreach ((long currentVertex, ImmutableList<FlowEdge> edges) in graph.OutgoingEdges)
         {
             if (tempEdges.ContainsKey(currentVertex))
             {
@@ -226,10 +226,10 @@ public sealed record FlowGraph
         }
 
         MutEdges tempEdges = OutgoingEdges.ToDictionary(p => p.Key, p => p.Value.ToList());
-        Dictionary<int, FlowVertex> tempVertices = Vertices.ToDictionary(p => p.Key, p => p.Value);
+        Dictionary<long, FlowVertex> tempVertices = Vertices.ToDictionary(p => p.Key, p => p.Value);
 
         // add everything from 'graph' to our graph
-        foreach ((int currentVertex, ImmutableList<FlowEdge> edges) in graph.OutgoingEdges)
+        foreach ((long currentVertex, ImmutableList<FlowEdge> edges) in graph.OutgoingEdges)
         {
             if (Vertices.ContainsKey(currentVertex))
             {
@@ -241,7 +241,7 @@ public sealed record FlowGraph
         }
 
         // turn every edge to 'vertex' into 'graph.StartEdges'
-        foreach ((int currentVertex, List<FlowEdge> edges) in tempEdges)
+        foreach ((long currentVertex, List<FlowEdge> edges) in tempEdges)
         {
             FlowEdgeKind kind = FlowEdgeKind.None;
 
@@ -273,7 +273,7 @@ public sealed record FlowGraph
         // redirect all edges to 'graph's EmptyVertex to every vertex that 'replacedVertex' points to
         ImmutableList<FlowEdge> replacedVertexEdges = OutgoingEdges[replacedVertex];
 
-        foreach ((int currentVertex, ImmutableList<FlowEdge> edges) in graph.OutgoingEdges)
+        foreach ((long currentVertex, ImmutableList<FlowEdge> edges) in graph.OutgoingEdges)
         {
             for (int i = 0; i < edges.Count; i++)
             {
@@ -313,7 +313,7 @@ public sealed record FlowGraph
         MutEdges tempEdges = [];
         List<FlowEdge> newStartEdges = [];
 
-        foreach ((int vertex, ImmutableList<FlowEdge> edges) in OutgoingEdges)
+        foreach ((long vertex, ImmutableList<FlowEdge> edges) in OutgoingEdges)
         {
             foreach (FlowEdge edge in edges)
             {
@@ -338,9 +338,9 @@ public sealed record FlowGraph
     public FlowGraph RemoveInvisible()
     {
         MutEdges tempEdges = OutgoingEdges.ToDictionary(p => p.Key, p => p.Value.ToList());
-        Dictionary<int, FlowVertex> tempVertices = Vertices.ToDictionary(p => p.Key, p => p.Value);
+        Dictionary<long, FlowVertex> tempVertices = Vertices.ToDictionary(p => p.Key, p => p.Value);
 
-        List<int> newStartVertices = [.. StartEdges.Where(e => e.IsStory).Select(e => e.ToVertex)];
+        List<long> newStartVertices = [.. StartEdges.Where(e => e.IsStory).Select(e => e.ToVertex)];
 
         foreach (FlowVertex vertex in Vertices.Values)
         {
@@ -354,7 +354,7 @@ public sealed record FlowGraph
 
             ImmutableList<FlowEdge> outgoingEdges = OutgoingEdges[vertex.Index];
 
-            foreach (int otherVertex in tempVertices.Keys)
+            foreach (long otherVertex in tempVertices.Keys)
             {
                 if (!tempEdges[otherVertex].Any(e => e.ToVertex == vertex.Index))
                 {
@@ -384,18 +384,18 @@ public sealed record FlowGraph
         };
     }
 
-    public IEnumerable<int> TopologicalSort()
+    public IEnumerable<long> TopologicalSort()
     {
-        Dictionary<int, bool> marked = [];
+        Dictionary<long, bool> marked = [];
 
-        foreach (int vertex in Vertices.Keys)
+        foreach (long vertex in Vertices.Keys)
         {
             marked[vertex] = false;
         }
 
-        Stack<int> postOrder = [];
+        Stack<long> postOrder = [];
 
-        foreach (int vertex in Vertices.Keys)
+        foreach (long vertex in Vertices.Keys)
         {
             if (!marked[vertex])
             {
@@ -405,7 +405,7 @@ public sealed record FlowGraph
 
         return postOrder;
 
-        void DepthFirstSearch(int vertex)
+        void DepthFirstSearch(long vertex)
         {
             marked[vertex] = true;
 

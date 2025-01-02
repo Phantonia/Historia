@@ -1606,10 +1606,10 @@ public sealed class BinderTests
             Parse(codeC, offsetC),
         ];
 
-        int storyAMaxIndex = stories[0].FlattenHierarchie().Max(n => n.Index);
-        int storyBMinIndex = stories[1].FlattenHierarchie().Min(n => n.Index);
-        int storyBMaxIndex = stories[1].FlattenHierarchie().Max(n => n.Index);
-        int storyCMinIndex = stories[2].FlattenHierarchie().Min(n => n.Index);
+        long storyAMaxIndex = stories[0].FlattenHierarchie().Max(n => n.Index);
+        long storyBMinIndex = stories[1].FlattenHierarchie().Min(n => n.Index);
+        long storyBMaxIndex = stories[1].FlattenHierarchie().Max(n => n.Index);
+        long storyCMinIndex = stories[2].FlattenHierarchie().Min(n => n.Index);
 
         Assert.IsTrue(storyAMaxIndex < storyBMinIndex);
         Assert.IsTrue(storyBMaxIndex < storyCMinIndex);

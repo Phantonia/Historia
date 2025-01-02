@@ -1068,8 +1068,8 @@ public sealed class EmitterTests
         Assert.AreEqual(1, storyGraph.StartEdges.Count);
         Assert.AreEqual(storyGraph.StartEdges[0].ToVertex, code.IndexOf("output 0;"));
 
-        IEnumerable<int> vertices = storyGraph.Vertices.Keys.Order();
-        int[] expectedVertices =
+        IEnumerable<long> vertices = storyGraph.Vertices.Keys.Order();
+        long[] expectedVertices =
         [
             code.IndexOf("output 0;"),
             code.IndexOf("switch (1)"),
@@ -1082,12 +1082,12 @@ public sealed class EmitterTests
 
         Assert.IsTrue(vertices.SequenceEqual(expectedVertices));
 
-        void AssertOutgoingEdgesAre(int index, params int[] expectedAdjacentVertices)
+        void AssertOutgoingEdgesAre(long index, params long[] expectedAdjacentVertices)
         {
             Assert.IsTrue(storyGraph.Vertices[index].OutgoingEdges.Select(e => e.ToVertex).Order().SequenceEqual(expectedAdjacentVertices));
         }
 
-        void AssertIncomingEdgesAre(int index, params int[] expectedAdjacentVertices)
+        void AssertIncomingEdgesAre(long index, params long[] expectedAdjacentVertices)
         {
             Assert.IsTrue(storyGraph.Vertices[index].IncomingEdges.Select(e => e.FromVertex).Order().SequenceEqual(expectedAdjacentVertices));
         }
@@ -1665,5 +1665,82 @@ public sealed class EmitterTests
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
+    }
+
+    [TestMethod]
+    public void TestNestedLoopSwitchesThroughScenes()
+    {
+        string code =
+            """
+            scene main
+            {
+                loop switch (0)
+                {
+                    option (1)
+                    {
+                        call A;
+                    }
+
+                    option (2)
+                    {
+                        output 3;
+                    }
+                }
+            }
+
+            scene A
+            {
+                loop switch (4)
+                {
+                    option (5)
+                    {
+                        output 6;
+                    }
+
+                    option (7)
+                    {
+                        output 8;
+                    }
+                }
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
+
+        Assert.IsTrue(stateMachine.TryContinue());
+
+        // outer loop switch
+        Assert.AreEqual(0, stateMachine.Output);
+        Assert.IsTrue(stateMachine.TryContinueWithOption(0));
+
+        // inner loop switch
+        Assert.AreEqual(4, stateMachine.Output);
+        Assert.IsTrue(stateMachine.TryContinueWithOption(1));
+
+        Assert.AreEqual(8, stateMachine.Output);
+        Assert.IsTrue(stateMachine.TryContinue());
+
+        Assert.AreEqual(4, stateMachine.Output);
+        Assert.IsTrue(stateMachine.TryContinueWithOption(0));
+
+        Assert.AreEqual(6, stateMachine.Output);
+        Assert.IsTrue(stateMachine.TryContinue());
+
+        // outer loop switch
+        Assert.AreEqual(0, stateMachine.Output);
+        Assert.IsTrue(stateMachine.TryContinueWithOption(0));
+
+        Assert.AreEqual(3, stateMachine.Output);
+        Assert.IsTrue(stateMachine.TryContinue());
+
+        Assert.IsTrue(stateMachine.FinishedStory);
     }
 }

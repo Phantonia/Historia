@@ -48,7 +48,7 @@ public sealed partial class Binder
 
             if (conflictingSymbol is TypeSymbol)
             {
-                int index = story.TopLevelNodes.OfType<ExpressionSettingDirectiveNode>().SingleOrDefault(t => t.SettingName == nameof(Settings.StoryName))?.Expression?.Index ?? 0;
+                long index = story.TopLevelNodes.OfType<ExpressionSettingDirectiveNode>().SingleOrDefault(t => t.SettingName == nameof(Settings.StoryName))?.Expression?.Index ?? 0;
 
                 ErrorFound?.Invoke(Errors.ConflictingStoryName(settings.StoryName, index));
             }

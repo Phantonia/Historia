@@ -14,7 +14,7 @@ public sealed partial class Parser
     {
         ImmutableArray<StatementNode>.Builder statementBuilder = ImmutableArray.CreateBuilder<StatementNode>();
 
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
 
         _ = Expect(TokenKind.OpenBrace, ref index);
 
@@ -57,7 +57,7 @@ public sealed partial class Parser
                 return ParseCallStatement(ref index);
             case { Kind: TokenKind.OutcomeKeyword }:
                 {
-                    (string name, ImmutableArray<string> options, string? defaultOption, int nodeIndex) = ParseOutcomeDeclaration(ref index);
+                    (string name, ImmutableArray<string> options, string? defaultOption, long nodeIndex) = ParseOutcomeDeclaration(ref index);
                     return new OutcomeDeclarationStatementNode
                     {
                         Name = name,
@@ -68,7 +68,7 @@ public sealed partial class Parser
                 }
             case { Kind: TokenKind.SpectrumKeyword }:
                 {
-                    (string name, ImmutableArray<SpectrumOptionNode> options, string? defaultOption, int nodeIndex) = ParseSpectrumDeclaration(ref index);
+                    (string name, ImmutableArray<SpectrumOptionNode> options, string? defaultOption, long nodeIndex) = ParseSpectrumDeclaration(ref index);
                     return new SpectrumDeclarationStatementNode
                     {
                         Name = name,
@@ -105,7 +105,7 @@ public sealed partial class Parser
     {
         Debug.Assert(tokens[index].Kind is TokenKind.OutputKeyword);
 
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
 
         index++;
 
@@ -129,7 +129,7 @@ public sealed partial class Parser
     {
         Debug.Assert(tokens[index].Kind is TokenKind.RunKeyword);
 
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
 
         index++;
 
@@ -159,7 +159,7 @@ public sealed partial class Parser
 
     private SwitchStatementNode? ParseSwitchStatement(ref int index, bool isCheckpoint)
     {
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
 
         Debug.Assert(tokens[index] is { Kind: TokenKind.SwitchKeyword });
 
@@ -196,7 +196,7 @@ public sealed partial class Parser
     {
         Debug.Assert(tokens[index].Kind is TokenKind.ChooseKeyword);
 
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
 
         index++;
 
@@ -240,7 +240,7 @@ public sealed partial class Parser
 
         while (tokens[index] is { Kind: TokenKind.OptionKeyword })
         {
-            int nodeIndex = tokens[index].Index;
+            long nodeIndex = tokens[index].Index;
 
             _ = Expect(TokenKind.OptionKeyword, ref index);
 
@@ -280,7 +280,7 @@ public sealed partial class Parser
 
     private LoopSwitchStatementNode? ParseLoopSwitchStatement(ref int index, bool isCheckpoint)
     {
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
 
         Debug.Assert(tokens[index] is { Kind: TokenKind.LoopKeyword });
 
@@ -324,7 +324,7 @@ public sealed partial class Parser
 
         while (tokens[index] is not { Kind: TokenKind.ClosedBrace })
         {
-            int nodeIndex = tokens[index].Index;
+            long nodeIndex = tokens[index].Index;
             LoopSwitchOptionKind kind;
 
             switch (tokens[index])
@@ -384,7 +384,7 @@ public sealed partial class Parser
     {
         Debug.Assert(tokens[index].Kind == TokenKind.CheckpointKeyword);
 
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
         index++;
 
         switch (tokens[index])
@@ -437,7 +437,7 @@ public sealed partial class Parser
     {
         Debug.Assert(tokens[index].Kind == TokenKind.BranchOnKeyword);
 
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
         index++;
 
         Token outcomeIdentifier = Expect(TokenKind.Identifier, ref index);
@@ -466,7 +466,7 @@ public sealed partial class Parser
 
         while (tokens[index] is { Kind: TokenKind.OptionKeyword })
         {
-            int nodeIndex = tokens[index].Index;
+            long nodeIndex = tokens[index].Index;
 
             index++;
 
@@ -491,7 +491,7 @@ public sealed partial class Parser
 
         if (tokens[index] is { Kind: TokenKind.OtherKeyword })
         {
-            int nodeIndex = tokens[index].Index;
+            long nodeIndex = tokens[index].Index;
 
             index++;
 
@@ -523,7 +523,7 @@ public sealed partial class Parser
     {
         Debug.Assert(tokens[index] is { Kind: TokenKind.CallKeyword });
 
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
         index++;
 
         string sceneName = Expect(TokenKind.Identifier, ref index).Text;
@@ -542,7 +542,7 @@ public sealed partial class Parser
         Debug.Assert(tokens[index] is { Kind: TokenKind.Identifier });
         Token identifier = tokens[index];
 
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
         index++;
 
         // we might have more statements that begin with an identifier later
@@ -576,7 +576,7 @@ public sealed partial class Parser
             Debug.Assert(tokens[index] is { Kind: TokenKind.WeakenKeyword });
         }
 
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
         index++;
 
         string spectrumName = Expect(TokenKind.Identifier, ref index).Text;
@@ -603,7 +603,7 @@ public sealed partial class Parser
 
     private IfStatementNode? ParseIfStatement(ref int index)
     {
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
         index++;
 
         ExpressionNode? condition = ParseExpression(ref index);

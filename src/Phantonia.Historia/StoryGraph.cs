@@ -5,16 +5,16 @@ using System.Linq;
 
 namespace Phantonia.Historia;
 
-public sealed class StoryGraph<TOutput, TOption>(IReadOnlyDictionary<int, StoryVertex<TOutput, TOption>> vertices, IReadOnlyList<StoryEdge> startEdges)
+public sealed class StoryGraph<TOutput, TOption>(IReadOnlyDictionary<long, StoryVertex<TOutput, TOption>> vertices, IReadOnlyList<StoryEdge> startEdges)
 {
-    public const int StartVertex = -2;
-    public const int FinalVertex = -1;
+    public const long StartVertex = -2;
+    public const long FinalVertex = -1;
 
-    public IReadOnlyDictionary<int, StoryVertex<TOutput, TOption>> Vertices { get; } = vertices;
+    public IReadOnlyDictionary<long, StoryVertex<TOutput, TOption>> Vertices { get; } = vertices;
 
     public IReadOnlyList<StoryEdge> StartEdges { get; } = startEdges;
 
-    public bool ContainsEdge(int start, int end)
+    public bool ContainsEdge(long start, long end)
     {
         bool result = false;
 
@@ -32,19 +32,19 @@ public sealed class StoryGraph<TOutput, TOption>(IReadOnlyDictionary<int, StoryV
         return result;
     }
 
-    public IEnumerable<int> TopologicalSort()
+    public IEnumerable<long> TopologicalSort()
     {
         // adapted from FlowGraph equivalent
-        Dictionary<int, bool> marked = [];
+        Dictionary<long, bool> marked = [];
 
-        foreach (int vertex in Vertices.Keys)
+        foreach (long vertex in Vertices.Keys)
         {
             marked[vertex] = false;
         }
 
-        Stack<int> postOrder = new();
+        Stack<long> postOrder = new();
 
-        foreach (int vertex in Vertices.Keys)
+        foreach (long vertex in Vertices.Keys)
         {
             if (!marked[vertex])
             {
@@ -54,7 +54,7 @@ public sealed class StoryGraph<TOutput, TOption>(IReadOnlyDictionary<int, StoryV
 
         return postOrder;
 
-        void DepthFirstSearch(int vertex)
+        void DepthFirstSearch(long vertex)
         {
             marked[vertex] = true;
 
@@ -72,13 +72,13 @@ public sealed class StoryGraph<TOutput, TOption>(IReadOnlyDictionary<int, StoryV
 
     public T Induce<T>(Func<IEnumerable<T>, T> inductor, T baseValue)
     {
-        Dictionary<int, T> values = [];
+        Dictionary<long, T> values = [];
 
-        IEnumerable<int> topologicalSort = TopologicalSort();
+        IEnumerable<long> topologicalSort = TopologicalSort();
 
         List<T> predecessorValues = [];
 
-        foreach (int vertex in topologicalSort)
+        foreach (long vertex in topologicalSort)
         {
             foreach (StoryEdge incomingEdge in Vertices[vertex].IncomingEdges)
             {

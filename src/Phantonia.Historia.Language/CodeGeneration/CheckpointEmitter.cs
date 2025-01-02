@@ -13,7 +13,7 @@ public sealed class CheckpointEmitter(
     FlowGraph flowGraph,
     SymbolTable symbolTable,
     Settings settings,
-    ImmutableDictionary<int, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtCheckpoints,
+    ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtCheckpoints,
     IndentedTextWriter writer)
 {
     public void GenerateCheckpointType()

@@ -28,7 +28,7 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
         writer.WriteLine("switch (fields.state)");
         writer.BeginBlock();
 
-        foreach ((int index, FlowVertex vertex) in flowGraph.Vertices)
+        foreach ((long index, FlowVertex vertex) in flowGraph.Vertices)
         {
             ExpressionNode outputExpression;
 
@@ -92,7 +92,7 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
             writer.WriteLine("switch (fields.state)");
             writer.BeginBlock();
 
-            foreach ((int index, FlowVertex vertex) in flowGraph.Vertices)
+            foreach ((long index, FlowVertex vertex) in flowGraph.Vertices)
             {
                 if (vertex.AssociatedStatement is FlowBranchingStatementNode { Original: SwitchStatementNode switchStatement })
                 {

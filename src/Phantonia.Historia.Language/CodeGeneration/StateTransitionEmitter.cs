@@ -42,7 +42,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
 
         writer.Indent--;
 
-        foreach ((int index, ImmutableList<FlowEdge> edges) in flowGraph.OutgoingEdges)
+        foreach ((long index, ImmutableList<FlowEdge> edges) in flowGraph.OutgoingEdges)
         {
             if (!flowGraph.Vertices[index].IsStory) // purely semantic vertex
             {
@@ -107,7 +107,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
     {
         Debug.Assert(flowGraph.IsConformable);
 
-        int startVertex = flowGraph.StartEdges.Single(e => e.IsStory).ToVertex;
+        long startVertex = flowGraph.StartEdges.Single(e => e.IsStory).ToVertex;
 
         writer.Write("fields.state = ");
         writer.Write(startVertex);
@@ -123,7 +123,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
         }
     }
 
-    private void GenerateOutputTransition(int index, ImmutableList<FlowEdge> edges)
+    private void GenerateOutputTransition(long index, ImmutableList<FlowEdge> edges)
     {
         Debug.Assert(flowGraph.OutgoingEdges[index].Count(o => o.IsStory) == 1);
         GenerateTransitionTo(edges.First(e => e.IsStory).ToVertex);
@@ -275,7 +275,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
                 writer.WriteLine("default:");
                 writer.Indent++;
 
-                int nextState = flowGraph.OutgoingEdges[branchOnStatement.Index][i].ToVertex;
+                long nextState = flowGraph.OutgoingEdges[branchOnStatement.Index][i].ToVertex;
                 GenerateTransitionTo(nextState);
             }
         }
@@ -302,7 +302,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
             writer.WriteLine(" == 0)");
             writer.BeginBlock();
 
-            int? nextState = null;
+            long? nextState = null;
 
             for (int i = 0; i < branchOnStatement.Options.Length; i++)
             {
@@ -564,9 +564,9 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
         writer.EndBlock();
     }
 
-    private void GenerateTransitionTo(int toVertex)
+    private void GenerateTransitionTo(long toVertex)
     {
-        void GenerateSimpleTransitionTo(int toVertex)
+        void GenerateSimpleTransitionTo(long toVertex)
         {
             writer.WriteLine($"fields.state = {toVertex};");
 

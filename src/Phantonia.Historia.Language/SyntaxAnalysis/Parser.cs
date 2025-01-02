@@ -52,11 +52,11 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
         }
     }
 
-    private (string name, ImmutableArray<string> options, string? defaultOption, int nodeIndex) ParseOutcomeDeclaration(ref int index)
+    private (string name, ImmutableArray<string> options, string? defaultOption, long nodeIndex) ParseOutcomeDeclaration(ref int index)
     {
         Debug.Assert(tokens[index] is { Kind: TokenKind.OutcomeKeyword });
 
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
         index++;
 
         string name = Expect(TokenKind.Identifier, ref index).Text;
@@ -97,11 +97,11 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
         return (name, optionsBuilder.ToImmutable(), defaultOption, nodeIndex);
     }
 
-    private (string name, ImmutableArray<SpectrumOptionNode> options, string? defaultOption, int nodeIndex) ParseSpectrumDeclaration(ref int index)
+    private (string name, ImmutableArray<SpectrumOptionNode> options, string? defaultOption, long nodeIndex) ParseSpectrumDeclaration(ref int index)
     {
         Debug.Assert(tokens[index] is { Kind: TokenKind.SpectrumKeyword });
 
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
         index++;
 
         string name = Expect(TokenKind.Identifier, ref index).Text;
@@ -113,7 +113,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
         while (tokens[index] is { Kind: TokenKind.Identifier })
         {
             string optionName = tokens[index].Text;
-            int optionIndex = tokens[index].Index;
+            long optionIndex = tokens[index].Index;
             index++;
 
             if (tokens[index] is not { Kind: TokenKind.LessThan or TokenKind.LessThanOrEquals })
@@ -171,7 +171,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
 
     private ExpressionNode? ParseExpression(ref int index)
     {
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
 
         ExpressionNode? leftHandSide = ParseConjunctiveExpression(ref index);
 
@@ -209,7 +209,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
 
     private ExpressionNode? ParseConjunctiveExpression(ref int index)
     {
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
 
         ExpressionNode? leftHandSide = ParseSimpleExpression(ref index);
 
@@ -293,7 +293,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
         Debug.Assert(tokens[index] is { Kind: TokenKind.Identifier });
 
         string name = tokens[index].Text;
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
         index++;
 
         switch (tokens[index].Kind)
@@ -357,7 +357,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
 
         while (tokens[index] is not { Kind: TokenKind.ClosedParenthesis })
         {
-            int argumentIndex = tokens[index].Index;
+            long argumentIndex = tokens[index].Index;
 
             if (index < tokens.Length - 1 && tokens[index].Kind == TokenKind.Identifier && tokens[index + 1].Kind == TokenKind.Equals)
             {
@@ -412,7 +412,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.NotKeyword);
 
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
         index++;
 
         ExpressionNode? innerExpression = ParseSimpleExpression(ref index);

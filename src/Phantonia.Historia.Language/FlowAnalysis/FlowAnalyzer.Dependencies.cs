@@ -10,17 +10,17 @@ public sealed partial class FlowAnalyzer
 {
     private (IEnumerable<SceneSymbol>? topologicalOrder, IReadOnlyDictionary<SceneSymbol, int> referenceCounts) PerformDependencyAnalysis(IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs)
     {
-        Dictionary<int, IReadOnlySet<int>> dependencies = [];
-        Dictionary<int, Symbol> symbols = [];
-        Dictionary<int, int> referenceCounts = [];
+        Dictionary<long, IReadOnlySet<long>> dependencies = [];
+        Dictionary<long, Symbol> symbols = [];
+        Dictionary<long, int> referenceCounts = [];
 
         foreach ((SceneSymbol scene, FlowGraph flowGraph) in sceneFlowGraphs)
         {
-            IReadOnlyDictionary<int, int> theseDependenciesAndReferenceCounts = GetDependenciesAndReferenceCounts(flowGraph);
-            dependencies[scene.Index] = (SortedSet<int>)[.. theseDependenciesAndReferenceCounts.Keys];
+            IReadOnlyDictionary<long, int> theseDependenciesAndReferenceCounts = GetDependenciesAndReferenceCounts(flowGraph);
+            dependencies[scene.Index] = (SortedSet<long>)[.. theseDependenciesAndReferenceCounts.Keys];
             symbols[scene.Index] = scene;
 
-            foreach ((int dep, int refCount) in theseDependenciesAndReferenceCounts)
+            foreach ((long dep, int refCount) in theseDependenciesAndReferenceCounts)
             {
                 referenceCounts.TryAdd(dep, 0);
                 referenceCounts[dep] += refCount;
@@ -36,7 +36,7 @@ public sealed partial class FlowAnalyzer
         Dictionary<SceneSymbol, int> finalReferenceCounts = referenceCounts.ToDictionary(p => (SceneSymbol)dependencyGraph.Symbols[p.Key], p => p.Value);
 
         // spec 1.2.2 "No scene may ever directly or indirectly depend on itself."
-        if (dependencyGraph.IsCyclic(out IEnumerable<int>? cycle))
+        if (dependencyGraph.IsCyclic(out IEnumerable<long>? cycle))
         {
             ErrorFound?.Invoke(Errors.CyclicSceneDefinition(cycle.Select(i => dependencyGraph.Symbols[i].Name), dependencyGraph.Symbols[cycle.First()].Index));
             return (null, finalReferenceCounts);
@@ -50,9 +50,9 @@ public sealed partial class FlowAnalyzer
         return (topologicalOrder, finalReferenceCounts);
     }
 
-    private static IReadOnlyDictionary<int, int> GetDependenciesAndReferenceCounts(FlowGraph flowGraph)
+    private static IReadOnlyDictionary<long, int> GetDependenciesAndReferenceCounts(FlowGraph flowGraph)
     {
-        Dictionary<int, int> referenceCounts = [];
+        Dictionary<long, int> referenceCounts = [];
 
         foreach (FlowVertex vertex in flowGraph.Vertices.Values)
         {
