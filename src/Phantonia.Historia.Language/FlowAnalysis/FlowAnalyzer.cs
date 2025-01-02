@@ -328,7 +328,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
                                      .ToImmutableDictionary();
 
         IEnumerable<FlowEdge> newStartEdges = flowGraph.StartEdges.Select(e => e with { ToVertex = e.ToVertex != FlowGraph.FinalVertex ? CalculateNewIndex(e.ToVertex) : FlowGraph.FinalVertex });
-
+        
         return flowGraph with
         {
             StartEdges = [.. newStartEdges],
