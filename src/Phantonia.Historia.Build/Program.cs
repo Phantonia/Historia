@@ -5,13 +5,22 @@ namespace Phantonia.Historia.Build;
 
 internal static class Program
 {
-    private const string InputPath = @"C:\Users\User\Documents\Projects\Stories\AntiFairytale\Historia";
-    private const string OutputPath = @"C:\Users\User\Documents\Godot\AntiFairytaleTextAdventure\Historia.cs";
+    private const string PathFile = @"..\..\..\Paths.txt";
     
     private static void Main(string[] args)
     {
-        using TextReader inputReader = new StreamReader(GetInputStream());
-        using TextWriter outputWriter = new StreamWriter(OutputPath);
+        if (!File.Exists(PathFile))
+        {
+            Console.WriteLine("Define a path file for both input and output path");
+            return;
+        }
+
+        string[] paths = File.ReadAllLines(PathFile);
+        string inputPath = paths[0];
+        string outputPath = paths[1];
+
+        using TextReader inputReader = new StreamReader(GetInputStream(inputPath));
+        using TextWriter outputWriter = new StreamWriter(outputPath);
 
         Stopwatch sw = Stopwatch.StartNew();
         Compiler compiler = new(inputReader, outputWriter);
@@ -26,7 +35,7 @@ internal static class Program
 
         Console.WriteLine($"Compilation did not succeed after {sw.Elapsed.TotalSeconds} seconds.");
 
-        string code = new StreamReader(GetInputStream()).ReadToEnd();
+        string code = new StreamReader(GetInputStream(inputPath)).ReadToEnd();
 
         foreach (Error error in result.Errors)
         {
@@ -35,9 +44,9 @@ internal static class Program
         }
     }
 
-    private static Stream GetInputStream()
+    private static Stream GetInputStream(string inputPath)
     {
-        IEnumerable<string> files = Directory.GetFiles(InputPath, "*.hstr");
+        IEnumerable<string> files = Directory.GetFiles(inputPath, "*.hstr");
 
         List<Stream> streams = [];
 
