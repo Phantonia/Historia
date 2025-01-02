@@ -34,6 +34,7 @@ public sealed partial class Binder
         {
             Index = 0,
             TopLevelNodes = stories.SelectMany(s => s.TopLevelNodes).ToImmutableArray(),
+            Length = stories.Max(s => s.Length),
         };
     }
 

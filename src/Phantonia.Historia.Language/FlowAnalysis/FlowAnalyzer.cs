@@ -190,7 +190,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
 
             flowGraph = flowGraph.AppendToVertex(loopSwitchStatement.Index, nestedFlowGraph);
 
-            FlowGraph nestedSemanticCopy = CreateSemanticCopy(nestedFlowGraph);
+            FlowGraph nestedSemanticCopy = CreateSemanticCopy(nestedFlowGraph, uniqueId: loopSwitchStatement.Index);
             semanticCopy = semanticCopy.AppendToVertex(loopSwitchStatement.Index - 1, nestedSemanticCopy);
 
             if (option.Kind != LoopSwitchOptionKind.Final)
@@ -285,19 +285,24 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
         return flowGraph;
     }
 
-    private static FlowGraph CreateSemanticCopy(FlowGraph flowGraph)
+    private FlowGraph CreateSemanticCopy(FlowGraph flowGraph, long uniqueId)
     {
-        static FlowVertex SemantifyVertex(FlowVertex vertex) => vertex with
+        // for every index in the story, we have index < story.Length
+        // so if each graph for which we want to create a semantic copy has a unique id (usually its start index)
+        // this cannot clash
+        long CalculateNewIndex(long index) => uniqueId * story.Length + index;
+
+        FlowVertex SemantifyVertex(FlowVertex vertex) => vertex with
         {
             Kind = FlowVertexKind.PurelySemantic,
-            Index = vertex.Index != FlowGraph.FinalVertex ? vertex.Index - 1 : FlowGraph.FinalVertex,
+            Index = vertex.Index != FlowGraph.FinalVertex ? CalculateNewIndex(vertex.Index) : FlowGraph.FinalVertex,
         };
 
         ImmutableDictionary<long, FlowVertex> vertices
-            = flowGraph.Vertices.Select(p => KeyValuePair.Create(p.Key - 1, SemantifyVertex(p.Value)))
+            = flowGraph.Vertices.Select(p => KeyValuePair.Create(CalculateNewIndex(p.Key), SemantifyVertex(p.Value)))
                                 .ToImmutableDictionary();
 
-        static FlowEdge SemantifyEdge(FlowEdge edge)
+        FlowEdge SemantifyEdge(FlowEdge edge)
         {
             FlowEdgeKind kind = edge.IsSemantic ? FlowEdgeKind.Semantic : FlowEdgeKind.None;
 
@@ -313,16 +318,16 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
                 return edge with
                 {
                     Kind = kind,
-                    ToVertex = edge.ToVertex != FlowGraph.FinalVertex ? edge.ToVertex - 1 : FlowGraph.FinalVertex,
+                    ToVertex = edge.ToVertex != FlowGraph.FinalVertex ? CalculateNewIndex(edge.ToVertex) : FlowGraph.FinalVertex,
                 };
             }
         }
 
         ImmutableDictionary<long, ImmutableList<FlowEdge>> edges
-            = flowGraph.OutgoingEdges.Select(p => KeyValuePair.Create(p.Key - 1, p.Value.Select(e => SemantifyEdge(e)).ToImmutableList()))
+            = flowGraph.OutgoingEdges.Select(p => KeyValuePair.Create(CalculateNewIndex(p.Key), p.Value.Select(e => SemantifyEdge(e)).ToImmutableList()))
                                      .ToImmutableDictionary();
 
-        IEnumerable<FlowEdge> newStartEdges = flowGraph.StartEdges.Select(e => e with { ToVertex = e.ToVertex != FlowGraph.FinalVertex ? e.ToVertex - 1 : FlowGraph.FinalVertex });
+        IEnumerable<FlowEdge> newStartEdges = flowGraph.StartEdges.Select(e => e with { ToVertex = e.ToVertex != FlowGraph.FinalVertex ? CalculateNewIndex(e.ToVertex) : FlowGraph.FinalVertex });
 
         return flowGraph with
         {

@@ -30,6 +30,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
         {
             TopLevelNodes = topLevelBuilder.ToImmutable(),
             Index = tokens.Length > 0 ? tokens[0].Index : 0,
+            Length = tokens[^1].Index,
         };
     }
 
