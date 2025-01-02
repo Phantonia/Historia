@@ -1,6 +1,7 @@
 ﻿using Phantonia.Historia.Language.SemanticAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
+using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -153,6 +154,19 @@ public sealed partial class FlowAnalyzer
                                          .Remove(FlowGraph.FinalEdge)
                                          .Add(FlowEdge.CreateStrongTo(nextVertex))),
                 };
+
+                if (vertex.AssociatedStatement is FlowBranchingStatementNode { Original: LoopSwitchStatementNode } flowBranchingStatement)
+                {
+                    flowBranchingStatement = flowBranchingStatement with
+                    {
+                        OutgoingEdges = flowBranchingStatement.OutgoingEdges.RemoveAt(flowBranchingStatement.OutgoingEdges.Count - 1).Add(FlowEdge.CreateStrongTo(nextVertex)),
+                    };
+
+                    mainFlowGraph = mainFlowGraph.SetVertex(vertex.Index, vertex with
+                    {
+                        AssociatedStatement = flowBranchingStatement,
+                    });
+                }
             }
         }
 
