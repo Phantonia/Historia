@@ -9,7 +9,7 @@ namespace Phantonia.Historia.Language;
 
 public static class Errors
 {
-    public static Error UnterminatedStringLiteral(int index)
+    public static Error UnterminatedStringLiteral(long index)
     {
         return new Error
         {
@@ -18,7 +18,7 @@ public static class Errors
         };
     }
 
-    public static Error InvalidEscapeSequence(int index)
+    public static Error InvalidEscapeSequence(long index)
     {
         return new Error
         {
@@ -27,7 +27,7 @@ public static class Errors
         };
     }
 
-    public static Error InvalidCharacter(int index)
+    public static Error InvalidCharacter(long index)
     {
         return new Error
         {
@@ -77,7 +77,7 @@ public static class Errors
         };
     }
 
-    public static Error MustHaveAtLeastOneOption(int index)
+    public static Error MustHaveAtLeastOneOption(long index)
     {
         return new Error
         {
@@ -108,7 +108,7 @@ public static class Errors
         };
     }
 
-    public static Error SymbolDoesNotExistInScope(string identifier, int index)
+    public static Error SymbolDoesNotExistInScope(string identifier, long index)
     {
         return new Error
         {
@@ -117,7 +117,7 @@ public static class Errors
         };
     }
 
-    public static Error NonTypeSymbolUsedAsType(string identifier, int index)
+    public static Error NonTypeSymbolUsedAsType(string identifier, long index)
     {
         return new Error
         {
@@ -126,7 +126,7 @@ public static class Errors
         };
     }
 
-    public static Error IncompatibleType(TypeSymbol sourceType, TypeSymbol targetType, string context, int index)
+    public static Error IncompatibleType(TypeSymbol sourceType, TypeSymbol targetType, string context, long index)
     {
         return new Error
         {
@@ -135,7 +135,7 @@ public static class Errors
         };
     }
 
-    public static Error RecordDoesNotExist(string recordName, int index)
+    public static Error RecordDoesNotExist(string recordName, long index)
     {
         return new Error
         {
@@ -144,7 +144,7 @@ public static class Errors
         };
     }
 
-    public static Error SymbolIsNotRecord(string symbolName, int index)
+    public static Error SymbolIsNotRecord(string symbolName, long index)
     {
         return new Error
         {
@@ -153,7 +153,7 @@ public static class Errors
         };
     }
 
-    public static Error SymbolIsNotEnum(string symbolName, int index)
+    public static Error SymbolIsNotEnum(string symbolName, long index)
     {
         return new Error
         {
@@ -162,7 +162,7 @@ public static class Errors
         };
     }
 
-    public static Error WrongAmountOfArgumentsInRecordCreation(string recordName, int givenAmount, int expectedAmount, int index)
+    public static Error WrongAmountOfArgumentsInRecordCreation(string recordName, int givenAmount, int expectedAmount, long index)
     {
         return new Error
         {
@@ -171,7 +171,7 @@ public static class Errors
         };
     }
 
-    public static Error WrongPropertyInRecordCreation(string propertyName, int index)
+    public static Error WrongPropertyInRecordCreation(string propertyName, long index)
     {
         return new Error
         {
@@ -180,7 +180,7 @@ public static class Errors
         };
     }
 
-    public static Error SymbolIsNotOutcome(string symbolName, int index)
+    public static Error SymbolIsNotOutcome(string symbolName, long index)
     {
         return new Error
         {
@@ -189,7 +189,7 @@ public static class Errors
         };
     }
 
-    public static Error OptionDoesNotExistInOutcome(string outcomeName, string optionName, int index)
+    public static Error OptionDoesNotExistInOutcome(string outcomeName, string optionName, long index)
     {
         return new Error
         {
@@ -198,7 +198,7 @@ public static class Errors
         };
     }
 
-    public static Error BranchOnDuplicateOption(string outcomeName, string optionName, int index)
+    public static Error BranchOnDuplicateOption(string outcomeName, string optionName, long index)
     {
         return new Error
         {
@@ -208,7 +208,7 @@ public static class Errors
         };
     }
 
-    public static Error BranchOnIsNotExhaustive(string outcomeName, IEnumerable<string> missingOptionNames, int index)
+    public static Error BranchOnIsNotExhaustive(string outcomeName, IEnumerable<string> missingOptionNames, long index)
     {
         missingOptionNames = missingOptionNames.Select(n => $"'{n}'");
 
@@ -221,7 +221,7 @@ public static class Errors
         };
     }
 
-    public static Error BranchOnIsExhaustiveAndHasOtherBranch(string outcomeName, int index)
+    public static Error BranchOnIsExhaustiveAndHasOtherBranch(string outcomeName, long index)
     {
         return new Error
         {
@@ -241,7 +241,7 @@ public static class Errors
         };
     }
 
-    public static Error DuplicatedSymbolName(string name, int index)
+    public static Error DuplicatedSymbolName(string name, long index)
     {
         return new Error
         {
@@ -250,7 +250,7 @@ public static class Errors
         };
     }
 
-    public static Error CyclicTypeDefinition(IEnumerable<string> cycle, int index)
+    public static Error CyclicTypeDefinition(IEnumerable<string> cycle, long index)
     {
         return new Error
         {
@@ -259,7 +259,7 @@ public static class Errors
         };
     }
 
-    public static Error CyclicSceneDefinition(IEnumerable<string> cycle, int index)
+    public static Error CyclicSceneDefinition(IEnumerable<string> cycle, long index)
     {
         return new Error
         {
@@ -268,7 +268,7 @@ public static class Errors
         };
     }
 
-    public static Error LoopSwitchHasToTerminate(int index)
+    public static Error LoopSwitchHasToTerminate(long index)
     {
         return new Error
         {
@@ -277,7 +277,7 @@ public static class Errors
         };
     }
 
-    public static Error DuplicatedOptionInOutcomeDeclaration(string optionName, int index)
+    public static Error DuplicatedOptionInOutcomeDeclaration(string optionName, long index)
     {
         return new Error
         {
@@ -286,7 +286,7 @@ public static class Errors
         };
     }
 
-    public static Error OutcomeWithZeroOptions(string outcomeName, int index)
+    public static Error OutcomeWithZeroOptions(string outcomeName, long index)
     {
         return new Error
         {
@@ -295,7 +295,7 @@ public static class Errors
         };
     }
 
-    public static Error OutcomeDefaultOptionNotAnOption(string outcomeName, int index)
+    public static Error OutcomeDefaultOptionNotAnOption(string outcomeName, long index)
     {
         return new Error
         {
@@ -304,7 +304,7 @@ public static class Errors
         };
     }
 
-    public static Error OutcomeAssignedNonIdentifier(string outcomeName, int index)
+    public static Error OutcomeAssignedNonIdentifier(string outcomeName, long index)
     {
         return new Error
         {
@@ -313,7 +313,7 @@ public static class Errors
         };
     }
 
-    public static Error SpectrumNotIncreasing(string spectrumName, (int num, int denom) lastOkay, (int num, int denom) offending, int index)
+    public static Error SpectrumNotIncreasing(string spectrumName, (int num, int denom) lastOkay, (int num, int denom) offending, long index)
     {
         return new Error
         {
@@ -322,7 +322,7 @@ public static class Errors
         };
     }
 
-    public static Error SpectrumBoundDivisionByZero(string spectrumName, string offendingOption, int index)
+    public static Error SpectrumBoundDivisionByZero(string spectrumName, string offendingOption, long index)
     {
         return new Error
         {
@@ -331,7 +331,7 @@ public static class Errors
         };
     }
 
-    public static Error SpectrumBoundNotInRange(string spectrumName, string offendingOption, int index)
+    public static Error SpectrumBoundNotInRange(string spectrumName, string offendingOption, long index)
     {
         return new Error
         {
@@ -340,7 +340,7 @@ public static class Errors
         };
     }
 
-    public static Error BranchOnOnlyOneOtherLast(int index)
+    public static Error BranchOnOnlyOneOtherLast(long index)
     {
         return new Error
         {
@@ -349,7 +349,7 @@ public static class Errors
         };
     }
 
-    public static Error SymbolHasNoValue(string name, int index)
+    public static Error SymbolHasNoValue(string name, long index)
     {
         return new Error
         {
@@ -358,7 +358,7 @@ public static class Errors
         };
     }
 
-    public static Error SymbolCannotBeAssignedTo(string name, int index)
+    public static Error SymbolCannotBeAssignedTo(string name, long index)
     {
         return new Error
         {
@@ -367,7 +367,7 @@ public static class Errors
         };
     }
 
-    public static Error SymbolIsNotSpectrum(string name, int index)
+    public static Error SymbolIsNotSpectrum(string name, long index)
     {
         return new Error
         {
@@ -376,7 +376,7 @@ public static class Errors
         };
     }
 
-    public static Error OutcomeMightBeAssignedMoreThanOnce(string outcomeName, IEnumerable<string> callStack, int index)
+    public static Error OutcomeMightBeAssignedMoreThanOnce(string outcomeName, IEnumerable<string> callStack, long index)
     {
         return new Error
         {
@@ -385,7 +385,7 @@ public static class Errors
         };
     }
 
-    public static Error OutcomeNotDefinitelyAssigned(string outcomeName, IEnumerable<string> callStack, int index)
+    public static Error OutcomeNotDefinitelyAssigned(string outcomeName, IEnumerable<string> callStack, long index)
     {
         return new Error
         {
@@ -394,7 +394,7 @@ public static class Errors
         };
     }
 
-    public static Error SpectrumNotDefinitelyAssigned(string spectrumName, IEnumerable<string> callStack, int index)
+    public static Error SpectrumNotDefinitelyAssigned(string spectrumName, IEnumerable<string> callStack, long index)
     {
         return new Error
         {
@@ -403,7 +403,7 @@ public static class Errors
         };
     }
 
-    public static Error OutcomeIsLocked(string outcomeName, IEnumerable<string> callStack, int index)
+    public static Error OutcomeIsLocked(string outcomeName, IEnumerable<string> callStack, long index)
     {
         return new Error
         {
@@ -414,7 +414,7 @@ public static class Errors
         };
     }
 
-    public static Error SpectrumIsLocked(string spectrumName, IEnumerable<string> callStack, int index)
+    public static Error SpectrumIsLocked(string spectrumName, IEnumerable<string> callStack, long index)
     {
         return new Error
         {
@@ -425,7 +425,7 @@ public static class Errors
         };
     }
 
-    public static Error UnionHasDuplicateSubtype(string unionName, string typeName, int index)
+    public static Error UnionHasDuplicateSubtype(string unionName, string typeName, long index)
     {
         return new Error
         {
@@ -434,7 +434,7 @@ public static class Errors
         };
     }
 
-    public static Error InvalidNamespaceFormat(string namespaceString, int index)
+    public static Error InvalidNamespaceFormat(string namespaceString, long index)
     {
         return new Error
         {
@@ -443,7 +443,7 @@ public static class Errors
         };
     }
 
-    public static Error ForbiddenNamespace(string namespaceString, int index)
+    public static Error ForbiddenNamespace(string namespaceString, long index)
     {
         return new Error
         {
@@ -452,7 +452,7 @@ public static class Errors
         };
     }
 
-    public static Error InvalidStoryName(string storyName, int index)
+    public static Error InvalidStoryName(string storyName, long index)
     {
         return new Error
         {
@@ -461,7 +461,7 @@ public static class Errors
         };
     }
 
-    public static Error ConflictingStoryName(string storyName, int index)
+    public static Error ConflictingStoryName(string storyName, long index)
     {
         // TODO: change this to reflect the StateMachine / Snapshot suffixes
         return new Error
@@ -471,7 +471,7 @@ public static class Errors
         };
     }
 
-    public static Error ExpectedTrueFalseString(string settingName, string actualString, int index)
+    public static Error ExpectedTrueFalseString(string settingName, string actualString, long index)
     {
         return new Error
         {
@@ -480,7 +480,7 @@ public static class Errors
         };
     }
 
-    public static Error ConflictingUnionSubtype(string unionName, string subtypeName, int index)
+    public static Error ConflictingUnionSubtype(string unionName, string subtypeName, long index)
     {
         return new Error
         {
@@ -489,7 +489,7 @@ public static class Errors
         };
     }
 
-    public static Error DuplicatedRecordPropertyName(string recordName, string propertyName, int index)
+    public static Error DuplicatedRecordPropertyName(string recordName, string propertyName, long index)
     {
         return new Error
         {
@@ -498,7 +498,7 @@ public static class Errors
         };
     }
 
-    public static Error ConflictingRecordProperty(string recordName, string propertyName, int index)
+    public static Error ConflictingRecordProperty(string recordName, string propertyName, long index)
     {
         return new Error
         {
@@ -507,7 +507,7 @@ public static class Errors
         };
     }
 
-    public static Error DuplicatedOptionInEnum(string enumName, string optionName, int index)
+    public static Error DuplicatedOptionInEnum(string enumName, string optionName, long index)
     {
         return new Error
         {
@@ -516,7 +516,7 @@ public static class Errors
         };
     }
 
-    public static Error OptionDoesNotExistInEnum(string enumName, string optionName, int index)
+    public static Error OptionDoesNotExistInEnum(string enumName, string optionName, long index)
     {
         return new Error
         {
@@ -525,7 +525,7 @@ public static class Errors
         };
     }
 
-    public static Error DuplicatedMethodNameInInterface(string interfaceName, string methodName, int index)
+    public static Error DuplicatedMethodNameInInterface(string interfaceName, string methodName, long index)
     {
         return new Error
         {
@@ -534,7 +534,7 @@ public static class Errors
         };
     }
 
-    public static Error SymbolIsNotInterface(string alledgedInterfaceName, int index)
+    public static Error SymbolIsNotInterface(string alledgedInterfaceName, long index)
     {
         return new Error
         {
@@ -543,7 +543,7 @@ public static class Errors
         };
     }
 
-    public static Error SymbolIsNotReference(string alledgedReferenceName, int index)
+    public static Error SymbolIsNotReference(string alledgedReferenceName, long index)
     {
         return new Error
         {
@@ -552,7 +552,7 @@ public static class Errors
         };
     }
 
-    public static Error MethodDoesNotExistInInterface(string referenceName, string interfaceName, string alledgedMethodName, int index)
+    public static Error MethodDoesNotExistInInterface(string referenceName, string interfaceName, string alledgedMethodName, long index)
     {
         return new Error
         {
@@ -561,7 +561,7 @@ public static class Errors
         };
     }
 
-    public static Error CannotRunChoiceMethod(string interfaceName, string methodName, int index)
+    public static Error CannotRunChoiceMethod(string interfaceName, string methodName, long index)
     {
         return new Error
         {
@@ -570,7 +570,7 @@ public static class Errors
         };
     }
 
-    public static Error CannotChooseFromActionMethod(string interfaceName, string methodName, int index)
+    public static Error CannotChooseFromActionMethod(string interfaceName, string methodName, long index)
     {
         return new Error
         {
@@ -579,7 +579,7 @@ public static class Errors
         };
     }
 
-    public static Error WrongAmountOfArgumentsInMethodCall(string interfaceName, string methodName, int givenAmount, int expectedAmount, int index)
+    public static Error WrongAmountOfArgumentsInMethodCall(string interfaceName, string methodName, int givenAmount, int expectedAmount, long index)
     {
         return new Error
         {
@@ -595,11 +595,11 @@ public static class Errors
         return $"Error: {error.ErrorMessage}{Environment.NewLine}{wholeLine}{Environment.NewLine}{new string(' ', column)}^";
     }
 
-    private static (string wholeLine, int column) FindLine(string text, int index)
+    private static (string wholeLine, int column) FindLine(string text, long index)
     {
         int lineStartIndex = 0;
 
-        for (int i = index - 1; i >= 0; i--)
+        for (int i = (int)index - 1; i >= 0; i--)
         {
             if (text[i] == '\n')
             {
@@ -609,11 +609,11 @@ public static class Errors
         }
 
         // column is 0-based, so it is also the number of characters before it in the line
-        int column = index - lineStartIndex;
+        int column = (int)index - lineStartIndex;
 
         int lineEndIndex = text.Length;
 
-        for (int i = index; i < text.Length; i++)
+        for (int i = (int)index; i < text.Length; i++)
         {
             if (text[i] is '\n' or '\r')
             {

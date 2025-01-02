@@ -1,25 +1,14 @@
-﻿using System.Collections.Immutable;
+﻿namespace Phantonia.Historia;
 
-namespace Phantonia.Historia;
-
-public readonly struct StoryVertex<TOutput, TOption>
+public readonly struct StoryVertex<TOutput, TOption>(long index, TOutput output, ReadOnlyList<TOption> options, ReadOnlyList<StoryEdge> outgoingEdges, ReadOnlyList<StoryEdge> incomingEdges)
 {
-    public StoryVertex(int index, TOutput output, ReadOnlyList<TOption> options, ReadOnlyList<StoryEdge> outgoingEdges, ReadOnlyList<StoryEdge> incomingEdges)
-    {
-        Index = index;
-        Output = output;
-        Options = options;
-        OutgoingEdges = outgoingEdges;
-        IncomingEdges = incomingEdges;
-    }
+    public long Index { get; } = index;
 
-    public int Index { get; }
+    public TOutput Output { get; } = output;
 
-    public TOutput Output { get; }
+    public ReadOnlyList<TOption> Options { get; } = options;
 
-    public ReadOnlyList<TOption> Options { get; }
+    public ReadOnlyList<StoryEdge> OutgoingEdges { get; } = outgoingEdges;
 
-    public ReadOnlyList<StoryEdge> OutgoingEdges { get; }
-
-    public ReadOnlyList<StoryEdge> IncomingEdges { get; }
+    public ReadOnlyList<StoryEdge> IncomingEdges { get; } = incomingEdges;
 }

@@ -4,7 +4,6 @@ using Phantonia.Historia.Language.SyntaxAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using System.CodeDom.Compiler;
 using System.Linq;
-using System.Reflection.Metadata;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
@@ -497,15 +496,28 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, Settings setti
             writer.Write($"internal @{union.Name}(");
             GeneralEmission.GenerateType(subtype, writer);
             writer.WriteLine(" value)");
+
             writer.BeginBlock();
+
             writer.Write("this.");
             GenerateUnionSubtypeName(subtype);
             writer.WriteLine(" = value;");
+
+            foreach (TypeSymbol otherSubtype in union.Subtypes.Except([subtype]))
+            {
+                writer.Write("this.");
+                GenerateUnionSubtypeName(otherSubtype);
+                writer.Write(" = default(");
+                GeneralEmission.GenerateType(otherSubtype, writer);
+                writer.WriteLine(");");
+            }
+
             writer.Write("Discriminator = ");
             writer.Write(union.Name);
             writer.Write("Discriminator.");
             GenerateUnionSubtypeName(subtype);
             writer.WriteLine(';');
+
             writer.EndBlock(); // constructor
             writer.WriteLine();
         }

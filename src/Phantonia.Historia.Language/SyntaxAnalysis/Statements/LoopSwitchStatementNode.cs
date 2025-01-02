@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public sealed record LoopSwitchStatementNode() : StatementNode, IOutputStatementNode
+public sealed record LoopSwitchStatementNode() : StatementNode, IOutputStatementNode, IBranchingStatementNode
 {
     public required ExpressionNode OutputExpression { get; init; }
 
@@ -28,4 +28,5 @@ public sealed record LoopSwitchStatementNode() : StatementNode, IOutputStatement
 
     protected internal override string GetDebuggerDisplay() => $"loopswitch {{ {string.Join(", ", Options.Select(o => o.GetDebuggerDisplay()))} }}";
 
+    IEnumerable<StatementBodyNode> IBranchingStatementNode.Bodies => Options.Select(o => o.Body);
 }

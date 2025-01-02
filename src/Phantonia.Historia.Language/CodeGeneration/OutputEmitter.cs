@@ -28,7 +28,7 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
         writer.WriteLine("switch (fields.state)");
         writer.BeginBlock();
 
-        foreach ((int index, FlowVertex vertex) in flowGraph.Vertices)
+        foreach ((long index, FlowVertex vertex) in flowGraph.Vertices)
         {
             ExpressionNode outputExpression;
 
@@ -37,17 +37,17 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
                 case OutputStatementNode outputStatement:
                     outputExpression = outputStatement.OutputExpression;
                     break;
-                case SwitchStatementNode switchStatement:
+                case FlowBranchingStatementNode { Original: SwitchStatementNode switchStatement }:
                     outputExpression = switchStatement.OutputExpression;
                     break;
-                case LoopSwitchStatementNode loopSwitchStatement:
+                case FlowBranchingStatementNode { Original: LoopSwitchStatementNode loopSwitchStatement }:
                     outputExpression = loopSwitchStatement.OutputExpression;
                     break;
                 default:
                     continue;
             }
 
-            if (vertex.AssociatedStatement is not (OutputStatementNode or SwitchStatementNode or LoopSwitchStatementNode))
+            if (vertex.AssociatedStatement is not (OutputStatementNode or FlowBranchingStatementNode { Original: SwitchStatementNode or LoopSwitchStatementNode }))
             {
                 continue;
             }
@@ -74,7 +74,7 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
         writer.EndBlock(); // switch
         writer.WriteLine();
 
-        writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid state\");");
+        writer.WriteLine("throw new global::System.InvalidOperationException(\"Fatal internal error: Invalid state (GetOutput)\");");
 
         writer.EndBlock(); // GetOutput method
     }
@@ -87,14 +87,14 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
 
         writer.BeginBlock();
 
-        if (flowGraph.Vertices.Values.Any(v => v.AssociatedStatement is SwitchStatementNode or LoopSwitchStatementNode))
+        if (flowGraph.Vertices.Values.Any(v => v.AssociatedStatement is FlowBranchingStatementNode { Original: SwitchStatementNode or LoopSwitchStatementNode }))
         {
             writer.WriteLine("switch (fields.state)");
             writer.BeginBlock();
 
-            foreach ((int index, FlowVertex vertex) in flowGraph.Vertices)
+            foreach ((long index, FlowVertex vertex) in flowGraph.Vertices)
             {
-                if (vertex.AssociatedStatement is SwitchStatementNode switchStatement)
+                if (vertex.AssociatedStatement is FlowBranchingStatementNode { Original: SwitchStatementNode switchStatement })
                 {
                     writer.Write("case ");
                     writer.Write(index);
@@ -121,7 +121,7 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
 
                     writer.Indent--;
                 }
-                else if (vertex.AssociatedStatement is LoopSwitchStatementNode loopSwitchStatement)
+                else if (vertex.AssociatedStatement is FlowBranchingStatementNode { Original: LoopSwitchStatementNode loopSwitchStatement })
                 {
                     writer.Write("case ");
                     writer.Write(index);

@@ -14,7 +14,7 @@ public sealed class DependencyGraphTests
     [TestMethod]
     public void TestCyclicGraph()
     {
-        Dictionary<int, Symbol> symbols = new()
+        Dictionary<long, Symbol> symbols = new()
         {
             [17] = new PseudoRecordTypeSymbol { Name = "Abc", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 17, },
             [26] = new PseudoRecordTypeSymbol { Name = "Def", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 26, },
@@ -27,17 +27,17 @@ public sealed class DependencyGraphTests
             [123] = new PseudoRecordTypeSymbol { Name = "Xyz", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 123, },
         };
 
-        Dictionary<int, IReadOnlySet<int>> dependencies = new()
+        Dictionary<long, IReadOnlySet<long>> dependencies = new()
         {
-            [17] = (SortedSet<int>)[26, 43],
-            [26] = (SortedSet<int>)[43, 55],
-            [43] = (SortedSet<int>)[70],
-            [55] = (SortedSet<int>)[70, 89],
-            [70] = (SortedSet<int>)[105],
-            [89] = (SortedSet<int>)[105, 117],
-            [105] = (SortedSet<int>)[117],
-            [117] = (SortedSet<int>)[123],
-            [123] = (SortedSet<int>)[89],
+            [17] = (SortedSet<long>)[26, 43],
+            [26] = (SortedSet<long>)[43, 55],
+            [43] = (SortedSet<long>)[70],
+            [55] = (SortedSet<long>)[70, 89],
+            [70] = (SortedSet<long>)[105],
+            [89] = (SortedSet<long>)[105, 117],
+            [105] = (SortedSet<long>)[117],
+            [117] = (SortedSet<long>)[123],
+            [123] = (SortedSet<long>)[89],
         };
 
         DependencyGraph graph = new()
@@ -46,17 +46,17 @@ public sealed class DependencyGraphTests
             Dependencies = dependencies,
         };
 
-        Assert.IsTrue(graph.IsCyclic(out IEnumerable<int>? foundCycle));
+        Assert.IsTrue(graph.IsCyclic(out IEnumerable<long>? foundCycle));
 
-        List<int> cycle = foundCycle.Distinct().ToList();
+        List<long> cycle = foundCycle.Distinct().ToList();
 
         switch (cycle.Count)
         {
             case 3:
-                Assert.IsTrue(cycle.OrderBy(i => i).SequenceEqual(new[] { 89, 117, 123 }));
+                Assert.IsTrue(cycle.OrderBy(i => i).SequenceEqual([89, 117, 123]));
                 break;
             case 4:
-                Assert.IsTrue(cycle.OrderBy(i => i).SequenceEqual(new[] { 89, 105, 117, 123 }));
+                Assert.IsTrue(cycle.OrderBy(i => i).SequenceEqual([89, 105, 117, 123]));
                 break;
             default:
                 Assert.Fail("Cycle is not of length 3 or 4");
@@ -67,7 +67,7 @@ public sealed class DependencyGraphTests
     //[TestMethod]
     public void TestAcyclicGraph()
     {
-        Dictionary<int, Symbol> symbols = new()
+        Dictionary<long, Symbol> symbols = new()
         {
             [17] = new PseudoRecordTypeSymbol { Name = "Abc", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 17, },
             [26] = new PseudoRecordTypeSymbol { Name = "Def", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 26, },
@@ -80,17 +80,17 @@ public sealed class DependencyGraphTests
             [123] = new PseudoRecordTypeSymbol { Name = "Xyz", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 123, },
         };
 
-        Dictionary<int, IReadOnlySet<int>> dependencies = new()
+        Dictionary<long, IReadOnlySet<long>> dependencies = new()
         {
-            [17] = (SortedSet<int>)[26, 43],
-            [26] = (SortedSet<int>)[43, 55],
-            [43] = (SortedSet<int>)[70],
-            [55] = (SortedSet<int>)[70, 89],
-            [70] = (SortedSet<int>)[105],
-            [89] = (SortedSet<int>)[105, 117],
-            [105] = (SortedSet<int>)[117],
-            [117] = (SortedSet<int>)[123],
-            [123] = (SortedSet<int>)[],
+            [17] = (SortedSet<long>)[26, 43],
+            [26] = (SortedSet<long>)[43, 55],
+            [43] = (SortedSet<long>)[70],
+            [55] = (SortedSet<long>)[70, 89],
+            [70] = (SortedSet<long>)[105],
+            [89] = (SortedSet<long>)[105, 117],
+            [105] = (SortedSet<long>)[117],
+            [117] = (SortedSet<long>)[123],
+            [123] = (SortedSet<long>)[],
         };
 
         DependencyGraph graph = new()
@@ -99,10 +99,10 @@ public sealed class DependencyGraphTests
             Dependencies = dependencies,
         };
 
-        Assert.IsFalse(graph.IsCyclic(out IEnumerable<int>? cycle));
+        Assert.IsFalse(graph.IsCyclic(out IEnumerable<long>? cycle));
         Assert.IsNull(cycle);
 
-        IEnumerable<int> topologicalOrdering = graph.GetDependencyRespectingOrder();
+        IEnumerable<long> topologicalOrdering = graph.GetDependencyRespectingOrder();
 
         // only in our specific case do we assume that a vertex only points at higher indexed vertices
         // in reality this might not be the case

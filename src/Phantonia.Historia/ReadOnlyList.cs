@@ -10,10 +10,7 @@ public readonly struct ReadOnlyList<T> : IReadOnlyList<T>
 
     public ReadOnlyList(IReadOnlyList<T> list, int startIndex, int endIndex)
     {
-        if (startIndex < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(startIndex));
-        }
+        ArgumentOutOfRangeException.ThrowIfNegative(startIndex);
 
         if (endIndex < startIndex || endIndex > list.Count)
         {

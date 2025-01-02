@@ -4,7 +4,6 @@ using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Diagnostics;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
@@ -59,7 +58,7 @@ public sealed class StoryGraphEmitter(FlowGraph flowGraph, Settings settings, In
         {
             writer.Write("global::");
             writer.Write(typeof(Dictionary<,>).FullName?[..typeof(Dictionary<,>).FullName!.IndexOf('`')]);
-            writer.Write("<int, ");
+            writer.Write("<long, ");
             GeneralEmission.GenerateGenericStoryType(typeof(StoryVertex<,>), settings, writer);
             writer.Write('>');
         }
@@ -81,7 +80,12 @@ public sealed class StoryGraphEmitter(FlowGraph flowGraph, Settings settings, In
 
         writer.BeginBlock();
 
-        IOutputStatementNode outputStatement = (IOutputStatementNode)vertex.AssociatedStatement;
+        IOutputStatementNode outputStatement = vertex.AssociatedStatement switch
+        {
+            IOutputStatementNode os => os,
+            FlowBranchingStatementNode { Original: IOutputStatementNode os } => os,
+            _ => throw new InvalidOperationException(),
+        };
 
         GenerateOptions(outputStatement); // includes writer.WriteLine()
 
@@ -256,7 +260,7 @@ public sealed class StoryGraphEmitter(FlowGraph flowGraph, Settings settings, In
             {
                 continue;
             }
-       
+
             writer.Write("startEdges[");
             writer.Write(i);
             writer.Write("] = new global::");

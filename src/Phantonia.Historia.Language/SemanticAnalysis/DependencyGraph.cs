@@ -9,21 +9,21 @@ public sealed class DependencyGraph
 {
     public DependencyGraph() { }
 
-    public required IReadOnlyDictionary<int, Symbol> Symbols { get; init; }
+    public required IReadOnlyDictionary<long, Symbol> Symbols { get; init; }
 
-    public required IReadOnlyDictionary<int, IReadOnlySet<int>> Dependencies { get; init; }
+    public required IReadOnlyDictionary<long, IReadOnlySet<long>> Dependencies { get; init; }
 
-    public bool IsCyclic([NotNullWhen(returnValue: true)] out IEnumerable<int>? cycle)
+    public bool IsCyclic([NotNullWhen(returnValue: true)] out IEnumerable<long>? cycle)
     {
-        Stack<int>? cycleStack = null;
-        Dictionary<int, VertexData> vertexData = [];
+        Stack<long>? cycleStack = null;
+        Dictionary<long, VertexData> vertexData = [];
 
-        foreach (int vertex in Symbols.Keys)
+        foreach (long vertex in Symbols.Keys)
         {
             vertexData[vertex] = new VertexData();
         }
 
-        foreach (int vertex in Symbols.Keys)
+        foreach (long vertex in Symbols.Keys)
         {
             if (!vertexData[vertex].Marked)
             {
@@ -34,11 +34,11 @@ public sealed class DependencyGraph
         cycle = cycleStack;
         return cycle is not null;
 
-        void DepthFirstSearch(int vertex)
+        void DepthFirstSearch(long vertex)
         {
             vertexData[vertex] = vertexData[vertex] with { OnStack = true, Marked = true };
 
-            foreach (int adjacentVertex in Dependencies[vertex])
+            foreach (long adjacentVertex in Dependencies[vertex])
             {
                 if (cycleStack is not null)
                 {
@@ -52,9 +52,9 @@ public sealed class DependencyGraph
                 }
                 else if (vertexData[adjacentVertex].OnStack)
                 {
-                    cycleStack = new Stack<int>();
+                    cycleStack = new Stack<long>();
 
-                    for (int x = vertex; x != adjacentVertex; x = vertexData[x].EdgeTo)
+                    for (long x = vertex; x != adjacentVertex; x = vertexData[x].EdgeTo)
                     {
                         cycleStack.Push(x);
                     }
@@ -68,20 +68,20 @@ public sealed class DependencyGraph
         }
     }
 
-    public IEnumerable<int> TopologicalSort()
+    public IEnumerable<long> TopologicalSort()
     {
         Debug.Assert(!IsCyclic(out _));
 
-        Dictionary<int, bool> marked = [];
+        Dictionary<long, bool> marked = [];
 
-        foreach (int vertex in Symbols.Keys)
+        foreach (long vertex in Symbols.Keys)
         {
             marked[vertex] = false;
         }
 
-        Stack<int> postOrder = new();
+        Stack<long> postOrder = new();
 
-        foreach (int vertex in Symbols.Keys)
+        foreach (long vertex in Symbols.Keys)
         {
             if (!marked[vertex])
             {
@@ -91,11 +91,11 @@ public sealed class DependencyGraph
 
         return postOrder;
 
-        void DepthFirstSearch(int vertex)
+        void DepthFirstSearch(long vertex)
         {
             marked[vertex] = true;
 
-            foreach (int adjacentVertex in Dependencies[vertex])
+            foreach (long adjacentVertex in Dependencies[vertex])
             {
                 if (!marked[adjacentVertex])
                 {
@@ -107,14 +107,14 @@ public sealed class DependencyGraph
         }
     }
 
-    public IEnumerable<int> GetDependencyRespectingOrder()
+    public IEnumerable<long> GetDependencyRespectingOrder()
     {
-        IEnumerable<int> order = TopologicalSort();
-        Debug.Assert(order is Stack<int>);
+        IEnumerable<long> order = TopologicalSort();
+        Debug.Assert(order is Stack<long>);
 
-        Stack<int> stack = (Stack<int>)order;
+        Stack<long> stack = (Stack<long>)order;
 
-        Stack<int> newOrder = new();
+        Stack<long> newOrder = new();
 
         // reverse stack
         while (stack.Count > 0)
@@ -130,7 +130,7 @@ public sealed class DependencyGraph
         public VertexData() { }
 
         public bool Marked { get; init; } = false;
-        public int EdgeTo { get; init; } = -1;
+        public long EdgeTo { get; init; } = -1;
         public bool OnStack { get; init; } = false;
     }
 }

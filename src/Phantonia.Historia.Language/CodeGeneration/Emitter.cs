@@ -15,7 +15,7 @@ public sealed class Emitter(
     Settings settings,
     FlowGraph flowGraph,
     SymbolTable symbolTable,
-    ImmutableDictionary<int, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtCheckpoints,
+    ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtCheckpoints,
     TextWriter outputWriter)
 {
     private readonly IndentedTextWriter writer = new(outputWriter);

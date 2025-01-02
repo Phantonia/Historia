@@ -33,7 +33,7 @@ public sealed partial class Parser
                 return ParsePublicTopLevelNode(ref index);
             case { Kind: TokenKind.OutcomeKeyword }:
                 {
-                    (string name, ImmutableArray<string> options, string? defaultOption, int nodeIndex) = ParseOutcomeDeclaration(ref index);
+                    (string name, ImmutableArray<string> options, string? defaultOption, long nodeIndex) = ParseOutcomeDeclaration(ref index);
 
                     return new OutcomeSymbolDeclarationNode
                     {
@@ -46,7 +46,7 @@ public sealed partial class Parser
                 }
             case { Kind: TokenKind.SpectrumKeyword }:
                 {
-                    (string name, ImmutableArray<SpectrumOptionNode> options, string? defaultOption, int nodeIndex) = ParseSpectrumDeclaration(ref index);
+                    (string name, ImmutableArray<SpectrumOptionNode> options, string? defaultOption, long nodeIndex) = ParseSpectrumDeclaration(ref index);
 
                     return new SpectrumSymbolDeclarationNode
                     {
@@ -75,7 +75,7 @@ public sealed partial class Parser
     private SceneSymbolDeclarationNode? ParseSceneSymbolDeclaration(ref int index)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.SceneKeyword);
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
 
         index++;
 
@@ -99,7 +99,7 @@ public sealed partial class Parser
     {
         Debug.Assert(tokens[index] is { Kind: TokenKind.UnionKeyword });
 
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
         index++;
 
         string name = Expect(TokenKind.Identifier, ref index).Text;
@@ -151,7 +151,7 @@ public sealed partial class Parser
 
         Debug.Assert(tokens[index] is { Kind: TokenKind.RecordKeyword });
 
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
 
         index++;
 
@@ -219,7 +219,7 @@ public sealed partial class Parser
         // EnumDeclaration : 'enum' identifier '(' (identifier (',' identifier)* ','?)? ')' ';';
         Debug.Assert(tokens[index] is { Kind: TokenKind.EnumKeyword });
 
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
         index++;
 
         string name = Expect(TokenKind.Identifier, ref index).Text;
@@ -259,7 +259,7 @@ public sealed partial class Parser
     {
         Debug.Assert(tokens[index].Kind == TokenKind.SettingKeyword);
 
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
         index++;
 
         Token identifier = Expect(TokenKind.Identifier, ref index);
@@ -315,7 +315,7 @@ public sealed partial class Parser
     {
         Debug.Assert(tokens[index] is { Kind: TokenKind.PublicKeyword });
 
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
         index++;
 
         switch (tokens[index])
@@ -356,7 +356,7 @@ public sealed partial class Parser
     {
         Debug.Assert(tokens[index].Kind == TokenKind.InterfaceKeyword);
 
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
         index++;
 
         string name = Expect(TokenKind.Identifier, ref index).Text;
@@ -397,7 +397,7 @@ public sealed partial class Parser
 
     private InterfaceMethodDeclarationNode? ParseInterfaceMethodDeclaration(ref int index)
     {
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
 
         InterfaceMethodKind kind;
 
@@ -438,7 +438,7 @@ public sealed partial class Parser
     {
         Debug.Assert(tokens[index].Kind is TokenKind.ReferenceKeyword);
 
-        int nodeIndex = tokens[index].Index;
+        long nodeIndex = tokens[index].Index;
         index++;
 
         string name = Expect(TokenKind.Identifier, ref index).Text;
