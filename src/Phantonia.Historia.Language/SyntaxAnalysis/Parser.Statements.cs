@@ -1,6 +1,7 @@
 ﻿using Phantonia.Historia.Language.LexicalAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
+using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using System.Collections.Immutable;
 using System.Diagnostics;
 
@@ -18,13 +19,20 @@ public sealed partial class Parser
 
         while (tokens[index].Kind is not TokenKind.ClosedBrace)
         {
-            StatementNode? nextStatement = ParseStatement(ref index);
-            if (nextStatement is null)
-            {
-                return null;
-            }
-
+            StatementNode nextStatement = ParseStatement(ref index);
+            
             statementBuilder.Add(nextStatement);
+
+            if (tokens[index].Kind is TokenKind.EndOfFile)
+            {
+                return new StatementBodyNode
+                {
+                    OpenBraceToken = openBrace,
+                    Statements = statementBuilder.ToImmutable(),
+                    ClosedBraceToken = Token.Missing(tokens[index].Index),
+                    Index = nodeIndex,
+                };
+            }
         }
 
         Token closedBrace = tokens[index];
@@ -39,16 +47,16 @@ public sealed partial class Parser
         };
     }
 
-    private StatementNode? ParseStatement(ref int index)
+    private StatementNode ParseStatement(ref int index)
     {
         switch (tokens[index].Kind)
         {
             case TokenKind.OutputKeyword:
-                return ParseOutputStatement(ref index, checkpointToken: null);
+                return ParseOutputStatement(ref index, checkpointKeyword: null);
             case TokenKind.SwitchKeyword:
-                return ParseSwitchStatement(ref index, isCheckpoint: false);
+                return ParseSwitchStatement(ref index, checkpointKeyword: null);
             case TokenKind.LoopKeyword:
-                return ParseLoopSwitchStatement(ref index, isCheckpoint: false);
+                return ParseLoopSwitchStatement(ref index, checkpointKeyword: null);
             case TokenKind.CheckpointKeyword:
                 return ParseCheckpointStatement(ref index);
             case TokenKind.BranchOnKeyword:
@@ -74,19 +82,23 @@ public sealed partial class Parser
                 }
             case TokenKind.SpectrumKeyword:
                 {
-                    (string name, ImmutableArray<SpectrumOptionNode> options, string? defaultOption, long nodeIndex) = ParseSpectrumDeclaration(ref index);
+                    SpectrumDeclarationInfo spectrumDeclaration = ParseSpectrumDeclaration(ref index);
+
                     return new SpectrumDeclarationStatementNode
                     {
-                        Name = name,
-                        Options = options,
-                        DefaultOption = defaultOption,
-                        Index = nodeIndex,
+                        SpectrumKeywordToken = spectrumDeclaration.SpectrumKeyword,
+                        NameToken = spectrumDeclaration.Name,
+                        OpenParenthesisToken = spectrumDeclaration.OpenParenthesis,
+                        Options = spectrumDeclaration.Options,
+                        ClosedParenthesisToken = spectrumDeclaration.ClosedParenthesis,
+                        DefaultKeywordToken = spectrumDeclaration.DefaultKeyword,
+                        DefaultOptionToken = spectrumDeclaration.DefaultOption,
+                        SemicolonToken = spectrumDeclaration.Semicolon,
+                        Index = spectrumDeclaration.Index,
                     };
                 }
-            case TokenKind.StrengthenKeyword:
-                return ParseSpectrumAdjustmentStatement(strengthens: true, ref index);
-            case TokenKind.WeakenKeyword:
-                return ParseSpectrumAdjustmentStatement(strengthens: false, ref index);
+            case TokenKind.StrengthenKeyword or TokenKind.WeakenKeyword:
+                return ParseSpectrumAdjustmentStatement(ref index);
             case TokenKind.Identifier:
                 return ParseIdentifierLeadStatement(ref index);
             case TokenKind.RunKeyword:
@@ -97,7 +109,10 @@ public sealed partial class Parser
                 return ParseIfStatement(ref index);
             case TokenKind.EndOfFile:
                 ErrorFound?.Invoke(Errors.UnexpectedEndOfFile(tokens[index]));
-                return null;
+                return new MissingStatementNode
+                {
+                    Index = tokens[index++].Index,
+                };
             default:
                 {
                     ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index]));
@@ -107,7 +122,7 @@ public sealed partial class Parser
         }
     }
 
-    private OutputStatementNode? ParseOutputStatement(ref int index, Token? checkpointToken)
+    private OutputStatementNode ParseOutputStatement(ref int index, Token? checkpointKeyword)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.OutputKeyword);
         Token outputKeyword = tokens[index];
@@ -122,7 +137,7 @@ public sealed partial class Parser
 
         return new OutputStatementNode
         {
-            CheckpointKeywordToken = checkpointToken,
+            CheckpointKeywordToken = checkpointKeyword,
             OutputKeywordToken = outputKeyword,
             OutputExpression = outputExpression,
             SemicolonToken = semicolon,
@@ -163,7 +178,7 @@ public sealed partial class Parser
         };
     }
 
-    private SwitchStatementNode? ParseSwitchStatement(ref int index, Token? checkpointKeyword)
+    private SwitchStatementNode ParseSwitchStatement(ref int index, Token? checkpointKeyword)
     {
         long nodeIndex = tokens[index].Index;
 
@@ -219,8 +234,12 @@ public sealed partial class Parser
             ReferenceNameToken = referenceName,
             DotToken = dot,
             MethodNameToken = methodName,
-            Arguments = (ImmutableArray<ArgumentNode>)arguments,
-            Options = (ImmutableArray<OptionNode>)optionNodes,
+            OpenParenthesisToken = openParenthesis,
+            Arguments = arguments,
+            ClosedParenthesisToken = closedParenthesis,
+            OpenBraceToken = openBrace,
+            Options = optionNodes,
+            ClosedBraceToken = closedBrace,
             Index = nodeIndex,
         };
     }
@@ -229,11 +248,11 @@ public sealed partial class Parser
     {
         ImmutableArray<OptionNode>.Builder optionBuilder = ImmutableArray.CreateBuilder<OptionNode>();
 
-        while (tokens[index] is TokenKind.OptionKeyword)
+        while (tokens[index].Kind is TokenKind.OptionKeyword)
         {
             long nodeIndex = tokens[index].Index;
 
-            _ = Expect(TokenKind.OptionKeyword, ref index);
+            Token optionKeyword = Expect(TokenKind.OptionKeyword, ref index);
 
             ExpressionNode expression = ParseExpression(ref index);
             StatementBodyNode body = ParseStatementBody(ref index);
@@ -242,6 +261,7 @@ public sealed partial class Parser
 
             optionNode = new OptionNode()
             {
+                OptionKeywordToken = optionKeyword,
                 Expression = expression,
                 Body = body,
                 Index = nodeIndex,
@@ -250,7 +270,7 @@ public sealed partial class Parser
             optionBuilder.Add(optionNode);
         }
 
-        if (optionBuilder.Count == 0)
+        if (optionBuilder.Count is 0)
         {
             ErrorFound?.Invoke(Errors.MustHaveAtLeastOneOption(tokens[index].Index));
         }
@@ -258,32 +278,31 @@ public sealed partial class Parser
         return optionBuilder.ToImmutable();
     }
 
-    private LoopSwitchStatementNode ParseLoopSwitchStatement(ref int index, bool isCheckpoint)
+    private LoopSwitchStatementNode ParseLoopSwitchStatement(ref int index, Token? checkpointKeyword)
     {
-        long nodeIndex = tokens[index].Index;
-
-        Debug.Assert(tokens[index] is TokenKind.LoopKeyword);
-
+        Debug.Assert(tokens[index].Kind is TokenKind.LoopKeyword);
+        Token loopKeyword = tokens[index];
+        long nodeIndex = loopKeyword.Index;
         index++;
 
-        _ = Expect(TokenKind.SwitchKeyword, ref index);
-        _ = Expect(TokenKind.OpenParenthesis, ref index);
-
+        Token switchKeyword = Expect(TokenKind.SwitchKeyword, ref index);
         ExpressionNode expression = ParseExpression(ref index);
 
-        _ = Expect(TokenKind.ClosedParenthesis, ref index);
-
-        _ = Expect(TokenKind.OpenBrace, ref index);
+        Token openBrace = Expect(TokenKind.OpenBrace, ref index);
 
         ImmutableArray<LoopSwitchOptionNode> optionNodes = ParseLoopSwitchOptions(ref index);
 
-        _ = Expect(TokenKind.ClosedBrace, ref index);
+        Token closedBrace = Expect(TokenKind.ClosedBrace, ref index);
 
         return new LoopSwitchStatementNode
         {
+            CheckpointKeywordToken = checkpointKeyword,
+            LoopKeywordToken = loopKeyword,
+            SwitchKeywordToken = switchKeyword,
             OutputExpression = expression,
-            Options = (ImmutableArray<LoopSwitchOptionNode>)optionNodes,
-            IsCheckpoint = isCheckpoint,
+            OpenBraceToken = openBrace,
+            Options = optionNodes,
+            ClosedBraceToken = closedBrace,
             Index = nodeIndex,
         };
     }
@@ -292,53 +311,37 @@ public sealed partial class Parser
     {
         ImmutableArray<LoopSwitchOptionNode>.Builder optionBuilder = ImmutableArray.CreateBuilder<LoopSwitchOptionNode>();
 
-        while (tokens[index] is not TokenKind.ClosedBrace)
+        while (tokens[index].Kind is not TokenKind.ClosedBrace)
         {
             long nodeIndex = tokens[index].Index;
-            LoopSwitchOptionKind kind;
 
-            switch (tokens[index])
+            Token? kind;
+            Token optionKeyword;
+
+            switch (tokens[index].Kind)
             {
                 case TokenKind.OptionKeyword:
-                    kind = LoopSwitchOptionKind.None;
+                    kind = null;
+                    optionKeyword = tokens[index];
                     index++;
                     break;
-                case TokenKind.LoopKeyword:
-                    kind = LoopSwitchOptionKind.Loop;
+                case TokenKind.LoopKeyword or TokenKind.FinalKeyword:
+                    kind = tokens[index];
                     index++;
-                    _ = Expect(TokenKind.OptionKeyword, ref index);
-                    break;
-                case TokenKind.FinalKeyword:
-                    kind = LoopSwitchOptionKind.Final;
-                    index++;
-                    _ = Expect(TokenKind.OptionKeyword, ref index);
+                    optionKeyword = Expect(TokenKind.OptionKeyword, ref index);
                     break;
                 default:
                     ErrorFound?.Invoke(Errors.ExpectedToken(tokens[index], TokenKind.ClosedBrace));
                     return optionBuilder.ToImmutable();
             }
 
-            _ = Expect(TokenKind.OpenParenthesis, ref index);
-
-            ExpressionNode? expression = ParseExpression(ref index);
-
-            if (expression is null)
-            {
-                return null;
-            }
-
-            _ = Expect(TokenKind.ClosedParenthesis, ref index);
-
-            StatementBodyNode? body = ParseStatementBody(ref index);
-
-            if (body is null)
-            {
-                return null;
-            }
+            ExpressionNode expression = ParseExpression(ref index);
+            StatementBodyNode body = ParseStatementBody(ref index);
 
             LoopSwitchOptionNode optionNode = new()
             {
-                Kind = kind,
+                KindToken = kind,
+                OptionKeywordToken = optionKeyword,
                 Expression = expression,
                 Body = body,
                 Index = nodeIndex,
@@ -350,49 +353,40 @@ public sealed partial class Parser
         return optionBuilder.ToImmutable();
     }
 
-    private StatementNode? ParseCheckpointStatement(ref int index)
+    private StatementNode ParseCheckpointStatement(ref int index)
     {
         Debug.Assert(tokens[index].Kind == TokenKind.CheckpointKeyword);
-
-        long nodeIndex = tokens[index].Index;
+        Token checkpointKeyword = tokens[index];
+        long nodeIndex = checkpointKeyword.Index;
         index++;
 
-        switch (tokens[index])
+        switch (tokens[index].Kind)
         {
             case TokenKind.OutputKeyword:
-                OutputStatementNode? outputStatement = ParseOutputStatement(ref index, isCheckpoint: true);
+                OutputStatementNode outputStatement = ParseOutputStatement(ref index, checkpointKeyword);
 
-                if (outputStatement is not null)
+                outputStatement = outputStatement with
                 {
-                    outputStatement = outputStatement with
-                    {
-                        Index = nodeIndex,
-                    };
-                }
+                    Index = nodeIndex,
+                };
 
                 return outputStatement;
             case TokenKind.SwitchKeyword:
-                SwitchStatementNode? switchStatement = ParseSwitchStatement(ref index, isCheckpoint: true);
+                SwitchStatementNode switchStatement = ParseSwitchStatement(ref index, checkpointKeyword);
 
-                if (switchStatement is not null)
+                switchStatement = switchStatement with
                 {
-                    switchStatement = switchStatement with
-                    {
-                        Index = nodeIndex,
-                    };
-                }
+                    Index = nodeIndex,
+                };
 
                 return switchStatement;
             case TokenKind.LoopKeyword:
-                LoopSwitchStatementNode? loopSwitchStatement = ParseLoopSwitchStatement(ref index, isCheckpoint: true);
+                LoopSwitchStatementNode? loopSwitchStatement = ParseLoopSwitchStatement(ref index, checkpointKeyword);
 
-                if (loopSwitchStatement is not null)
+                loopSwitchStatement = loopSwitchStatement with
                 {
-                    loopSwitchStatement = loopSwitchStatement with
-                    {
-                        Index = nodeIndex,
-                    };
-                }
+                    Index = nodeIndex,
+                };
 
                 return loopSwitchStatement;
             default:
@@ -403,55 +397,50 @@ public sealed partial class Parser
         }
     }
 
-    private BranchOnStatementNode? ParseBranchOnStatement(ref int index)
+    private BranchOnStatementNode ParseBranchOnStatement(ref int index)
     {
         Debug.Assert(tokens[index].Kind == TokenKind.BranchOnKeyword);
-
-        long nodeIndex = tokens[index].Index;
+        Token branchonKeyword = tokens[index];
+        long nodeIndex = branchonKeyword.Index;
         index++;
 
-        Token outcomeIdentifier = Expect(TokenKind.Identifier, ref index);
+        Token outcomeName = Expect(TokenKind.Identifier, ref index);
 
-        _ = Expect(TokenKind.OpenBrace, ref index);
+        Token openBrace = Expect(TokenKind.OpenBrace, ref index);
 
-        ImmutableArray<BranchOnOptionNode>? options = ParseBranchOnOptions(ref index);
-        if (options is null)
-        {
-            return null;
-        }
-
-        _ = Expect(TokenKind.ClosedBrace, ref index);
+        ImmutableArray<BranchOnOptionNode> options = ParseBranchOnOptions(ref index);
+        
+        Token closedBrace = Expect(TokenKind.ClosedBrace, ref index);
 
         return new BranchOnStatementNode
         {
-            OutcomeName = outcomeIdentifier.Text,
-            Options = (ImmutableArray<BranchOnOptionNode>)options,
+            BranchOnKeywordToken = branchonKeyword,
+            OutcomeNameToken = outcomeName,
+            OpenBraceToken = openBrace,
+            Options = options,
+            ClosedBraceToken = closedBrace,
             Index = nodeIndex,
         };
     }
 
-    private ImmutableArray<BranchOnOptionNode>? ParseBranchOnOptions(ref int index)
+    private ImmutableArray<BranchOnOptionNode> ParseBranchOnOptions(ref int index)
     {
         ImmutableArray<BranchOnOptionNode>.Builder optionBuilder = ImmutableArray.CreateBuilder<BranchOnOptionNode>();
 
-        while (tokens[index] is TokenKind.OptionKeyword)
+        while (tokens[index].Kind is TokenKind.OptionKeyword)
         {
-            long nodeIndex = tokens[index].Index;
-
+            Token optionKeyword = tokens[index];
+            long nodeIndex = optionKeyword.Index;
             index++;
 
-            string name = Expect(TokenKind.Identifier, ref index).Text;
+            Token optionName = Expect(TokenKind.Identifier, ref index);
 
             StatementBodyNode? body = ParseStatementBody(ref index);
 
-            if (body is null)
-            {
-                return null;
-            }
-
             BranchOnOptionNode optionNode = new NamedBranchOnOptionNode()
             {
-                OptionName = name,
+                OptionKeywordToken = optionKeyword,
+                OptionNameToken = optionName,
                 Body = body,
                 Index = nodeIndex,
             };
@@ -459,21 +448,19 @@ public sealed partial class Parser
             optionBuilder.Add(optionNode);
         }
 
-        if (tokens[index] is TokenKind.OtherKeyword)
+        if (tokens[index].Kind is TokenKind.OtherKeyword)
         {
-            long nodeIndex = tokens[index].Index;
+            Token otherKeyword = tokens[index];
+            long nodeIndex = otherKeyword.Index;
 
             index++;
 
-            StatementBodyNode? body = ParseStatementBody(ref index);
-
-            if (body is null)
-            {
-                return null;
-            }
+            StatementBodyNode body = ParseStatementBody(ref index);
 
             BranchOnOptionNode optionNode = new OtherBranchOnOptionNode()
             {
+                OptionKeywordToken = Token.Missing(nodeIndex),
+                OtherKeywordToken = otherKeyword,
                 Body = body,
                 Index = nodeIndex,
             };
@@ -489,27 +476,28 @@ public sealed partial class Parser
         return optionBuilder.ToImmutable();
     }
 
-    private CallStatementNode? ParseCallStatement(ref int index)
+    private CallStatementNode ParseCallStatement(ref int index)
     {
-        Debug.Assert(tokens[index] is TokenKind.CallKeyword);
-
+        Debug.Assert(tokens[index].Kind is TokenKind.CallKeyword);
+        Token callKeyword = tokens[index];
         long nodeIndex = tokens[index].Index;
         index++;
 
-        string sceneName = Expect(TokenKind.Identifier, ref index).Text;
-
-        _ = Expect(TokenKind.Semicolon, ref index);
+        Token sceneName = Expect(TokenKind.Identifier, ref index);
+        Token semicolon = Expect(TokenKind.Semicolon, ref index);
 
         return new CallStatementNode
         {
-            SceneName = sceneName,
+            CallKeywordToken = callKeyword,
+            SceneNameToken = sceneName,
+            SemicolonToken = semicolon,
             Index = nodeIndex,
         };
     }
 
-    private StatementNode? ParseIdentifierLeadStatement(ref int index)
+    private StatementNode ParseIdentifierLeadStatement(ref int index)
     {
-        Debug.Assert(tokens[index] is TokenKind.Identifier);
+        Debug.Assert(tokens[index].Kind is TokenKind.Identifier);
         Token identifier = tokens[index];
 
         long nodeIndex = tokens[index].Index;
@@ -517,123 +505,101 @@ public sealed partial class Parser
 
         // we might have more statements that begin with an identifier later
         // rewrite this method then
-        _ = Expect(TokenKind.Equals, ref index);
+        Token equals = Expect(TokenKind.Equals, ref index);
 
-        ExpressionNode? assignedExpression = ParseExpression(ref index);
-        if (assignedExpression is null)
-        {
-            return null;
-        }
-
-        _ = Expect(TokenKind.Semicolon, ref index);
+        ExpressionNode assignedExpression = ParseExpression(ref index);
+       
+        Token semicolon = Expect(TokenKind.Semicolon, ref index);
 
         return new AssignmentStatementNode
         {
-            VariableName = identifier.Text,
+            VariableNameToken = identifier,
+            EqualsSignToken = equals,
             AssignedExpression = assignedExpression,
+            SemicolonToken = semicolon,
             Index = nodeIndex,
         };
     }
 
-    private SpectrumAdjustmentStatementNode? ParseSpectrumAdjustmentStatement(bool strengthens, ref int index)
+    private SpectrumAdjustmentStatementNode ParseSpectrumAdjustmentStatement(ref int index)
     {
-        if (strengthens)
-        {
-            Debug.Assert(tokens[index] is TokenKind.StrengthenKeyword);
-        }
-        else
-        {
-            Debug.Assert(tokens[index] is TokenKind.WeakenKeyword);
-        }
-
-        long nodeIndex = tokens[index].Index;
+        Debug.Assert(tokens[index].Kind is TokenKind.StrengthenKeyword or TokenKind.WeakenKeyword);
+        Token adjustmentKeyword = tokens[index];
+        long nodeIndex = adjustmentKeyword.Index;
         index++;
 
-        string spectrumName = Expect(TokenKind.Identifier, ref index).Text;
+        Token spectrumName = Expect(TokenKind.Identifier, ref index);
+        Token byKeyword = Expect(TokenKind.ByKeyword, ref index);
 
-        _ = Expect(TokenKind.ByKeyword, ref index);
+        ExpressionNode adjustmentAmount = ParseExpression(ref index);
 
-        ExpressionNode? adjustmentAmount = ParseExpression(ref index);
-
-        if (adjustmentAmount is null)
-        {
-            return null;
-        }
-
-        _ = Expect(TokenKind.Semicolon, ref index);
+        Token semicolon = Expect(TokenKind.Semicolon, ref index);
 
         return new SpectrumAdjustmentStatementNode
         {
-            SpectrumName = spectrumName,
-            Strengthens = strengthens,
+            StrengthenOrWeakenKeywordToken = adjustmentKeyword,
+            SpectrumNameToken = spectrumName,
+            ByKeywordToken = byKeyword,
             AdjustmentAmount = adjustmentAmount,
+            SemicolonToken = semicolon,
             Index = nodeIndex,
         };
     }
 
-    private IfStatementNode? ParseIfStatement(ref int index)
+    private IfStatementNode ParseIfStatement(ref int index)
     {
-        long nodeIndex = tokens[index].Index;
+        Debug.Assert(tokens[index].Kind is TokenKind.IfKeyword);
+
+        Token ifKeyword = tokens[index];
+        long nodeIndex = ifKeyword.Index;
         index++;
 
-        ExpressionNode? condition = ParseExpression(ref index);
+        ExpressionNode condition = ParseExpression(ref index);
 
-        if (condition is null)
-        {
-            return null;
-        }
-
-        StatementBodyNode? thenBlock = ParseStatementBody(ref index);
-
-        if (thenBlock is null)
-        {
-            return null;
-        }
+        StatementBodyNode thenBlock = ParseStatementBody(ref index);
 
         if (tokens[index].Kind is not TokenKind.ElseKeyword)
         {
             return new IfStatementNode
             {
+                IfKeywordToken = ifKeyword,
                 Condition = condition,
                 ThenBlock = thenBlock,
+                ElseKeywordToken = null,
                 ElseBlock = null,
                 Index = nodeIndex,
             };
         }
 
+        Token elseKeyword = tokens[index];
+
         index++;
 
-        StatementBodyNode? elseBlock;
+        StatementBodyNode elseBlock;
 
         if (tokens[index].Kind is TokenKind.IfKeyword)
         {
-            IfStatementNode? ifStatement = ParseIfStatement(ref index);
-
-            if (ifStatement is null)
-            {
-                return null;
-            }
+            IfStatementNode ifStatement = ParseIfStatement(ref index);
 
             elseBlock = new StatementBodyNode
             {
+                OpenBraceToken = Token.Missing(ifStatement.Index),
                 Index = ifStatement.Index,
+                ClosedBraceToken = Token.Missing(tokens[index].Index),
                 Statements = [ifStatement],
             };
         }
         else
         {
             elseBlock = ParseStatementBody(ref index);
-
-            if (elseBlock is null)
-            {
-                return null;
-            }
         }
 
         return new IfStatementNode
         {
+            IfKeywordToken = ifKeyword,
             Condition = condition,
             ThenBlock = thenBlock,
+            ElseKeywordToken = elseKeyword,
             ElseBlock = elseBlock,
             Index = nodeIndex,
         };

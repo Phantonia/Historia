@@ -158,8 +158,9 @@ public sealed partial class Binder
 
         BoundEnumOptionExpressionNode boundExpression = new()
         {
-            EnumName = enumOptionExpression.EnumName,
-            OptionName = enumOptionExpression.OptionName,
+            EnumNameToken = enumOptionExpression.EnumNameToken,
+            DotToken = enumOptionExpression.DotToken,
+            OptionNameToken = enumOptionExpression.OptionNameToken,
             Index = enumOptionExpression.Index,
             EnumSymbol = enumSymbol,
         };

@@ -147,8 +147,10 @@ public sealed partial class Binder
 
             BoundArgumentNode boundArgument = new()
             {
+                ParameterNameToken = argumentContainer.Arguments[i].ParameterNameToken,
+                EqualsToken = argumentContainer.Arguments[i].EqualsToken,
                 Expression = typedExpression,
-                PropertyName = argumentContainer.Arguments[i].ParameterName,
+                CommaToken = argumentContainer.Arguments[i].CommaToken,
                 Property = properties[i],
                 Index = argumentContainer.Index,
             };

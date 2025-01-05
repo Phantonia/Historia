@@ -8,8 +8,6 @@ namespace Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 
 public record InterfaceMethodDeclarationNode() : SyntaxNode
 {
-    public required Token InterfaceKeyword { get; init; }
-
     public required Token KindToken { get; init; }
 
     public InterfaceMethodKind Kind => (InterfaceMethodKind)KindToken.Kind;
@@ -30,7 +28,6 @@ public record InterfaceMethodDeclarationNode() : SyntaxNode
 
     protected override void ReconstructCore(TextWriter writer)
     {
-        InterfaceKeyword.Reconstruct(writer);
         KindToken.Reconstruct(writer);
         NameToken.Reconstruct(writer);
         OpenParenthesisToken.Reconstruct(writer);

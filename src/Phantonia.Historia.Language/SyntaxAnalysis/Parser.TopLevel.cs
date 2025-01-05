@@ -3,7 +3,6 @@ using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using Phantonia.Historia.Language.SyntaxAnalysis.Types;
-using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 
@@ -29,28 +28,39 @@ public sealed partial class Parser
                 return ParsePublicTopLevelNode(ref index);
             case TokenKind.OutcomeKeyword:
                 {
-                    (string name, ImmutableArray<string> options, string? defaultOption, long nodeIndex) = ParseOutcomeDeclaration(ref index);
+                    OutcomeDeclarationInfo outcomeDeclaration = ParseOutcomeDeclaration(ref index);
 
                     return new OutcomeSymbolDeclarationNode
                     {
-                        Name = name,
-                        Options = options,
-                        DefaultOption = defaultOption,
-                        IsPublic = false,
-                        Index = nodeIndex,
+                        PublicKeywordToken = null,
+                        OutcomeKeywordToken = outcomeDeclaration.OutcomeKeyword,
+                        NameToken = outcomeDeclaration.Name,
+                        OpenParenthesisToken = outcomeDeclaration.OpenParenthesis,
+                        OptionNameTokens = outcomeDeclaration.Options,
+                        CommaTokens = outcomeDeclaration.Commas,
+                        ClosedParenthesisToken = outcomeDeclaration.ClosedParenthesis,
+                        DefaultKeywordToken = outcomeDeclaration.DefaultKeyword,
+                        DefaultOptionToken = outcomeDeclaration.DefaultOption,
+                        SemicolonToken = outcomeDeclaration.Semicolon,
+                        Index = outcomeDeclaration.Index,
                     };
                 }
             case TokenKind.SpectrumKeyword:
                 {
-                    (string name, ImmutableArray<SpectrumOptionNode> options, string? defaultOption, long nodeIndex) = ParseSpectrumDeclaration(ref index);
+                    SpectrumDeclarationInfo spectrumDeclaration = ParseSpectrumDeclaration(ref index);
 
                     return new SpectrumSymbolDeclarationNode
                     {
-                        Name = name,
-                        Options = options,
-                        DefaultOption = defaultOption,
-                        IsPublic = false,
-                        Index = nodeIndex,
+                        PublicKeywordToken = null,
+                        SpectrumKeywordToken = spectrumDeclaration.SpectrumKeyword,
+                        NameToken = spectrumDeclaration.Name,
+                        OpenParenthesisToken = spectrumDeclaration.OpenParenthesis,
+                        Options = spectrumDeclaration.Options,
+                        ClosedParenthesisToken = spectrumDeclaration.ClosedParenthesis,
+                        DefaultKeywordToken = spectrumDeclaration.DefaultKeyword,
+                        DefaultOptionToken = spectrumDeclaration.DefaultOption,
+                        SemicolonToken = spectrumDeclaration.Semicolon,
+                        Index = spectrumDeclaration.Index,
                     };
                 }
             case TokenKind.InterfaceKeyword:
@@ -58,11 +68,13 @@ public sealed partial class Parser
             case TokenKind.ReferenceKeyword:
                 return ParseReferenceDeclaration(ref index);
             case TokenKind.EndOfFile:
-                Debug.Assert(false);
-                return null;
+                return new MissingTopLevelNode
+                {
+                    Index = tokens[index++].Index,
+                };
             default:
                 {
-                    ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index]));
+                    ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index++]));
                     index++;
                     return ParseTopLevelNode(ref index);
                 }
@@ -80,7 +92,7 @@ public sealed partial class Parser
         Token name = Expect(TokenKind.Identifier, ref index);
 
         StatementBodyNode body = ParseStatementBody(ref index);
-        
+
         return new SceneSymbolDeclarationNode
         {
             SceneKeywordToken = sceneKeyword,
@@ -138,7 +150,7 @@ public sealed partial class Parser
         };
     }
 
-    private RecordSymbolDeclarationNode? ParseRecordSymbolDeclaration(ref int index)
+    private RecordSymbolDeclarationNode ParseRecordSymbolDeclaration(ref int index)
     {
         // spec 1.3.1.1:
         /*
@@ -182,7 +194,7 @@ public sealed partial class Parser
             Token colon = Expect(TokenKind.Colon, ref index);
 
             TypeNode type = ParseType(ref index);
-            
+
             if (tokens[index].Kind is not TokenKind.Comma)
             {
                 propertyDeclarations.Add(new ParameterDeclarationNode
@@ -286,7 +298,7 @@ public sealed partial class Parser
         if (Settings.TypeSettings.Contains(identifier.Text))
         {
             TypeNode type = ParseType(ref index);
-            
+
             Token semicolon = Expect(TokenKind.Semicolon, ref index);
 
             return new TypeSettingDirectiveNode
@@ -310,7 +322,7 @@ public sealed partial class Parser
         SettingDirectiveNode ParseExpressionSetting(ref int index)
         {
             ExpressionNode expression = ParseExpression(ref index);
-            
+
             Token semicolon = Expect(TokenKind.Semicolon, ref index);
 
             return new ExpressionSettingDirectiveNode
@@ -325,38 +337,49 @@ public sealed partial class Parser
         }
     }
 
-    private TopLevelNode? ParsePublicTopLevelNode(ref int index)
+    private TopLevelNode ParsePublicTopLevelNode(ref int index)
     {
-        Debug.Assert(tokens[index] is TokenKind.PublicKeyword);
-
+        Debug.Assert(tokens[index].Kind is TokenKind.PublicKeyword);
+        Token publicKeyword = tokens[index];
         long nodeIndex = tokens[index].Index;
         index++;
 
-        switch (tokens[index])
+        switch (tokens[index].Kind)
         {
             case TokenKind.SpectrumKeyword:
                 {
-                    (string name, ImmutableArray<SpectrumOptionNode> options, string? defaultOption, _) = ParseSpectrumDeclaration(ref index);
+                    SpectrumDeclarationInfo spectrumDeclaration = ParseSpectrumDeclaration(ref index);
 
                     return new SpectrumSymbolDeclarationNode
                     {
-                        Name = name,
-                        Options = options,
-                        DefaultOption = defaultOption,
-                        IsPublic = true,
-                        Index = nodeIndex,
+                        PublicKeywordToken = publicKeyword,
+                        SpectrumKeywordToken = spectrumDeclaration.SpectrumKeyword,
+                        NameToken = spectrumDeclaration.Name,
+                        OpenParenthesisToken = spectrumDeclaration.OpenParenthesis,
+                        Options = spectrumDeclaration.Options,
+                        ClosedParenthesisToken = spectrumDeclaration.ClosedParenthesis,
+                        DefaultKeywordToken = spectrumDeclaration.DefaultKeyword,
+                        DefaultOptionToken = spectrumDeclaration.DefaultOption,
+                        SemicolonToken = spectrumDeclaration.Semicolon,
+                        Index = spectrumDeclaration.Index,
                     };
                 }
             case TokenKind.OutcomeKeyword:
                 {
-                    (string name, ImmutableArray<string> options, string? defaultOption, _) = ParseOutcomeDeclaration(ref index);
+                    OutcomeDeclarationInfo outcomeDeclaration = ParseOutcomeDeclaration(ref index);
 
                     return new OutcomeSymbolDeclarationNode
                     {
-                        Name = name,
-                        Options = options,
-                        DefaultOption = defaultOption,
-                        IsPublic = true,
+                        PublicKeywordToken = publicKeyword,
+                        OutcomeKeywordToken = outcomeDeclaration.OutcomeKeyword,
+                        NameToken = outcomeDeclaration.Name,
+                        OpenParenthesisToken = outcomeDeclaration.OpenParenthesis,
+                        OptionNameTokens = outcomeDeclaration.Options,
+                        CommaTokens = outcomeDeclaration.Commas,
+                        ClosedParenthesisToken = outcomeDeclaration.ClosedParenthesis,
+                        DefaultKeywordToken = outcomeDeclaration.DefaultKeyword,
+                        DefaultOptionToken = outcomeDeclaration.DefaultOption,
+                        SemicolonToken = outcomeDeclaration.Semicolon,
                         Index = nodeIndex,
                     };
                 }
@@ -366,107 +389,93 @@ public sealed partial class Parser
         }
     }
 
-    private InterfaceSymbolDeclarationNode? ParseInterfaceDeclaration(ref int index)
+    private InterfaceSymbolDeclarationNode ParseInterfaceDeclaration(ref int index)
     {
         Debug.Assert(tokens[index].Kind == TokenKind.InterfaceKeyword);
-
-        long nodeIndex = tokens[index].Index;
+        Token interfaceKeyword = tokens[index];
+        long nodeIndex = interfaceKeyword.Index;
         index++;
 
-        string name = Expect(TokenKind.Identifier, ref index).Text;
+        Token name = Expect(TokenKind.Identifier, ref index);
 
-        _ = Expect(TokenKind.OpenParenthesis, ref index);
+        Token openParenthesis = Expect(TokenKind.OpenParenthesis, ref index);
 
         ImmutableArray<InterfaceMethodDeclarationNode>.Builder methods = ImmutableArray.CreateBuilder<InterfaceMethodDeclarationNode>();
 
         while (tokens[index].Kind is not TokenKind.ClosedParenthesis)
         {
-            var nextMethod = ParseInterfaceMethodDeclaration(ref index);
-
-            if (nextMethod is null)
-            {
-                return null;
-            }
+            InterfaceMethodDeclarationNode nextMethod = ParseInterfaceMethodDeclaration(ref index);
 
             methods.Add(nextMethod);
 
-            if (tokens[index].Kind is not TokenKind.Comma)
+            if (nextMethod.CommaToken is null)
             {
                 break;
             }
-
-            index++;
         }
 
-        _ = Expect(TokenKind.ClosedParenthesis, ref index);
-        _ = Expect(TokenKind.Semicolon, ref index);
+        Token closedParenthesis = Expect(TokenKind.ClosedParenthesis, ref index);
+        Token semicolon = Expect(TokenKind.Semicolon, ref index);
 
         return new InterfaceSymbolDeclarationNode
         {
-            Name = name,
+            InterfaceKeywordToken = interfaceKeyword,
+            NameToken = name,
+            OpenParenthesisToken = openParenthesis,
             Methods = methods.ToImmutable(),
+            ClosedParenthesisToken = closedParenthesis,
+            SemicolonToken = semicolon,
             Index = nodeIndex,
         };
     }
 
-    private InterfaceMethodDeclarationNode? ParseInterfaceMethodDeclaration(ref int index)
+    private InterfaceMethodDeclarationNode ParseInterfaceMethodDeclaration(ref int index)
     {
         long nodeIndex = tokens[index].Index;
 
-        InterfaceMethodKind kind;
+        Token kind = ExpectOneOf(ref index, TokenKind.ActionKeyword, TokenKind.ChoiceKeyword);
+        Token name = Expect(TokenKind.Identifier, ref index);
+        (Token openParenthesis, ImmutableArray<ParameterDeclarationNode> parameterList, Token closedParenthesis) = ParseParameterList(ref index);
 
-        switch (tokens[index].Kind)
+        Token? comma = null;
+
+        if (tokens[index].Kind is TokenKind.Comma)
         {
-            case TokenKind.ActionKeyword:
-                kind = InterfaceMethodKind.Action;
-                index++;
-                break;
-            case TokenKind.ChoiceKeyword:
-                kind = InterfaceMethodKind.Choice;
-                index++;
-                break;
-            default:
-                ErrorFound?.Invoke(Errors.ExpectedToken(tokens[index], TokenKind.ActionKeyword));
-                return null;
-        }
-
-        string name = Expect(TokenKind.Identifier, ref index).Text;
-
-        ImmutableArray<ParameterDeclarationNode>? parameterList = ParseParameterList(ref index);
-
-        if (parameterList is null)
-        {
-            return null;
+            comma = tokens[index];
+            index++;
         }
 
         return new InterfaceMethodDeclarationNode
         {
-            Name = name,
-            Kind = kind,
-            Parameters = (ImmutableArray<ParameterDeclarationNode>)parameterList,
+            KindToken = kind,
+            NameToken = name,
+            OpenParenthesisToken = openParenthesis,
+            Parameters = parameterList,
+            ClosedParenthesisToken = closedParenthesis,
+            CommaToken = comma,
             Index = nodeIndex,
         };
     }
 
-    private ReferenceSymbolDeclarationNode? ParseReferenceDeclaration(ref int index)
+    private ReferenceSymbolDeclarationNode ParseReferenceDeclaration(ref int index)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.ReferenceKeyword);
-
-        long nodeIndex = tokens[index].Index;
+        Token referenceKeyword = tokens[index];
+        long nodeIndex = referenceKeyword.Index;
         index++;
 
-        string name = Expect(TokenKind.Identifier, ref index).Text;
-
-        _ = Expect(TokenKind.Colon, ref index);
-
-        string interfaceName = Expect(TokenKind.Identifier, ref index).Text;
-
-        _ = Expect(TokenKind.Semicolon, ref index);
+        Token name = Expect(TokenKind.Identifier, ref index);
+        Token colon = Expect(TokenKind.Colon, ref index);
+        Token interfaceName = Expect(TokenKind.Identifier, ref index);
+        Token semicolon = Expect(TokenKind.Semicolon, ref index);
 
         return new ReferenceSymbolDeclarationNode
         {
-            Name = name,
-            InterfaceName = interfaceName,
+            ReferenceKeywordToken = referenceKeyword,
+            NameToken = name,
+            ColonToken = colon,
+            InterfaceNameToken = interfaceName,
+            SemicolonToken = semicolon,
             Index = nodeIndex,
         };
     }

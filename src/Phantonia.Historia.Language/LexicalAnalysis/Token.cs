@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.IO;
 
 namespace Phantonia.Historia.Language.LexicalAnalysis;
@@ -6,6 +7,14 @@ namespace Phantonia.Historia.Language.LexicalAnalysis;
 [DebuggerDisplay($"{{{nameof(GetDebuggerDisplay)}(),nq}}")]
 public readonly record struct Token : IReconstructable
 {
+    internal static Token Missing(long index) => new()
+    {
+        Index = index,
+        Kind = TokenKind.Missing,
+        PrecedingTrivia = "",
+        Text = "",
+    };
+
     public required TokenKind Kind { get; init; }
 
     public required long Index { get; init; }
@@ -23,6 +32,8 @@ public readonly record struct Token : IReconstructable
         writer.Write(PrecedingTrivia);
         writer.Write(Text);
     }
+
+    public string Reconstruct() => PrecedingTrivia + Text;
 
     private string GetDebuggerDisplay() => $"{Kind} token w/ text ({Text}) @ index {Index}";
 }

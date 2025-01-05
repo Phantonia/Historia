@@ -6,15 +6,15 @@ namespace Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 
 public sealed record StringLiteralExpressionNode() : ExpressionNode
 {
-    public required Token StringLiteralToken { get; init; }
+    public required Token LiteralToken { get; init; }
 
-    public string StringLiteral => StringLiteralToken.StringValue!;
+    public string StringLiteral => LiteralToken.StringValue!;
 
     public override IEnumerable<SyntaxNode> Children => [];
 
     protected override void ReconstructCore(TextWriter writer)
     {
-        StringLiteralToken.Reconstruct(writer);
+        LiteralToken.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"string {StringLiteral}";

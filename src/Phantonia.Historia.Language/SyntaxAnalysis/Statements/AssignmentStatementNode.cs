@@ -15,13 +15,16 @@ public record AssignmentStatementNode() : StatementNode
 
     public required ExpressionNode AssignedExpression { get; init; }
 
+    public required Token SemicolonToken { get; init; }
+
     public override IEnumerable<SyntaxNode> Children => [AssignedExpression];
 
     protected override void ReconstructCore(TextWriter writer)
     {
         VariableNameToken.Reconstruct(writer);
         EqualsSignToken.Reconstruct(writer);
-        AssignedExpression.Reconstruct();
+        AssignedExpression.Reconstruct(writer);
+        SemicolonToken.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"assignment {VariableName} = {AssignedExpression.GetDebuggerDisplay()}";

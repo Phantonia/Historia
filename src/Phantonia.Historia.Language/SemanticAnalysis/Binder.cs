@@ -180,7 +180,7 @@ public sealed partial class Binder
         return new PseudoEnumTypeSymbol
         {
             Name = enumDeclaration.Name,
-            Options = enumDeclaration.Options,
+            Options = enumDeclaration.Options.ToImmutableArray(),
             Index = enumDeclaration.Index,
         };
     }

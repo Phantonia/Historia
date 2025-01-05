@@ -5,6 +5,7 @@ using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
 
 namespace Phantonia.Historia.Tests.Compiler;
@@ -21,6 +22,11 @@ public sealed class FlowGraphTests
         }
 
         public override IEnumerable<SyntaxNode> Children => Enumerable.Empty<SyntaxNode>();
+
+        protected override void ReconstructCore(TextWriter writer)
+        {
+            throw new NotImplementedException();
+        }
 
         protected override string GetDebuggerDisplay() => "stub";
     }

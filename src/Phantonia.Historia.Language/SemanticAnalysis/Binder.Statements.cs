@@ -237,9 +237,15 @@ public sealed partial class Binder
 
         BoundOutcomeDeclarationStatementNode boundStatement = new()
         {
-            Name = outcomeDeclaration.Name,
-            Options = outcomeDeclaration.Options,
-            DefaultOption = outcomeDeclaration.DefaultOption,
+            OutcomeKeywordToken = outcomeDeclaration.OutcomeKeywordToken,
+            NameToken = outcomeDeclaration.NameToken,
+            OpenParenthesisToken = outcomeDeclaration.OpenParenthesisToken,
+            OptionNameTokens = outcomeDeclaration.OptionNameTokens,
+            CommaTokens = outcomeDeclaration.CommaTokens,
+            ClosedParenthesisToken = outcomeDeclaration.ClosedParenthesisToken,
+            DefaultKeywordToken = outcomeDeclaration.DefaultKeywordToken,
+            DefaultOptionToken = outcomeDeclaration.DefaultOptionToken,
+            SemicolonToken = outcomeDeclaration.SemicolonToken,
             Index = outcomeDeclaration.Index,
             Outcome = symbol,
         };
@@ -258,9 +264,14 @@ public sealed partial class Binder
 
         BoundSpectrumDeclarationStatementNode boundStatement = new()
         {
-            Name = spectrumDeclaration.Name,
+            SpectrumKeywordToken = spectrumDeclaration.SpectrumKeywordToken,
+            NameToken = spectrumDeclaration.NameToken,
+            OpenParenthesisToken = spectrumDeclaration.OpenParenthesisToken,
             Options = spectrumDeclaration.Options,
-            DefaultOption = spectrumDeclaration.DefaultOption,
+            ClosedParenthesisToken = spectrumDeclaration.ClosedParenthesisToken,
+            DefaultKeywordToken = spectrumDeclaration.DefaultKeywordToken,
+            DefaultOptionToken = spectrumDeclaration.DefaultOptionToken,
+            SemicolonToken = spectrumDeclaration.SemicolonToken,
             Index = spectrumDeclaration.Index,
             Spectrum = symbol,
         };
@@ -296,8 +307,10 @@ public sealed partial class Binder
 
                     BoundOutcomeAssignmentStatementNode boundAssignment = new()
                     {
-                        VariableName = assignmentStatement.VariableName,
+                        VariableNameToken = assignmentStatement.VariableNameToken,
+                        EqualsSignToken = assignmentStatement.EqualsSignToken,
                         AssignedExpression = assignmentStatement.AssignedExpression,
+                        SemicolonToken = assignmentStatement.SemicolonToken,
                         Index = assignmentStatement.Index,
                         Outcome = outcomeSymbol,
                     };
@@ -346,9 +359,11 @@ public sealed partial class Binder
         BoundSpectrumAdjustmentStatementNode boundStatement = new()
         {
             Spectrum = spectrumSymbol,
-            Strengthens = adjustmentStatement.Strengthens,
-            SpectrumName = adjustmentStatement.SpectrumName,
-            AdjustmentAmount = typedAmount,
+            StrengthenOrWeakenKeywordToken = adjustmentStatement.StrengthenOrWeakenKeywordToken,
+            SpectrumNameToken = adjustmentStatement.SpectrumNameToken,
+            ByKeywordToken = adjustmentStatement.ByKeywordToken,
+            AdjustmentAmount = adjustmentStatement.AdjustmentAmount,
+            SemicolonToken = adjustmentStatement.SemicolonToken,
             Index = adjustmentStatement.Index,
         };
 
@@ -421,8 +436,11 @@ public sealed partial class Binder
         BoundBranchOnStatementNode boundStatement = new()
         {
             Outcome = outcomeSymbol,
-            OutcomeName = outcomeSymbol.Name,
+            BranchOnKeywordToken = branchOnStatement.BranchOnKeywordToken,
+            OutcomeNameToken = branchOnStatement.OutcomeNameToken,
+            OpenBraceToken = branchOnStatement.OpenBraceToken,
             Options = [.. boundOptions],
+            ClosedBraceToken = branchOnStatement.ClosedBraceToken,
             Index = branchOnStatement.Index,
         };
 
@@ -446,7 +464,9 @@ public sealed partial class Binder
         BoundCallStatementNode boundCallStatement = new()
         {
             Scene = sceneSymbol,
-            SceneName = callStatement.SceneName,
+            CallKeywordToken = callStatement.CallKeywordToken,
+            SceneNameToken = callStatement.SceneNameToken,
+            SemicolonToken = callStatement.SemicolonToken,
             Index = callStatement.Index,
         };
 
@@ -466,6 +486,7 @@ public sealed partial class Binder
         {
             Reference = referenceSymbol,
             Method = methodSymbol,
+            Original = runStatement,
             Arguments = [.. boundArguments],
             Index = runStatement.Index,
         };
@@ -518,6 +539,7 @@ public sealed partial class Binder
             Method = methodSymbol,
             Arguments = [.. boundArguments],
             Options = [.. boundOptions],
+            Original = chooseStatement,
             Index = chooseStatement.Index,
         };
 

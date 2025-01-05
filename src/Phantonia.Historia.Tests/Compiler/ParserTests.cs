@@ -900,10 +900,10 @@ public sealed class ParserTests
 
         Assert.IsNotNull(enumDeclaration);
         Assert.AreEqual("Character", enumDeclaration.Name);
-        Assert.AreEqual(3, enumDeclaration.Options.Length);
-        Assert.AreEqual("Alice", enumDeclaration.Options[0]);
-        Assert.AreEqual("Beverly", enumDeclaration.Options[1]);
-        Assert.AreEqual("Charlotte", enumDeclaration.Options[2]);
+        Assert.AreEqual(3, enumDeclaration.Options.Count());
+        Assert.AreEqual("Alice", enumDeclaration.Options.ElementAt(0));
+        Assert.AreEqual("Beverly", enumDeclaration.Options.ElementAt(1));
+        Assert.AreEqual("Charlotte", enumDeclaration.Options.ElementAt(2));
         Assert.AreEqual(code.IndexOf("enum"), enumDeclaration.Index);
     }
 

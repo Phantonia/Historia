@@ -36,7 +36,7 @@ public sealed partial class Binder
                 {
                     Original = symbolDeclaration,
                     Symbol = table[symbolDeclaration.Name],
-                    Name = symbolDeclaration.Name,
+                    NameToken = symbolDeclaration.NameToken,
                     Index = symbolDeclaration.Index,
                 });
             default:
@@ -87,16 +87,18 @@ public sealed partial class Binder
 
             boundPropertyDeclarations.Add(new BoundPropertyDeclarationNode
             {
-                Name = propertySymbol.Name,
                 Symbol = propertySymbol,
+                NameToken = propertyDeclaration.NameToken,
+                ColonToken = propertyDeclaration.ColonToken,
                 Type = propertyDeclaration.Type,
+                CommaToken = propertyDeclaration.CommaToken,
                 Index = propertySymbol.Index,
             });
         }
 
         BoundSymbolDeclarationNode boundRecordDeclaration = new()
         {
-            Name = recordDeclaration.Name,
+            NameToken = recordDeclaration.NameToken,
             Original = recordDeclaration with
             {
                 Properties = boundPropertyDeclarations.MoveToImmutable(),
@@ -147,7 +149,7 @@ public sealed partial class Binder
 
         BoundSymbolDeclarationNode boundUnionDeclaration = new()
         {
-            Name = unionDeclaration.Name,
+            NameToken = unionDeclaration.NameToken,
             Original = unionDeclaration,
             Symbol = unionSymbol,
             Index = unionDeclaration.Index,
@@ -173,7 +175,7 @@ public sealed partial class Binder
 
         BoundSymbolDeclarationNode boundEnumDeclaration = new()
         {
-            Name = enumDeclaration.Name,
+            NameToken = enumDeclaration.NameToken,
             Original = enumDeclaration,
             Symbol = symbol,
             Index = enumDeclaration.Index,
@@ -197,7 +199,7 @@ public sealed partial class Binder
                 Body = boundBody,
             },
             Symbol = sceneSymbol,
-            Name = sceneDeclaration.Name,
+            NameToken = sceneDeclaration.NameToken,
             Index = sceneDeclaration.Index,
         };
 
