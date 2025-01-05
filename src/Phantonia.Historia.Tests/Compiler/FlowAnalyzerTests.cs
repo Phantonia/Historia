@@ -52,7 +52,7 @@ public sealed class FlowAnalyzerTests
 
         Assert.AreEqual(4, graph.Vertices.Count);
 
-        int[] vertices = graph.Vertices.Keys.ToArray();
+        long[] vertices = graph.Vertices.Keys.ToArray();
 
         Assert.AreEqual(1, graph.StartEdges.Length);
         Assert.AreEqual(vertices[0], graph.StartEdges[0].ToVertex);
@@ -101,7 +101,7 @@ public sealed class FlowAnalyzerTests
         Assert.AreEqual(5, flowGraph.Vertices.Count);
         Assert.AreEqual(5, flowGraph.OutgoingEdges.Count);
 
-        void AssertHasOutputValue(int vertex, int value)
+        void AssertHasOutputValue(long vertex, int value)
         {
             switch (flowGraph.Vertices[vertex].AssociatedStatement)
             {
@@ -114,11 +114,14 @@ public sealed class FlowAnalyzerTests
                 }:
                     Assert.AreEqual(value, val);
                     break;
-                case SwitchStatementNode
-                {
-                    OutputExpression: TypedExpressionNode
+                case FlowBranchingStatementNode
+                { 
+                    Original: SwitchStatementNode
                     {
-                        Original: IntegerLiteralExpressionNode { Value: var val }
+                        OutputExpression: TypedExpressionNode
+                        {
+                            Original: IntegerLiteralExpressionNode { Value: var val }
+                        }
                     }
                 }:
                     Assert.AreEqual(value, val);
@@ -130,26 +133,26 @@ public sealed class FlowAnalyzerTests
         }
 
         // switch (4)
-        int startVertex = flowGraph.GetStoryStartVertex();
+        long startVertex = flowGraph.GetStoryStartVertex();
         AssertHasOutputValue(startVertex, 4);
         Assert.AreEqual(2, flowGraph.OutgoingEdges[startVertex].Count);
 
         // output 6
-        int output6Vertex = flowGraph.OutgoingEdges[startVertex][0].ToVertex;
+        long output6Vertex = flowGraph.OutgoingEdges[startVertex][0].ToVertex;
         AssertHasOutputValue(output6Vertex, 6);
 
         // output 8
-        int output8Vertex = flowGraph.OutgoingEdges[startVertex][1].ToVertex;
+        long output8Vertex = flowGraph.OutgoingEdges[startVertex][1].ToVertex;
         AssertHasOutputValue(output8Vertex, 8);
         Assert.AreEqual(1, flowGraph.OutgoingEdges[output8Vertex].Count);
 
         // output 9
-        int output9Vertex = flowGraph.OutgoingEdges[output8Vertex][0].ToVertex;
+        long output9Vertex = flowGraph.OutgoingEdges[output8Vertex][0].ToVertex;
         AssertHasOutputValue(output9Vertex, 9);
 
         // output 10
         Assert.AreEqual(flowGraph.OutgoingEdges[output6Vertex][0].ToVertex, flowGraph.OutgoingEdges[output9Vertex][0].ToVertex);
-        int output10Vertex = flowGraph.OutgoingEdges[output6Vertex][0].ToVertex;
+        long output10Vertex = flowGraph.OutgoingEdges[output6Vertex][0].ToVertex;
 
         Assert.AreEqual(1, flowGraph.OutgoingEdges[output10Vertex].Count);
         Assert.AreEqual(FlowGraph.FinalVertex, flowGraph.OutgoingEdges[output10Vertex][0].ToVertex);
@@ -202,12 +205,12 @@ public sealed class FlowAnalyzerTests
         FlowGraph? graph = flowAnalyzer.PerformFlowAnalysis().MainFlowGraph;
         Assert.IsNotNull(graph);
 
-        int output0Index = code.IndexOf("output (0)");
+        long output0Index = code.IndexOf("output (0)");
 
         Assert.IsTrue(graph.OutgoingEdges.ContainsKey(output0Index));
         Assert.AreEqual(1, graph.OutgoingEdges[output0Index].Count);
 
-        int branchOnIndex = code.IndexOf("branchon");
+        long branchOnIndex = code.IndexOf("branchon");
 
         Assert.AreEqual(branchOnIndex, graph.OutgoingEdges[output0Index][0].ToVertex);
 
@@ -565,15 +568,15 @@ public sealed class FlowAnalyzerTests
 
         Assert.AreEqual(7, mainFlowGraph.Vertices.Count);
 
-        int s1 = code.IndexOf("switch (1)"); // S1 nach Oranienburg
-        int s2 = code.IndexOf("output 2"); // S2 nach Bernau
-        int s3 = code.IndexOf("output 3"); // S3 nach Erkner
-        int s4 = code.IndexOf("output 4"); // S46 nach Königs Wusterhausen (close)
-        int s5 = code.IndexOf("switch (5)"); // S5 nach Strausberg Nord
-        int s6 = code.IndexOf("output 6"); // sadly no S6 in Berlin :(
-        int s7 = code.IndexOf("output 7"); // S7 nach Potsdam Hauptbahnhof
+        long s1 = code.IndexOf("switch (1)"); // S1 nach Oranienburg
+        long s2 = code.IndexOf("output 2"); // S2 nach Bernau
+        long s3 = code.IndexOf("output 3"); // S3 nach Erkner
+        long s4 = code.IndexOf("output 4"); // S46 nach Königs Wusterhausen (close)
+        long s5 = code.IndexOf("switch (5)"); // S5 nach Strausberg Nord
+        long s6 = code.IndexOf("output 6"); // sadly no S6 in Berlin :(
+        long s7 = code.IndexOf("output 7"); // S7 nach Potsdam Hauptbahnhof
 
-        void AssertIsOutput(int index, int expectedOutputValue)
+        void AssertIsOutput(long index, int expectedOutputValue)
         {
             StatementNode statement = mainFlowGraph.Vertices[index].AssociatedStatement;
 
@@ -589,17 +592,20 @@ public sealed class FlowAnalyzerTests
             } && value == expectedOutputValue);
         }
 
-        void AssertIsSwitch(int index, int expectedOutputValue)
+        void AssertIsSwitch(long index, int expectedOutputValue)
         {
             StatementNode statement = mainFlowGraph.Vertices[index].AssociatedStatement;
 
-            Assert.IsTrue(statement is SwitchStatementNode
+            Assert.IsTrue(statement is FlowBranchingStatementNode
             {
-                OutputExpression: TypedExpressionNode
+                Original: SwitchStatementNode
                 {
-                    Original: IntegerLiteralExpressionNode
+                    OutputExpression: TypedExpressionNode
                     {
-                        Value: int value,
+                        Original: IntegerLiteralExpressionNode
+                        {
+                            Value: int value,
+                        }
                     }
                 }
             } && value == expectedOutputValue);
@@ -676,16 +682,16 @@ public sealed class FlowAnalyzerTests
         FlowGraph? graph = flowAnalyzer.PerformFlowAnalysis().MainFlowGraph;
         Assert.IsNotNull(graph);
 
-        int o0 = code.IndexOf("output 0");
-        int o1 = code.IndexOf("output 1");
-        int o2 = code.IndexOf("output 2");
-        int o10 = code.IndexOf("output 10");
-        int o20 = code.IndexOf("output 20");
+        long o0 = code.IndexOf("output 0");
+        long o1 = code.IndexOf("output 1");
+        long o2 = code.IndexOf("output 2");
+        long o10 = code.IndexOf("output 10");
+        long o20 = code.IndexOf("output 20");
 
-        int t0 = code.IndexOf("call A; // 0");
-        int t1 = code.IndexOf("call A; // 1");
+        long t0 = code.IndexOf("call A; // 0");
+        long t1 = code.IndexOf("call A; // 1");
 
-        int rA = code.IndexOf("scene A") + 2;
+        long rA = code.IndexOf("scene A") + 2;
 
         Assert.IsTrue(new[] { o0, o1, o2, o10, o20, t0, t1, rA }.Order().SequenceEqual(graph.Vertices.Keys.Order()));
 
@@ -885,52 +891,52 @@ public sealed class FlowAnalyzerTests
         // problem: the 'X = A' fails even though it shouldn't
         return;
 
-        string code =
-            """
-            scene main
-            {
-                outcome X(A, B);
-                outcome Y(A, B);
+        //string code =
+        //    """
+        //    scene main
+        //    {
+        //        outcome X(A, B);
+        //        outcome Y(A, B);
 
-                loop switch (0)
-                {
-                    option (1)
-                    {
-                        X = A;
-                    }
+        //        loop switch (0)
+        //        {
+        //            option (1)
+        //            {
+        //                X = A;
+        //            }
 
-                    final option (2)
-                    {
-                        Y = A;
-                    }
-                }
+        //            final option (2)
+        //            {
+        //                Y = A;
+        //            }
+        //        }
 
-                branchon X // error: X not definitely assigned
-                {
-                    option A { }
-                    option B { }
-                }
+        //        branchon X // error: X not definitely assigned
+        //        {
+        //            option A { }
+        //            option B { }
+        //        }
 
-                branchon Y // no error: final option definitely hit
-                {
-                    option A { }
-                    option B { }
-                }
-            }
-            """;
+        //        branchon Y // no error: final option definitely hit
+        //        {
+        //            option A { }
+        //            option B { }
+        //        }
+        //    }
+        //    """;
 
-        FlowAnalyzer analyzer = PrepareFlowAnalyzer(code);
+        //FlowAnalyzer analyzer = PrepareFlowAnalyzer(code);
 
-        List<Error> errors = [];
-        analyzer.ErrorFound += errors.Add;
+        //List<Error> errors = [];
+        //analyzer.ErrorFound += errors.Add;
 
-        _ = analyzer.PerformFlowAnalysis();
+        //_ = analyzer.PerformFlowAnalysis();
 
-        Assert.AreEqual(1, errors.Count);
+        //Assert.AreEqual(1, errors.Count);
 
-        Error expectedError = Errors.OutcomeNotDefinitelyAssigned("X", ["main"], code.IndexOf("branchon X"));
+        //Error expectedError = Errors.OutcomeNotDefinitelyAssigned("X", ["main"], code.IndexOf("branchon X"));
 
-        Assert.AreEqual(expectedError, errors[0]);
+        //Assert.AreEqual(expectedError, errors[0]);
     }
 
     [TestMethod]
@@ -1076,7 +1082,7 @@ public sealed class FlowAnalyzerTests
 
         _ = analyzer.PerformFlowAnalysis();
 
-        errors.Sort((x, y) => x.Index - y.Index);
+        errors.Sort((x, y) => (int)(x.Index - y.Index));
 
         Error firstError = Errors.OutcomeMightBeAssignedMoreThanOnce("X", ["main"], code.IndexOf("X = A;"));
         Error secondError = Errors.OutcomeMightBeAssignedMoreThanOnce("X", ["main"], code.IndexOf("X = B;"));
@@ -1268,14 +1274,14 @@ public sealed class FlowAnalyzerTests
         FlowAnalysisResult result = analyzer.PerformFlowAnalysis();
         Assert.IsNotNull(result.MainFlowGraph);
 
-        int ifIndex = code.IndexOf("if X");
-        int output0Index = code.IndexOf("output 0");
-        int elseIfIndex = code.IndexOf("if not X");
-        int output1Index = code.IndexOf("output 1");
+        long ifIndex = code.IndexOf("if X");
+        long output0Index = code.IndexOf("output 0");
+        long elseIfIndex = code.IndexOf("if not X");
+        long output1Index = code.IndexOf("output 1");
 
-        Assert.IsTrue(result.MainFlowGraph.OutgoingEdges[ifIndex] is [{ ToVertex: int ifToA }, { ToVertex: int ifToB }] && ifToA == output0Index && ifToB == elseIfIndex);
+        Assert.IsTrue(result.MainFlowGraph.OutgoingEdges[ifIndex] is [{ ToVertex: long ifToA }, { ToVertex: long ifToB }] && ifToA == output0Index && ifToB == elseIfIndex);
         Assert.IsTrue(result.MainFlowGraph.OutgoingEdges[output0Index] is [{ ToVertex: FlowGraph.FinalVertex }]);
-        Assert.IsTrue(result.MainFlowGraph.OutgoingEdges[elseIfIndex] is [{ ToVertex: int elseIfToA }, { ToVertex: FlowGraph.FinalVertex }] && elseIfToA == output1Index);
+        Assert.IsTrue(result.MainFlowGraph.OutgoingEdges[elseIfIndex] is [{ ToVertex: long elseIfToA }, { ToVertex: FlowGraph.FinalVertex }] && elseIfToA == output1Index);
         Assert.IsTrue(result.MainFlowGraph.OutgoingEdges[output1Index] is [{ ToVertex: FlowGraph.FinalVertex }]);
     }
 
@@ -1307,5 +1313,68 @@ public sealed class FlowAnalyzerTests
 
         Assert.AreEqual(1, errors.Count);
         Assert.AreEqual(errors[0], expectedError);
+    }
+
+    [TestMethod]
+    public void TestNeverCalledScene()
+    {
+        string code =
+            """
+            scene main
+            {
+                output 0;
+            }
+
+            scene A
+            {
+
+            }
+            """;
+
+        FlowAnalyzer analyzer = PrepareFlowAnalyzer(code);
+        analyzer.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        FlowAnalysisResult result = analyzer.PerformFlowAnalysis();
+        Assert.IsNotNull(result.MainFlowGraph);
+    }
+
+    [TestMethod]
+    public void TestNestedLoopSwitches()
+    {
+        string code =
+            """
+            scene main
+            {
+                loop switch (0)
+                {
+                    option (1)
+                    {
+                        loop switch (2)
+                        {
+                            option (3)
+                            {
+                                output 4;
+                            }
+
+                            option (5)
+                            {
+                                output 6;
+                            }
+                        }
+                    }
+
+                    option (7)
+                    {
+                        output 8;
+                    }
+                }
+            }
+            """;
+
+        FlowAnalyzer analyzer = PrepareFlowAnalyzer(code);
+        analyzer.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
+
+        FlowAnalysisResult result = analyzer.PerformFlowAnalysis();
+        Assert.IsNotNull(result.MainFlowGraph);
     }
 }

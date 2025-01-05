@@ -103,7 +103,7 @@ public sealed class FlowGraphTests
         Assert.AreEqual(4, graph.Vertices.Count);
         Assert.AreEqual(4, graph.OutgoingEdges.Count);
 
-        foreach ((int leftKey, int rightKey) in graph.OutgoingEdges.Keys.OrderBy(k => k).Zip(graph.Vertices.Keys.OrderBy(k => k)))
+        foreach ((long leftKey, long rightKey) in graph.OutgoingEdges.Keys.OrderBy(k => k).Zip(graph.Vertices.Keys.OrderBy(k => k)))
         {
             Assert.AreEqual(leftKey, rightKey);
             Assert.AreEqual(rightKey, graph.Vertices[rightKey].Index);
@@ -140,7 +140,7 @@ public sealed class FlowGraphTests
         Assert.AreEqual(6, graphC.Vertices.Count);
         Assert.AreEqual(6, graphC.OutgoingEdges.Count);
 
-        foreach ((int leftKey, int rightKey) in graphC.OutgoingEdges.Keys.OrderBy(k => k).Zip(graphC.Vertices.Keys.OrderBy(k => k)))
+        foreach ((long leftKey, long rightKey) in graphC.OutgoingEdges.Keys.OrderBy(k => k).Zip(graphC.Vertices.Keys.OrderBy(k => k)))
         {
             Assert.AreEqual(leftKey, rightKey);
             Assert.AreEqual(rightKey, graphC.Vertices[rightKey].Index);
@@ -148,7 +148,7 @@ public sealed class FlowGraphTests
 
         Assert.AreEqual(9, graphC.GetStoryStartVertex());
 
-        void AssertHasEdges(int vertex, params int[] edges)
+        void AssertHasEdges(long vertex, params long[] edges)
         {
             Assert.IsTrue(edges.SequenceEqual(graphC.OutgoingEdges[vertex].Select(e => e.ToVertex).OrderBy(v => v)));
         }

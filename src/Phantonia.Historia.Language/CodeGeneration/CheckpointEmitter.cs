@@ -13,7 +13,7 @@ public sealed class CheckpointEmitter(
     FlowGraph flowGraph,
     SymbolTable symbolTable,
     Settings settings,
-    ImmutableDictionary<int, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtCheckpoints,
+    ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtCheckpoints,
     IndentedTextWriter writer)
 {
     public void GenerateCheckpointType()
@@ -32,12 +32,14 @@ public sealed class CheckpointEmitter(
         GenerateConstructor(settings, writer);
 
         writer.WriteLine();
-        writer.Write("public int Index { get; }");
+        writer.WriteLine("public int Index { get; }");
         writer.WriteLine();
 
         GenerateOutcomeProperties();
 
         GenerateGetForIndexMethod();
+
+        writer.WriteLine();
 
         GenerateIsReadyMethod();
 

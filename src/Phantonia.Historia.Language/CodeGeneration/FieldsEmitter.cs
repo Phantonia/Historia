@@ -27,7 +27,7 @@ public sealed class FieldsEmitter(StoryNode boundStory, SymbolTable symbolTable,
 
     private void GenerateFields()
     {
-        writer.WriteLine("public int state;");
+        writer.WriteLine("public long state;");
 
         foreach (Symbol symbol in symbolTable.AllSymbols)
         {

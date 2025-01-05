@@ -55,7 +55,7 @@ public sealed partial class Binder
                 return BindAndTypeLogicExpression(logicExpression, table);
             case NotExpressionNode notExpression:
                 return BindAndTypeNotExpression(notExpression, table);
-            case IdentifierExpressionNode { Identifier: string identifier, Index: int index }:
+            case IdentifierExpressionNode { Identifier: string identifier, Index: long index }:
                 if (!table.IsDeclared(identifier))
                 {
                     ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(identifier, index));

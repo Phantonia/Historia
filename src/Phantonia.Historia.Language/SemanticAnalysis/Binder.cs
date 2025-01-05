@@ -34,6 +34,7 @@ public sealed partial class Binder
         {
             Index = 0,
             TopLevelNodes = stories.SelectMany(s => s.TopLevelNodes).ToImmutableArray(),
+            Length = stories.Max(s => s.Length),
         };
     }
 
@@ -118,7 +119,7 @@ public sealed partial class Binder
     {
         switch (declaration)
         {
-            case SceneSymbolDeclarationNode { Name: string name, Index: int index }:
+            case SceneSymbolDeclarationNode { Name: string name, Index: long index }:
                 return new SceneSymbol { Name = name, Index = index };
             case RecordSymbolDeclarationNode recordDeclaration:
                 return CreateRecordSymbolFromDeclaration(recordDeclaration);

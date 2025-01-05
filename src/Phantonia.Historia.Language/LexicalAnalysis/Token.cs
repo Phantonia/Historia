@@ -8,7 +8,7 @@ public readonly record struct Token : IReconstructable
 {
     public required TokenKind Kind { get; init; }
 
-    public required int Index { get; init; }
+    public required long Index { get; init; }
 
     public required string Text { get; init; }
 

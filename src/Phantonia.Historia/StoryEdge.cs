@@ -1,10 +1,10 @@
 ﻿namespace Phantonia.Historia;
 
-public readonly struct StoryEdge(int toVertex, int fromVertex, bool isWeak)
+public readonly struct StoryEdge(long toVertex, long fromVertex, bool isWeak)
 {
-    public int ToVertex { get; } = toVertex;
+    public long ToVertex { get; } = toVertex;
 
-    public int FromVertex { get; } = fromVertex;
+    public long FromVertex { get; } = fromVertex;
 
     public bool IsWeak { get; } = isWeak;
 }

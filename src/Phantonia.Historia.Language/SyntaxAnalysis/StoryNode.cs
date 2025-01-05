@@ -9,6 +9,8 @@ public sealed record StoryNode() : SyntaxNode
 {
     public required ImmutableArray<TopLevelNode> TopLevelNodes { get; init; }
 
+    public required long Length { get; init; }
+
     public override IEnumerable<SyntaxNode> Children => TopLevelNodes;
 
     protected override void ReconstructCore(TextWriter writer)

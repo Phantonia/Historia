@@ -15,7 +15,7 @@ public sealed class Emitter(
     Settings settings,
     FlowGraph flowGraph,
     SymbolTable symbolTable,
-    ImmutableDictionary<int, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtCheckpoints,
+    ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtCheckpoints,
     TextWriter outputWriter)
 {
     private readonly IndentedTextWriter writer = new(outputWriter);
@@ -33,8 +33,6 @@ public sealed class Emitter(
 
         TypeDeclarationsEmitter typeDeclarationsEmitter = new(boundStory, settings, writer);
         typeDeclarationsEmitter.GenerateTypeDeclarations();
-
-        writer.WriteLine();
 
         FieldsEmitter fieldsEmitter = new(boundStory, symbolTable, writer);
         fieldsEmitter.GenerateFieldsStruct();
@@ -58,6 +56,8 @@ public sealed class Emitter(
 
         StoryGraphEmitter storyGraphEmitter = new(flowGraph, settings, writer);
         storyGraphEmitter.GenerateStoryGraphClass();
+
+        writer.WriteLine();
 
         CheckpointEmitter checkpointEmitter = new(flowGraph, symbolTable, settings, definitelyAssignedOutcomesAtCheckpoints, writer);
         checkpointEmitter.GenerateCheckpointType();

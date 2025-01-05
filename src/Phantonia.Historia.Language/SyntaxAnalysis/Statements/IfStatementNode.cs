@@ -5,7 +5,7 @@ using System.IO;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public sealed record IfStatementNode() : StatementNode
+public sealed record IfStatementNode() : StatementNode, IBranchingStatementNode
 {
     public required Token IfKeywordToken { get; init; }
 
@@ -30,4 +30,6 @@ public sealed record IfStatementNode() : StatementNode
 
     protected internal override string GetDebuggerDisplay()
         => $"if ({Condition.GetDebuggerDisplay()}) run {ThenBlock.Statements.Length} statement(s), else run {ElseBlock?.Statements.Length ?? 0} statement(s)";
+
+    IEnumerable<StatementBodyNode> IBranchingStatementNode.Bodies => ElseBlock is null ? [ThenBlock] : [ThenBlock, ElseBlock];
 }

@@ -1,6 +1,7 @@
 ﻿using Phantonia.Historia.Language.SemanticAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
+using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -45,7 +46,7 @@ public sealed partial class FlowAnalyzer
             }
         }
 
-        Debug.Assert(mainFlowGraph.Vertices.Values.All(v => v.AssociatedStatement is not BoundCallStatementNode));
+        Debug.Assert(mainFlowGraph.Vertices.Values.All(v => !v.IsStory || v.AssociatedStatement is not BoundCallStatementNode));
 
         return (mainFlowGraph, symbolTable);
     }
@@ -53,7 +54,7 @@ public sealed partial class FlowAnalyzer
     private static FlowGraph EmbedSingleReferenceScene(FlowGraph mainFlowGraph, FlowGraph sceneFlowGraph, SceneSymbol scene)
     {
         // 1. add all scene vertices
-        foreach (int vertex in sceneFlowGraph.Vertices.Keys)
+        foreach (long vertex in sceneFlowGraph.Vertices.Keys)
         {
             mainFlowGraph = mainFlowGraph with
             {
@@ -63,20 +64,20 @@ public sealed partial class FlowAnalyzer
         }
 
         // 2. find callVertex and nextVertex (the single vertex that callVertex points to, since it's linear)
-        int callVertex = int.MinValue;
-        int nextVertex = int.MinValue;
+        long callVertex = int.MinValue;
+        long nextVertex = int.MinValue;
 
         foreach (FlowVertex vertex in mainFlowGraph.Vertices.Values)
         {
-            if (vertex.AssociatedStatement is not BoundCallStatementNode { Scene: SceneSymbol calledScene } || calledScene != scene)
+            if (!vertex.IsStory || (vertex.AssociatedStatement is not BoundCallStatementNode { Scene: SceneSymbol calledScene } || calledScene != scene))
             {
                 continue;
             }
 
             callVertex = vertex.Index;
 
-            Debug.Assert(mainFlowGraph.OutgoingEdges[vertex.Index].Count == 1); // assert vertex is infact linear
-            nextVertex = mainFlowGraph.OutgoingEdges[vertex.Index][0].ToVertex;
+            Debug.Assert(mainFlowGraph.OutgoingEdges[vertex.Index].Where(e => e.IsStory).Count() == 1); // assert vertex is infact linear
+            nextVertex = mainFlowGraph.OutgoingEdges[vertex.Index].First(e => e.IsStory).ToVertex;
             break;
         }
 
@@ -109,6 +110,33 @@ public sealed partial class FlowAnalyzer
                                          .Remove(FlowEdge.CreateStrongTo(callVertex)) // there are no weak edges to call vertices (only weak edges back to loop switches)
                                          .AddRange(sceneFlowGraph.StartEdges)),
                 };
+
+                if (mainFlowGraph.Vertices[vertex.Index].AssociatedStatement is FlowBranchingStatementNode branchingStatement)
+                {
+                    int edgeIndex = -1;
+
+                    for (int i = 0; i < branchingStatement.OutgoingEdges.Count; i++)
+                    {
+                        if (branchingStatement.OutgoingEdges[i].ToVertex == callVertex)
+                        {
+                            edgeIndex = i;
+                            break;
+                        }
+                    }
+
+                    Debug.Assert(edgeIndex >= 0);
+                    Debug.Assert(sceneFlowGraph.IsConformable);
+
+                    branchingStatement = branchingStatement with
+                    {
+                        OutgoingEdges = branchingStatement.OutgoingEdges.SetItem(edgeIndex, sceneFlowGraph.StartEdges.Single(e => e.IsStory)),
+                    };
+
+                    mainFlowGraph = mainFlowGraph.SetVertex(vertex.Index, mainFlowGraph.Vertices[vertex.Index] with
+                    {
+                        AssociatedStatement = branchingStatement,
+                    });
+                }
             }
         }
 
@@ -126,6 +154,19 @@ public sealed partial class FlowAnalyzer
                                          .Remove(FlowGraph.FinalEdge)
                                          .Add(FlowEdge.CreateStrongTo(nextVertex))),
                 };
+
+                if (vertex.AssociatedStatement is FlowBranchingStatementNode { Original: LoopSwitchStatementNode } flowBranchingStatement)
+                {
+                    flowBranchingStatement = flowBranchingStatement with
+                    {
+                        OutgoingEdges = flowBranchingStatement.OutgoingEdges.RemoveAt(flowBranchingStatement.OutgoingEdges.Count - 1).Add(FlowEdge.CreateStrongTo(nextVertex)),
+                    };
+
+                    mainFlowGraph = mainFlowGraph.SetVertex(vertex.Index, vertex with
+                    {
+                        AssociatedStatement = flowBranchingStatement,
+                    });
+                }
             }
         }
 
@@ -141,7 +182,7 @@ public sealed partial class FlowAnalyzer
     private static FlowGraph EmbedMultiReferenceScene(FlowGraph mainFlowGraph, FlowGraph sceneFlowGraph, SceneSymbol scene, CallerTrackerSymbol tracker)
     {
         // 1. add all scene vertices
-        foreach (int vertex in sceneFlowGraph.Vertices.Keys)
+        foreach (long vertex in sceneFlowGraph.Vertices.Keys)
         {
             mainFlowGraph = mainFlowGraph with
             {
@@ -151,8 +192,8 @@ public sealed partial class FlowAnalyzer
         }
 
         // 2. find all callsites, replace them with tracker statements and redirect them correctly
-        Dictionary<int, int> nextVertices = [];
-        List<int> callSites = [];
+        Dictionary<long, long> nextVertices = [];
+        List<long> callSites = [];
 
         foreach (FlowVertex vertex in mainFlowGraph.Vertices.Values)
         {
@@ -184,6 +225,10 @@ public sealed partial class FlowAnalyzer
                     vertex.Index,
                     [.. sceneFlowGraph.StartEdges]),
             };
+
+            // flow branching statements are fine because they used to point to the call statement
+            // but since the index of the tracker statement is the same as of the call statement
+            // nothing needs to be changed
         }
 
         // 3. synthesize resolution statement
@@ -202,7 +247,7 @@ public sealed partial class FlowAnalyzer
 
         ImmutableList<FlowEdge>.Builder edgesBuilder = ImmutableList.CreateBuilder<FlowEdge>();
 
-        foreach (int site in callSites)
+        foreach (long site in callSites)
         {
             edgesBuilder.Add(FlowEdge.CreateStrongTo(nextVertices[site]));
         }

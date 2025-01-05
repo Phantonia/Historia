@@ -301,6 +301,7 @@ public sealed class Lexer
                 Index = startIndex,
                 Kind = TokenKind.StringLiteral,
                 Text = new string(delimiter, 2),
+                StringValue = "",
                 PrecedingTrivia = triviaBuffer.ClearToString(),
             };
         }

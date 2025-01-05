@@ -27,7 +27,7 @@ public sealed class InterpreterStateMachine : IStoryStateMachine
     private readonly FlowGraph flowGraph;
     private readonly SymbolTable symbolTable;
 
-    private int state = StartState;
+    private long state = StartState;
     private readonly Dictionary<string, ulong> fields = [];
     private readonly List<object> options = [];
 

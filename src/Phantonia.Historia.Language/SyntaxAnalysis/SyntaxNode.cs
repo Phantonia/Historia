@@ -12,7 +12,7 @@ public abstract record SyntaxNode : ISyntaxNode
 {
     protected SyntaxNode() { }
 
-    public required int Index { get; init; }
+    public required long Index { get; init; }
 
     public abstract IEnumerable<SyntaxNode> Children { get; }
 

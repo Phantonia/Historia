@@ -2,5 +2,5 @@
 
 public interface ISyntaxNode : IReconstructable
 {
-    int Index { get; }
+    long Index { get; }
 }

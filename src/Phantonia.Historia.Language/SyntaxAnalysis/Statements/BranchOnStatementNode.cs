@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public record BranchOnStatementNode() : StatementNode
+public record BranchOnStatementNode() : StatementNode, IBranchingStatementNode
 {
     public required Token BranchOnKeywordToken { get; init; }
 
@@ -37,4 +37,6 @@ public record BranchOnStatementNode() : StatementNode
     }
 
     protected internal override string GetDebuggerDisplay() => $"branchon {OutcomeName} {{ {string.Join(", ", Options.Select(o => o.GetDebuggerDisplay()))} }}";
+
+    IEnumerable<StatementBodyNode> IBranchingStatementNode.Bodies => Options.Select(o => o.Body);
 }
