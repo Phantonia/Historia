@@ -9,7 +9,7 @@ namespace Phantonia.Historia.Language.SyntaxAnalysis;
 
 public sealed partial class Parser
 {
-    private StatementBodyNode? ParseStatementBody(ref int index)
+    private StatementBodyNode ParseStatementBody(ref int index)
     {
         ImmutableArray<StatementNode>.Builder statementBuilder = ImmutableArray.CreateBuilder<StatementNode>();
 

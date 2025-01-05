@@ -17,9 +17,9 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
         int index = 0;
         ImmutableArray<TopLevelNode>.Builder topLevelBuilder = ImmutableArray.CreateBuilder<TopLevelNode>();
 
-        TopLevelNode? nextTopLevelNode = ParseTopLevelNode(ref index);
+        TopLevelNode nextTopLevelNode = ParseTopLevelNode(ref index);
 
-        while (nextTopLevelNode is not null)
+        while (index < tokens.Length)
         {
             topLevelBuilder.Add(nextTopLevelNode);
 
@@ -174,7 +174,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
         return (name, optionBuilder.ToImmutable(), defaultOption, nodeIndex);
     }
 
-    private ExpressionNode? ParseExpression(ref int index)
+    private ExpressionNode ParseExpression(ref int index)
     {
         int nodeIndex = tokens[index].Index;
 
@@ -247,7 +247,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
         };
     }
 
-    private ExpressionNode? ParseSimpleExpression(ref int index)
+    private ExpressionNode ParseSimpleExpression(ref int index)
     {
         switch (tokens[index])
         {
@@ -428,36 +428,40 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
     private NotExpressionNode? ParseNotExpression(ref int index)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.NotKeyword);
-
-        int nodeIndex = tokens[index].Index;
+        Token notKeyword = tokens[index];
+        int nodeIndex = notKeyword.Index;
         index++;
 
-        ExpressionNode? innerExpression = ParseSimpleExpression(ref index);
-
-        if (innerExpression is null)
-        {
-            return null;
-        }
+        ExpressionNode innerExpression = ParseSimpleExpression(ref index);
 
         return new NotExpressionNode
         {
+            NotKeywordToken = notKeyword,
             InnerExpression = innerExpression,
             Index = nodeIndex,
         };
     }
 
-    private TypeNode? ParseType(ref int index)
+    private TypeNode ParseType(ref int index)
     {
-        switch (tokens[index])
+        switch (tokens[index].Kind)
         {
-            case { Kind: TokenKind.Identifier, Text: string identifier }:
-                return new IdentifierTypeNode { Identifier = identifier, Index = tokens[index++].Index };
+            case TokenKind.Identifier:
+                return new IdentifierTypeNode
+                {
+                    IdentifierToken = tokens[index],
+                    Index = tokens[index++].Index,
+                };
             case TokenKind.EndOfFile:
-                ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index]));
-                return null;
+                ErrorFound?.Invoke(Errors.UnexpectedEndOfFile(tokens[index]));
+                return new MissingTypeNode
+                {
+                    Index = tokens[index].Index,
+                };
             default:
                 ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index]));
-                return null;
+                index++;
+                return ParseType(ref index);
         }
     }
 }

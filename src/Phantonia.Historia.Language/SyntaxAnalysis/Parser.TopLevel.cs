@@ -11,15 +11,11 @@ namespace Phantonia.Historia.Language.SyntaxAnalysis;
 
 public sealed partial class Parser
 {
-    private TopLevelNode? ParseTopLevelNode(ref int index)
+    private TopLevelNode ParseTopLevelNode(ref int index)
     {
-        switch (tokens[index])
+        switch (tokens[index].Kind)
         {
             case TokenKind.SceneKeyword:
-                // if parse scene symbol returns null
-                // we have an eof too early
-                // however this still means we can return null here
-                // which means we are done parsing
                 return ParseSceneSymbolDeclaration(ref index);
             case TokenKind.RecordKeyword:
                 return ParseRecordSymbolDeclaration(ref index);
@@ -62,6 +58,7 @@ public sealed partial class Parser
             case TokenKind.ReferenceKeyword:
                 return ParseReferenceDeclaration(ref index);
             case TokenKind.EndOfFile:
+                Debug.Assert(false);
                 return null;
             default:
                 {
@@ -72,71 +69,71 @@ public sealed partial class Parser
         }
     }
 
-    private SceneSymbolDeclarationNode? ParseSceneSymbolDeclaration(ref int index)
+    private SceneSymbolDeclarationNode ParseSceneSymbolDeclaration(ref int index)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.SceneKeyword);
         int nodeIndex = tokens[index].Index;
+        Token sceneKeyword = tokens[index];
 
         index++;
 
-        Token nameToken = Expect(TokenKind.Identifier, ref index);
+        Token name = Expect(TokenKind.Identifier, ref index);
 
-        StatementBodyNode? body = ParseStatementBody(ref index);
-        if (body is null)
-        {
-            return null;
-        }
-
+        StatementBodyNode body = ParseStatementBody(ref index);
+        
         return new SceneSymbolDeclarationNode
         {
+            SceneKeywordToken = sceneKeyword,
+            NameToken = name,
             Body = body,
-            Name = nameToken.Text,
             Index = nodeIndex,
         };
     }
 
-    private UnionSymbolDeclarationNode? ParseUnionSymbolDeclaration(ref int index)
+    private UnionSymbolDeclarationNode ParseUnionSymbolDeclaration(ref int index)
     {
-        Debug.Assert(tokens[index] is TokenKind.UnionKeyword);
-
-        int nodeIndex = tokens[index].Index;
+        Debug.Assert(tokens[index].Kind is TokenKind.UnionKeyword);
+        Token unionKeyword = tokens[index];
+        int nodeIndex = unionKeyword.Index;
         index++;
 
-        string name = Expect(TokenKind.Identifier, ref index).Text;
+        Token name = Expect(TokenKind.Identifier, ref index);
 
-        _ = Expect(TokenKind.OpenParenthesis, ref index);
+        Token openParenthesis = Expect(TokenKind.OpenParenthesis, ref index);
 
         ImmutableArray<TypeNode>.Builder subtypeBuilder = ImmutableArray.CreateBuilder<TypeNode>();
+        ImmutableArray<Token>.Builder commaBuilder = ImmutableArray.CreateBuilder<Token>();
 
-        while (tokens[index] is not TokenKind.ClosedParenthesis)
+        while (tokens[index].Kind is not TokenKind.ClosedParenthesis)
         {
-            TypeNode? subtype = ParseType(ref index);
-
-            if (subtype is null)
-            {
-                return null;
-            }
+            TypeNode subtype = ParseType(ref index);
 
             subtypeBuilder.Add(subtype);
 
-            if (tokens[index] is not TokenKind.Comma)
+            if (tokens[index].Kind is not TokenKind.Comma)
             {
                 break;
             }
+
+            commaBuilder.Add(tokens[index]);
 
             index++;
         }
 
         // in case of no trailing comma, just expect a closed parenthesis
         // else this is redundant and just does index++
-        _ = Expect(TokenKind.ClosedParenthesis, ref index);
-
-        _ = Expect(TokenKind.Semicolon, ref index);
+        Token closedParenthesis = Expect(TokenKind.ClosedParenthesis, ref index);
+        Token semicolon = Expect(TokenKind.Semicolon, ref index);
 
         return new UnionSymbolDeclarationNode
         {
-            Name = name,
+            UnionKeywordToken = unionKeyword,
+            NameToken = name,
+            OpenParenthesisToken = openParenthesis,
             Subtypes = subtypeBuilder.ToImmutable(),
+            CommaTokens = commaBuilder.ToImmutable(),
+            ClosedParenthesisToken = closedParenthesis,
+            SemicolonToken = semicolon,
             Index = nodeIndex,
         };
     }
@@ -149,166 +146,184 @@ public sealed partial class Parser
             PropertyDeclaration: identifier ':' Type;
          */
 
-        Debug.Assert(tokens[index] is TokenKind.RecordKeyword);
+        Debug.Assert(tokens[index].Kind is TokenKind.RecordKeyword);
+        Token recordKeyword = tokens[index];
 
-        int nodeIndex = tokens[index].Index;
+        int nodeIndex = recordKeyword.Index;
 
         index++;
 
-        Token identifierToken = Expect(TokenKind.Identifier, ref index);
+        Token name = Expect(TokenKind.Identifier, ref index);
 
-        ImmutableArray<ParameterDeclarationNode>? propertyDeclarations = ParsePropertyDeclarationList(ref index);
+        (Token openParenthesis, ImmutableArray<ParameterDeclarationNode> propertyDeclarations, Token closedParenthesis) = ParseParameterList(ref index);
 
-        if (propertyDeclarations is null)
-        {
-            return null;
-        }
-
-        _ = Expect(TokenKind.Semicolon, ref index);
+        Token semicolon = Expect(TokenKind.Semicolon, ref index);
 
         return new RecordSymbolDeclarationNode
         {
-            Name = identifierToken.Text,
-            Properties = (ImmutableArray<ParameterDeclarationNode>)propertyDeclarations,
+            RecordKeywordToken = recordKeyword,
+            NameToken = name,
+            OpenParenthesisToken = openParenthesis,
+            Properties = propertyDeclarations,
+            ClosedParenthesisToken = closedParenthesis,
+            SemicolonToken = semicolon,
             Index = nodeIndex,
         };
     }
 
-    private ImmutableArray<ParameterDeclarationNode>? ParsePropertyDeclarationList(ref int index)
+    private (Token openParenthesis, ImmutableArray<ParameterDeclarationNode> parameter, Token closedParenthesis) ParseParameterList(ref int index)
     {
-        _ = Expect(TokenKind.OpenParenthesis, ref index);
+        Token openParenthesis = Expect(TokenKind.OpenParenthesis, ref index);
 
         ImmutableArray<ParameterDeclarationNode>.Builder propertyDeclarations = ImmutableArray.CreateBuilder<ParameterDeclarationNode>();
 
-        while (tokens[index] is not TokenKind.ClosedParenthesis)
+        while (tokens[index].Kind is not TokenKind.ClosedParenthesis)
         {
-            Token propertyIdentifierToken = Expect(TokenKind.Identifier, ref index);
-            _ = Expect(TokenKind.Colon, ref index);
+            Token parameterName = Expect(TokenKind.Identifier, ref index);
+            Token colon = Expect(TokenKind.Colon, ref index);
 
-            TypeNode? type = ParseType(ref index);
-            if (type is null)
+            TypeNode type = ParseType(ref index);
+            
+            if (tokens[index].Kind is not TokenKind.Comma)
             {
-                return null;
+                propertyDeclarations.Add(new ParameterDeclarationNode
+                {
+                    NameToken = parameterName,
+                    ColonToken = colon,
+                    Type = type,
+                    CommaToken = null,
+                    Index = parameterName.Index,
+                });
+
+                break;
             }
 
             propertyDeclarations.Add(new ParameterDeclarationNode
             {
-                Name = propertyIdentifierToken.Text,
+                NameToken = parameterName,
+                ColonToken = colon,
                 Type = type,
-                Index = propertyIdentifierToken.Index,
+                CommaToken = tokens[index],
+                Index = parameterName.Index,
             });
-
-            if (tokens[index] is not TokenKind.Comma)
-            {
-                break;
-            }
 
             index++;
         }
 
         // in case of no trailing comma, just expect a closed parenthesis
         // else this is redundant and just does index++
-        _ = Expect(TokenKind.ClosedParenthesis, ref index);
+        Token closedParenthesis = Expect(TokenKind.ClosedParenthesis, ref index);
 
-        return propertyDeclarations.ToImmutable();
+        return (openParenthesis, propertyDeclarations.ToImmutable(), closedParenthesis);
     }
 
-    private EnumSymbolDeclarationNode? ParseEnumSymbolDeclaration(ref int index)
+    private EnumSymbolDeclarationNode ParseEnumSymbolDeclaration(ref int index)
     {
         // spec 1.3.1.2:
         // EnumDeclaration : 'enum' identifier '(' (identifier (',' identifier)* ','?)? ')' ';';
-        Debug.Assert(tokens[index] is TokenKind.EnumKeyword);
-
-        int nodeIndex = tokens[index].Index;
+        Debug.Assert(tokens[index].Kind is TokenKind.EnumKeyword);
+        Token enumKeyword = tokens[index];
+        int nodeIndex = enumKeyword.Index;
         index++;
 
-        string name = Expect(TokenKind.Identifier, ref index).Text;
+        Token name = Expect(TokenKind.Identifier, ref index);
 
-        _ = Expect(TokenKind.OpenParenthesis, ref index);
+        Token openParenthesis = Expect(TokenKind.OpenParenthesis, ref index);
 
-        ImmutableArray<string>.Builder optionsBuilder = ImmutableArray.CreateBuilder<string>();
+        ImmutableArray<Token>.Builder optionBuilder = ImmutableArray.CreateBuilder<Token>();
+        ImmutableArray<Token>.Builder commaBuilder = ImmutableArray.CreateBuilder<Token>();
 
-        while (tokens[index] is { Kind: TokenKind.Identifier, Text: string option })
+        while (tokens[index].Kind is TokenKind.Identifier)
         {
-            optionsBuilder.Add(option);
+            optionBuilder.Add(tokens[index]);
 
             index++;
 
-            if (tokens[index] is not TokenKind.Comma)
+            if (tokens[index].Kind is not TokenKind.Comma)
             {
                 break;
             }
             else
             {
+                commaBuilder.Add(tokens[index]);
                 index++;
             }
         }
 
-        _ = Expect(TokenKind.ClosedParenthesis, ref index);
-        _ = Expect(TokenKind.Semicolon, ref index);
+        Token closedParenthesis = Expect(TokenKind.ClosedParenthesis, ref index);
+        Token semicolon = Expect(TokenKind.Semicolon, ref index);
 
         return new EnumSymbolDeclarationNode
         {
-            Name = name,
-            Options = optionsBuilder.ToImmutable(),
+            EnumKeywordToken = enumKeyword,
+            NameToken = name,
+            OpenParenthesisToken = openParenthesis,
+            OptionTokens = optionBuilder.ToImmutable(),
+            CommaTokens = commaBuilder.ToImmutable(),
+            ClosedParenthesisToken = closedParenthesis,
+            SemicolonToken = semicolon,
             Index = nodeIndex,
         };
     }
 
-    private SettingDirectiveNode? ParseSettingDirective(ref int index)
+    private SettingDirectiveNode ParseSettingDirective(ref int index)
     {
-        Debug.Assert(tokens[index].Kind == TokenKind.SettingKeyword);
-
-        int nodeIndex = tokens[index].Index;
+        Debug.Assert(tokens[index].Kind is TokenKind.SettingKeyword);
+        Token settingKeyword = tokens[index];
+        int nodeIndex = settingKeyword.Index;
         index++;
 
         Token identifier = Expect(TokenKind.Identifier, ref index);
-
-        _ = Expect(TokenKind.Colon, ref index);
+        Token colon = Expect(TokenKind.Colon, ref index);
 
         if (!Settings.AllSettings.Contains(identifier.Text))
         {
             ErrorFound?.Invoke(Errors.SettingDoesNotExist(identifier));
-            return null;
+
+            // just pretend this is an expression setting
+            return ParseExpressionSetting(ref index);
         }
 
         if (Settings.TypeSettings.Contains(identifier.Text))
         {
-            TypeNode? type = ParseType(ref index);
-            if (type is null)
-            {
-                return null;
-            }
-
-            _ = Expect(TokenKind.Semicolon, ref index);
+            TypeNode type = ParseType(ref index);
+            
+            Token semicolon = Expect(TokenKind.Semicolon, ref index);
 
             return new TypeSettingDirectiveNode
             {
+                SettingKeywordToken = settingKeyword,
+                SettingNameToken = identifier,
+                ColonToken = colon,
                 Type = type,
-                SettingName = identifier.Text,
+                SemicolonToken = semicolon,
                 Index = nodeIndex,
             };
         }
         else if (Settings.ExpressionSettings.Contains(identifier.Text))
         {
-            ExpressionNode? expression = ParseExpression(ref index);
-            if (expression is null)
-            {
-                return null;
-            }
-
-            _ = Expect(TokenKind.Semicolon, ref index);
-
-            return new ExpressionSettingDirectiveNode
-            {
-                Expression = expression,
-                SettingName = identifier.Text,
-                Index = nodeIndex,
-            };
+            return ParseExpressionSetting(ref index);
         }
 
         Debug.Assert(false);
         return null;
+
+        SettingDirectiveNode ParseExpressionSetting(ref int index)
+        {
+            ExpressionNode expression = ParseExpression(ref index);
+            
+            Token semicolon = Expect(TokenKind.Semicolon, ref index);
+
+            return new ExpressionSettingDirectiveNode
+            {
+                SettingKeywordToken = settingKeyword,
+                SettingNameToken = identifier,
+                ColonToken = colon,
+                Expression = expression,
+                SemicolonToken = semicolon,
+                Index = nodeIndex,
+            };
+        }
     }
 
     private TopLevelNode? ParsePublicTopLevelNode(ref int index)
@@ -418,7 +433,7 @@ public sealed partial class Parser
 
         string name = Expect(TokenKind.Identifier, ref index).Text;
 
-        ImmutableArray<ParameterDeclarationNode>? parameterList = ParsePropertyDeclarationList(ref index);
+        ImmutableArray<ParameterDeclarationNode>? parameterList = ParseParameterList(ref index);
 
         if (parameterList is null)
         {
