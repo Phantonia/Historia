@@ -32,7 +32,7 @@ public sealed class CheckpointEmitter(
         GenerateConstructor(settings, writer);
 
         writer.WriteLine();
-        writer.WriteLine("public int Index { get; }");
+        writer.WriteLine("public long Index { get; }");
         writer.WriteLine();
 
         GenerateOutcomeProperties();
@@ -50,7 +50,7 @@ public sealed class CheckpointEmitter(
     {
         writer.Write("private ");
         writer.Write(settings.StoryName);
-        writer.WriteLine("Checkpoint(int index)");
+        writer.WriteLine("Checkpoint(long index)");
 
         writer.BeginBlock();
         writer.WriteLine("Index = index;");
@@ -92,7 +92,7 @@ public sealed class CheckpointEmitter(
     {
         writer.Write("public static ");
         writer.Write(settings.StoryName);
-        writer.WriteLine("Checkpoint GetForIndex(int index)");
+        writer.WriteLine("Checkpoint GetForIndex(long index)");
 
         writer.BeginBlock();
 

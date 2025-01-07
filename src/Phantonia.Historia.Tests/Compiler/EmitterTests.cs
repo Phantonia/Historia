@@ -1238,13 +1238,13 @@ public sealed class EmitterTests
         MethodInfo? getForIndexMethod = checkpointType.GetMethod("GetForIndex");
 
         {
-            int index = code.IndexOf("checkpoint output 0");
+            long index = code.IndexOf("checkpoint output 0");
 
             object? checkpoint0 = getForIndexMethod?.Invoke(null, [index]);
 
             Assert.IsNotNull(checkpoint0);
 
-            int? allegedIndex = (int?)checkpoint0.GetType().GetProperty("Index", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint0);
+            long? allegedIndex = (long?)checkpoint0.GetType().GetProperty("Index", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint0);
             Assert.AreEqual(index, allegedIndex);
 
             object? outcomeX = checkpointType.GetProperty("OutcomeX", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint0);
@@ -1266,13 +1266,13 @@ public sealed class EmitterTests
         }
 
         {
-            int index = code.IndexOf("checkpoint output 1");
+            long index = code.IndexOf("checkpoint output 1");
 
             object? checkpoint1 = getForIndexMethod?.Invoke(null, [index]);
 
             Assert.IsNotNull(checkpoint1);
 
-            int? allegedIndex = (int?)checkpoint1.GetType().GetProperty("Index", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint1);
+            long? allegedIndex = (long?)checkpoint1.GetType().GetProperty("Index", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint1);
             Assert.AreEqual(index, allegedIndex);
 
             object? outcomeX = checkpointType.GetProperty("OutcomeX", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint1);
