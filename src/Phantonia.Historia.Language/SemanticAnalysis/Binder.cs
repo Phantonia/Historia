@@ -1,5 +1,7 @@
-﻿using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
+﻿using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
+using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis;
+using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using Phantonia.Historia.Language.SyntaxAnalysis.Types;
 using System;
@@ -437,5 +439,27 @@ public sealed partial class Binder
         }
 
         return sourceType.Index == targetType.Index;
+    }
+
+    private TypedExpressionNode RecursivelySetTargetType(TypedExpressionNode typedExpression, TypeSymbol targetType)
+    {
+        if (typedExpression.Original is not ParenthesizedExpressionNode parenthesizedExpression)
+        {
+            return typedExpression with
+            {
+                TargetType = targetType,
+            };
+        }
+
+        parenthesizedExpression = parenthesizedExpression with
+        {
+            InnerExpression = RecursivelySetTargetType((TypedExpressionNode)parenthesizedExpression.InnerExpression, targetType),
+        };
+
+        return typedExpression with
+        {
+            Original = parenthesizedExpression,
+            TargetType = targetType,
+        };
     }
 }

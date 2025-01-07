@@ -147,7 +147,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
             long optionIndex = tokens[index].Index;
             index++;
 
-            if (tokens[index].Kind is not TokenKind.LessThan or TokenKind.LessThanOrEquals)
+            if (tokens[index].Kind is not (TokenKind.LessThan or TokenKind.LessThanOrEquals))
             {
                 optionBuilder.Add(new SpectrumOptionNode
                 {

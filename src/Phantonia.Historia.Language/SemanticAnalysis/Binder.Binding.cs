@@ -140,10 +140,7 @@ public sealed partial class Binder
                 continue;
             }
 
-            typedExpression = typedExpression with
-            {
-                TargetType = properties[i].Type,
-            };
+            typedExpression = RecursivelySetTargetType(typedExpression, properties[i].Type);
 
             BoundArgumentNode boundArgument = new()
             {

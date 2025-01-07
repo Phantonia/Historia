@@ -365,16 +365,40 @@ public static class GeneralEmission
             writer.Write("new @");
             writer.Write(typedExpression.TargetType.Name);
             writer.Write('(');
-            GenerateExpression(typedExpression with
+
+            // copied from Binder.cs because I'm lazy
+            TypedExpressionNode RecursivelySetTargetType(TypedExpressionNode typedExpression, TypeSymbol targetType)
             {
-                TargetType = typedExpression.SourceType,
-            }, writer);
+                if (typedExpression.Original is not ParenthesizedExpressionNode parenthesizedExpression)
+                {
+                    return typedExpression with
+                    {
+                        TargetType = targetType,
+                    };
+                }
+
+                parenthesizedExpression = parenthesizedExpression with
+                {
+                    InnerExpression = RecursivelySetTargetType((TypedExpressionNode)parenthesizedExpression.InnerExpression, targetType),
+                };
+
+                return typedExpression with
+                {
+                    Original = parenthesizedExpression,
+                    TargetType = targetType,
+                };
+            }
+
+            GenerateExpression(RecursivelySetTargetType(typedExpression, typedExpression.SourceType), writer);
             writer.Write(')');
             return;
         }
 
         switch (typedExpression.Original)
         {
+            case ParenthesizedExpressionNode { InnerExpression: ExpressionNode innerExpression }:
+                GenerateExpression(innerExpression, writer);
+                return;
             case IntegerLiteralExpressionNode { Value: int intValue }:
                 writer.Write(intValue);
                 return;

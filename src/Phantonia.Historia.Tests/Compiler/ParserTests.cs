@@ -8,6 +8,7 @@ using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using Phantonia.Historia.Language.SyntaxAnalysis.Types;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 
 namespace Phantonia.Historia.Tests.Compiler;
@@ -39,7 +40,16 @@ public sealed class ParserTests
         OutputStatementNode? outputStatement = scene.Body.Statements[0] as OutputStatementNode;
         Assert.IsNotNull(outputStatement);
 
-        Assert.IsTrue(outputStatement is { OutputExpression: IntegerLiteralExpressionNode { Value: 42 } });
+        Assert.IsTrue(outputStatement is
+        {
+            OutputExpression: ParenthesizedExpressionNode
+            {
+                InnerExpression: IntegerLiteralExpressionNode
+                {
+                    Value: 42,
+                },
+            },
+        });
 
         Assert.IsTrue(scene.Body.Statements[1] is OutputStatementNode);
     }
@@ -93,27 +103,19 @@ public sealed class ParserTests
                       """;
 
         Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        ImmutableArray<Token> tokens = lexer.Lex();
+        Parser parser = new(tokens);
 
-        int errorCount = 0;
+        List<Error> errors = [];
 
-        parser.ErrorFound += e =>
-        {
-            Error expectedError = Errors.UnexpectedEndOfFile(new Token
-            {
-                Kind = TokenKind.EndOfFile,
-                Index = code.Length,
-                Text = "",
-                PrecedingTrivia = Environment.NewLine,
-            });
-
-            Assert.AreEqual(expectedError, e);
-            errorCount++;
-        };
+        parser.ErrorFound += errors.Add;
 
         StoryNode story = parser.Parse(); // assert this does not throw
 
-        Assert.AreEqual(1, errorCount);
+        Error expectedError = Errors.ExpectedToken(tokens[^1], TokenKind.ClosedBrace);
+
+        Assert.AreEqual(1, errors.Count);
+        Assert.AreEqual(expectedError, errors[0]);
     }
 
     [TestMethod]
@@ -122,14 +124,14 @@ public sealed class ParserTests
         string code = """
                       scene main
                       {
-                          switch (4)
+                          switch 4
                           {
-                              option (5)
+                              option 5
                               {
                                   output 6;
                               }
 
-                              option (7)
+                              option 7
                               {
                                   output 8;
                                   output 9;
@@ -308,29 +310,24 @@ public sealed class ParserTests
             """;
 
         Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        ImmutableArray<Token> tokens = lexer.Lex();
+        Parser parser = new(tokens);
 
-        int errorCount = 0;
+        List<Error> errors = [];
 
-        parser.ErrorFound += e =>
-        {
-            errorCount++;
-
-            Error expectedError = Errors.UnexpectedToken(new Token
-            {
-                Kind = TokenKind.Semicolon,
-                Text = ";",
-                Index = code.IndexOf(';'),
-                PrecedingTrivia = " ",
-            });
-
-            Assert.AreEqual(expectedError, e);
-            Assert.AreEqual(code.IndexOf(';'), e.Index);
-        };
+        parser.ErrorFound += errors.Add;
 
         _ = parser.Parse();
 
-        Assert.AreEqual(1, errorCount);
+        Assert.AreEqual(3, errors.Count);
+
+        Error firstError = Errors.UnexpectedToken(tokens[^2]);
+        Error secondError = Errors.UnexpectedEndOfFile(tokens[^1]);
+        Error thirdError = Errors.ExpectedToken(tokens[^1], TokenKind.Semicolon);
+
+        Assert.AreEqual(firstError, errors[0]);
+        Assert.AreEqual(secondError, errors[1]);
+        Assert.AreEqual(thirdError, errors[2]);
     }
 
     [TestMethod]
@@ -812,7 +809,13 @@ public sealed class ParserTests
         Assert.IsTrue(weakenStatement.Weakens);
         Assert.IsFalse(weakenStatement.Strengthens);
         Assert.AreEqual("Y", weakenStatement.SpectrumName);
-        Assert.IsTrue(weakenStatement.AdjustmentAmount is IntegerLiteralExpressionNode { Value: 4 });
+        Assert.IsTrue(weakenStatement.AdjustmentAmount is ParenthesizedExpressionNode
+        {
+            InnerExpression: IntegerLiteralExpressionNode
+            {
+                Value: 4,
+            }
+        });
     }
 
     [TestMethod]
@@ -1273,7 +1276,9 @@ public sealed class ParserTests
         IsExpressionNode? gh = ghijkl.LeftExpression as IsExpressionNode;
         Assert.IsNotNull(gh);
 
-        LogicExpressionNode? ijkl = ghijkl.RightExpression as LogicExpressionNode;
+        ParenthesizedExpressionNode? ijkl_ = ghijkl.RightExpression as ParenthesizedExpressionNode;
+        Assert.IsNotNull(ijkl_);
+        LogicExpressionNode? ijkl = ijkl_.InnerExpression as LogicExpressionNode;
         Assert.IsNotNull(ijkl);
         Assert.AreEqual(LogicOperator.Or, ijkl.Operator);
 

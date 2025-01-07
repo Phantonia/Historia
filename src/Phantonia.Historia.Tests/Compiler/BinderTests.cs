@@ -1835,7 +1835,7 @@ public sealed class BinderTests
                 // choose T.B() { option (100) { } } // method B takes 1 parameter
                 choose T.B(8, 9) { option (100) { } } // method B takes 1 parameter
                 choose T.B("What's up world") { option (100) { } } // method B takes Int parameter
-                choose T.B(10) { option ("Goodbye world") { } } // option type is Int
+                choose T.B(10) { option "Goodbye world" { } } // option type is Int
             }
             """;
 
@@ -1870,7 +1870,12 @@ public sealed class BinderTests
             Errors.IncompatibleType((TypeSymbol)result.SymbolTable["String"], (TypeSymbol)result.SymbolTable["Int"], "option", code.IndexOf(@"""Goodbye world""")),
         ];
 
-        Assert.IsTrue(errors.SequenceEqual(expectedErrors));
+        Assert.AreEqual(expectedErrors.Count, errors.Count);
+
+        foreach ((Error expected, Error actual) in expectedErrors.Zip(errors))
+        {
+            Assert.AreEqual(expected, actual);
+        }
     }
 
     [TestMethod]

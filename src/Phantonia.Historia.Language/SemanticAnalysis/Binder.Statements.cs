@@ -49,10 +49,7 @@ public sealed partial class Binder
                             return (table, statement);
                         }
 
-                        boundExpression = typedExpression with
-                        {
-                            TargetType = settings.OutputType,
-                        };
+                        boundExpression = RecursivelySetTargetType(typedExpression, settings.OutputType);
                     }
 
                     OutputStatementNode boundStatement = outputStatement with
@@ -103,10 +100,7 @@ public sealed partial class Binder
                 }
                 else
                 {
-                    outputExpression = typedExpression with
-                    {
-                        TargetType = settings.OutputType,
-                    };
+                    outputExpression = RecursivelySetTargetType(typedExpression, settings.OutputType);
                 }
             }
         }
@@ -125,10 +119,7 @@ public sealed partial class Binder
                 }
                 else
                 {
-                    optionExpression = typedExpression with
-                    {
-                        TargetType = settings.OptionType,
-                    };
+                    optionExpression = RecursivelySetTargetType(typedExpression, settings.OptionType);
                 }
             }
 
@@ -165,10 +156,7 @@ public sealed partial class Binder
                 }
                 else
                 {
-                    outputExpression = typedExpression with
-                    {
-                        TargetType = settings.OutputType,
-                    };
+                    outputExpression = RecursivelySetTargetType(typedExpression, settings.OutputType);
                 }
             }
         }
@@ -187,10 +175,7 @@ public sealed partial class Binder
                 }
                 else
                 {
-                    optionExpression = typedExpression with
-                    {
-                        TargetType = settings.OptionType,
-                    };
+                    optionExpression = RecursivelySetTargetType(typedExpression, settings.OptionType);
                 }
             }
 
@@ -351,10 +336,7 @@ public sealed partial class Binder
             ErrorFound?.Invoke(Errors.IncompatibleType(typedAmount.SourceType, (TypeSymbol)table["Int"], "strengthen/weaken amount", typedAmount.Index));
         }
 
-        typedAmount = typedAmount with
-        {
-            TargetType = (TypeSymbol)table["Int"],
-        };
+        typedAmount = RecursivelySetTargetType(typedAmount, (TypeSymbol)table["Int"]);
 
         BoundSpectrumAdjustmentStatementNode boundStatement = new()
         {
@@ -362,7 +344,7 @@ public sealed partial class Binder
             StrengthenOrWeakenKeywordToken = adjustmentStatement.StrengthenOrWeakenKeywordToken,
             SpectrumNameToken = adjustmentStatement.SpectrumNameToken,
             ByKeywordToken = adjustmentStatement.ByKeywordToken,
-            AdjustmentAmount = adjustmentStatement.AdjustmentAmount,
+            AdjustmentAmount = typedAmount,
             SemicolonToken = adjustmentStatement.SemicolonToken,
             Index = adjustmentStatement.Index,
         };
@@ -517,10 +499,7 @@ public sealed partial class Binder
                 }
                 else
                 {
-                    optionExpression = typedExpression with
-                    {
-                        TargetType = settings.OptionType,
-                    };
+                    optionExpression = RecursivelySetTargetType(typedExpression, settings.OptionType);
                 }
             }
 
@@ -559,10 +538,7 @@ public sealed partial class Binder
                 ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, booleanType, "condition", boundCondition.Index));
             };
 
-            boundCondition = ((TypedExpressionNode)boundCondition) with
-            {
-                TargetType = booleanType,
-            };
+            boundCondition = RecursivelySetTargetType((TypedExpressionNode)boundCondition, booleanType);
         }
 
         (table, StatementBodyNode? boundThenBlock) = BindStatementBody(ifStatement.ThenBlock, settings, table);

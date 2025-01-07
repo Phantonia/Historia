@@ -74,14 +74,14 @@ public sealed class FlowAnalyzerTests
         string code = """
                       scene main
                       {
-                          switch (4)
+                          switch 4
                           {
-                              option (5)
+                              option 5
                               {
                                   output 6;
                               }
 
-                              option (7)
+                              option 7
                               {
                                   output 8;
                                   output 9;
@@ -518,14 +518,14 @@ public sealed class FlowAnalyzerTests
             {
                 call A;
 
-                switch (1) // s1
+                switch 1 // s1
                 {
-                    option (0)
+                    option 0
                     {
                         call B;
                     }
 
-                    option (0)
+                    option 0
                     {
                         call C;
                     }
@@ -545,14 +545,14 @@ public sealed class FlowAnalyzerTests
 
             scene C
             {
-                switch (5) // s5
+                switch 5 // s5
                 {
-                    option (0)
+                    option 0
                     {
                         output 6; // s6
                     }
 
-                    option (0)
+                    option 0
                     {
                         output 7; // s7
                     }
@@ -568,11 +568,11 @@ public sealed class FlowAnalyzerTests
 
         Assert.AreEqual(7, mainFlowGraph.Vertices.Count);
 
-        long s1 = code.IndexOf("switch (1)"); // S1 nach Oranienburg
+        long s1 = code.IndexOf("switch 1"); // S1 nach Oranienburg
         long s2 = code.IndexOf("output 2"); // S2 nach Bernau
         long s3 = code.IndexOf("output 3"); // S3 nach Erkner
         long s4 = code.IndexOf("output 4"); // S46 nach Königs Wusterhausen (close)
-        long s5 = code.IndexOf("switch (5)"); // S5 nach Strausberg Nord
+        long s5 = code.IndexOf("switch 5"); // S5 nach Strausberg Nord
         long s6 = code.IndexOf("output 6"); // sadly no S6 in Berlin :(
         long s7 = code.IndexOf("output 7"); // S7 nach Potsdam Hauptbahnhof
 

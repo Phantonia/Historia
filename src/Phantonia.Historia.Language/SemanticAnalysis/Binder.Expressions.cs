@@ -1,7 +1,6 @@
 ﻿using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -15,6 +14,29 @@ public sealed partial class Binder
     {
         switch (expression)
         {
+            case ParenthesizedExpressionNode parenthesizedExpression:
+                {
+                    (table, ExpressionNode innerExpression) = BindAndTypeExpression(parenthesizedExpression.InnerExpression, table);
+
+                    parenthesizedExpression = parenthesizedExpression with
+                    {
+                        InnerExpression = innerExpression,
+                    };
+
+                    if (innerExpression is not TypedExpressionNode typedInnerExpression)
+                    {
+                        return (table, parenthesizedExpression);
+                    }
+
+                    TypedExpressionNode typedExpression = new()
+                    {
+                        Original = parenthesizedExpression,
+                        SourceType = typedInnerExpression.SourceType,
+                        Index = parenthesizedExpression.Index,
+                    };
+
+                    return (table, typedExpression);
+                }
             case IntegerLiteralExpressionNode:
                 {
                     Debug.Assert(table.IsDeclared("Int") && table["Int"] is BuiltinTypeSymbol { Type: BuiltinType.Int });
@@ -243,8 +265,8 @@ public sealed partial class Binder
             return (table, logicExpression);
         }
 
-        TypedExpressionNode typedLeftHandSide = (TypedExpressionNode)boundLeftHandSide with { TargetType = booleanType };
-        TypedExpressionNode typedRightHandSide = (TypedExpressionNode)boundRightHandSide with { TargetType = booleanType };
+        TypedExpressionNode typedLeftHandSide = RecursivelySetTargetType((TypedExpressionNode)boundLeftHandSide, booleanType);
+        TypedExpressionNode typedRightHandSide = RecursivelySetTargetType((TypedExpressionNode)boundRightHandSide, booleanType);
 
         TypedExpressionNode typedLogicExpression = new()
         {
@@ -277,7 +299,7 @@ public sealed partial class Binder
             return (table, notExpression);
         }
 
-        TypedExpressionNode typedInnerExpression = (TypedExpressionNode)boundInnerExpression with { TargetType = booleanType };
+        TypedExpressionNode typedInnerExpression = RecursivelySetTargetType((TypedExpressionNode)boundInnerExpression, booleanType);
 
         TypedExpressionNode typedNotExpression = new()
         {

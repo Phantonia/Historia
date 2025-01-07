@@ -74,7 +74,7 @@ public sealed partial class Parser
                 };
             default:
                 {
-                    ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index++]));
+                    ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index]));
                     index++;
                     return ParseTopLevelNode(ref index);
                 }

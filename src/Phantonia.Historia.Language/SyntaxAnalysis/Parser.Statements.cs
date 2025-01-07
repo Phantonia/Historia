@@ -17,26 +17,14 @@ public sealed partial class Parser
 
         Token openBrace = Expect(TokenKind.OpenBrace, ref index);
 
-        while (tokens[index].Kind is not TokenKind.ClosedBrace)
+        while (tokens[index].Kind is not (TokenKind.ClosedBrace or TokenKind.EndOfFile))
         {
             StatementNode nextStatement = ParseStatement(ref index);
             
             statementBuilder.Add(nextStatement);
-
-            if (tokens[index].Kind is TokenKind.EndOfFile)
-            {
-                return new StatementBodyNode
-                {
-                    OpenBraceToken = openBrace,
-                    Statements = statementBuilder.ToImmutable(),
-                    ClosedBraceToken = Token.Missing(tokens[index].Index),
-                    Index = nodeIndex,
-                };
-            }
         }
 
-        Token closedBrace = tokens[index];
-        index++;
+        Token closedBrace = Expect(TokenKind.ClosedBrace, ref index);
 
         return new StatementBodyNode
         {
@@ -111,7 +99,7 @@ public sealed partial class Parser
                 ErrorFound?.Invoke(Errors.UnexpectedEndOfFile(tokens[index]));
                 return new MissingStatementNode
                 {
-                    Index = tokens[index++].Index,
+                    Index = tokens[index].Index,
                 };
             default:
                 {
