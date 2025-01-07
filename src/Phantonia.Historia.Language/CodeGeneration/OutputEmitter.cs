@@ -30,6 +30,11 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
 
         foreach ((long index, FlowVertex vertex) in flowGraph.Vertices)
         {
+            if (!vertex.IsStory)
+            {
+                continue;
+            }
+
             ExpressionNode outputExpression;
 
             switch (vertex.AssociatedStatement)
@@ -87,7 +92,7 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
 
         writer.BeginBlock();
 
-        if (flowGraph.Vertices.Values.Any(v => v.AssociatedStatement is FlowBranchingStatementNode { Original: SwitchStatementNode or LoopSwitchStatementNode }))
+        if (flowGraph.Vertices.Values.Any(v => v.IsStory && v.AssociatedStatement is FlowBranchingStatementNode { Original: SwitchStatementNode or LoopSwitchStatementNode }))
         {
             writer.WriteLine("switch (fields.state)");
             writer.BeginBlock();
