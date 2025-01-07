@@ -10,22 +10,22 @@ namespace Phantonia.Historia.Language.SyntaxAnalysis;
 
 public sealed partial class Parser
 {
-    private TopLevelNode ParseTopLevelNode(ref int index)
+    private TopLevelNode ParseTopLevelNode(ref int index, ImmutableList<Token> precedingTokens)
     {
         switch (tokens[index].Kind)
         {
             case TokenKind.SceneKeyword:
-                return ParseSceneSymbolDeclaration(ref index);
+                return ParseSceneSymbolDeclaration(ref index, precedingTokens);
             case TokenKind.RecordKeyword:
-                return ParseRecordSymbolDeclaration(ref index);
+                return ParseRecordSymbolDeclaration(ref index, precedingTokens);
             case TokenKind.UnionKeyword:
-                return ParseUnionSymbolDeclaration(ref index);
+                return ParseUnionSymbolDeclaration(ref index, precedingTokens);
             case TokenKind.EnumKeyword:
-                return ParseEnumSymbolDeclaration(ref index);
+                return ParseEnumSymbolDeclaration(ref index, precedingTokens);
             case TokenKind.SettingKeyword:
-                return ParseSettingDirective(ref index);
+                return ParseSettingDirective(ref index, precedingTokens);
             case TokenKind.PublicKeyword:
-                return ParsePublicTopLevelNode(ref index);
+                return ParsePublicTopLevelNode(ref index, precedingTokens);
             case TokenKind.OutcomeKeyword:
                 {
                     OutcomeDeclarationInfo outcomeDeclaration = ParseOutcomeDeclaration(ref index);
@@ -43,6 +43,7 @@ public sealed partial class Parser
                         DefaultOptionToken = outcomeDeclaration.DefaultOption,
                         SemicolonToken = outcomeDeclaration.Semicolon,
                         Index = outcomeDeclaration.Index,
+                        PrecedingTokens = precedingTokens,
                     };
                 }
             case TokenKind.SpectrumKeyword:
@@ -61,27 +62,30 @@ public sealed partial class Parser
                         DefaultOptionToken = spectrumDeclaration.DefaultOption,
                         SemicolonToken = spectrumDeclaration.Semicolon,
                         Index = spectrumDeclaration.Index,
+                        PrecedingTokens = precedingTokens,
                     };
                 }
             case TokenKind.InterfaceKeyword:
-                return ParseInterfaceDeclaration(ref index);
+                return ParseInterfaceDeclaration(ref index, precedingTokens);
             case TokenKind.ReferenceKeyword:
-                return ParseReferenceDeclaration(ref index);
+                return ParseReferenceDeclaration(ref index, precedingTokens);
             case TokenKind.EndOfFile:
                 return new MissingTopLevelNode
                 {
                     Index = tokens[index++].Index,
+                    PrecedingTokens = precedingTokens,
                 };
             default:
                 {
-                    ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index]));
+                    Token unexpectedToken = tokens[index];
+                    ErrorFound?.Invoke(Errors.UnexpectedToken(unexpectedToken));
                     index++;
-                    return ParseTopLevelNode(ref index);
+                    return ParseTopLevelNode(ref index, precedingTokens.Add(unexpectedToken));
                 }
         }
     }
 
-    private SceneSymbolDeclarationNode ParseSceneSymbolDeclaration(ref int index)
+    private SceneSymbolDeclarationNode ParseSceneSymbolDeclaration(ref int index, ImmutableList<Token> precedingTokens)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.SceneKeyword);
         Token sceneKeyword = tokens[index];
@@ -91,7 +95,7 @@ public sealed partial class Parser
 
         Token name = Expect(TokenKind.Identifier, ref index);
 
-        StatementBodyNode body = ParseStatementBody(ref index);
+        StatementBodyNode body = ParseStatementBody(ref index, []);
 
         return new SceneSymbolDeclarationNode
         {
@@ -99,10 +103,11 @@ public sealed partial class Parser
             NameToken = name,
             Body = body,
             Index = nodeIndex,
+            PrecedingTokens = precedingTokens,
         };
     }
 
-    private UnionSymbolDeclarationNode ParseUnionSymbolDeclaration(ref int index)
+    private UnionSymbolDeclarationNode ParseUnionSymbolDeclaration(ref int index, ImmutableList<Token> precedingTokens)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.UnionKeyword);
         Token unionKeyword = tokens[index];
@@ -118,7 +123,7 @@ public sealed partial class Parser
 
         while (tokens[index].Kind is not TokenKind.ClosedParenthesis)
         {
-            TypeNode subtype = ParseType(ref index);
+            TypeNode subtype = ParseType(ref index, []);
 
             subtypeBuilder.Add(subtype);
 
@@ -147,10 +152,11 @@ public sealed partial class Parser
             ClosedParenthesisToken = closedParenthesis,
             SemicolonToken = semicolon,
             Index = nodeIndex,
+            PrecedingTokens = precedingTokens,
         };
     }
 
-    private RecordSymbolDeclarationNode ParseRecordSymbolDeclaration(ref int index)
+    private RecordSymbolDeclarationNode ParseRecordSymbolDeclaration(ref int index, ImmutableList<Token> precedingTokens)
     {
         // spec 1.3.1.1:
         /*
@@ -166,7 +172,7 @@ public sealed partial class Parser
 
         Token name = Expect(TokenKind.Identifier, ref index);
 
-        (Token openParenthesis, ImmutableArray<ParameterDeclarationNode> propertyDeclarations, Token closedParenthesis) = ParseParameterList(ref index);
+        (Token openParenthesis, ImmutableArray<ParameterDeclarationNode> propertyDeclarations, Token closedParenthesis) = ParseParameterList(ref index, []);
 
         Token semicolon = Expect(TokenKind.Semicolon, ref index);
 
@@ -179,10 +185,11 @@ public sealed partial class Parser
             ClosedParenthesisToken = closedParenthesis,
             SemicolonToken = semicolon,
             Index = nodeIndex,
+            PrecedingTokens = precedingTokens,
         };
     }
 
-    private (Token openParenthesis, ImmutableArray<ParameterDeclarationNode> parameter, Token closedParenthesis) ParseParameterList(ref int index)
+    private (Token openParenthesis, ImmutableArray<ParameterDeclarationNode> parameter, Token closedParenthesis) ParseParameterList(ref int index, ImmutableList<Token> precedingTokens)
     {
         Token openParenthesis = Expect(TokenKind.OpenParenthesis, ref index);
 
@@ -193,7 +200,7 @@ public sealed partial class Parser
             Token parameterName = Expect(TokenKind.Identifier, ref index);
             Token colon = Expect(TokenKind.Colon, ref index);
 
-            TypeNode type = ParseType(ref index);
+            TypeNode type = ParseType(ref index, []);
 
             if (tokens[index].Kind is not TokenKind.Comma)
             {
@@ -204,6 +211,7 @@ public sealed partial class Parser
                     Type = type,
                     CommaToken = null,
                     Index = parameterName.Index,
+                    PrecedingTokens = precedingTokens,
                 });
 
                 break;
@@ -216,6 +224,7 @@ public sealed partial class Parser
                 Type = type,
                 CommaToken = tokens[index],
                 Index = parameterName.Index,
+                PrecedingTokens = precedingTokens,
             });
 
             index++;
@@ -228,7 +237,7 @@ public sealed partial class Parser
         return (openParenthesis, propertyDeclarations.ToImmutable(), closedParenthesis);
     }
 
-    private EnumSymbolDeclarationNode ParseEnumSymbolDeclaration(ref int index)
+    private EnumSymbolDeclarationNode ParseEnumSymbolDeclaration(ref int index, ImmutableList<Token> precedingTokens)
     {
         // spec 1.3.1.2:
         // EnumDeclaration : 'enum' identifier '(' (identifier (',' identifier)* ','?)? ')' ';';
@@ -274,10 +283,11 @@ public sealed partial class Parser
             ClosedParenthesisToken = closedParenthesis,
             SemicolonToken = semicolon,
             Index = nodeIndex,
+            PrecedingTokens = precedingTokens,
         };
     }
 
-    private SettingDirectiveNode ParseSettingDirective(ref int index)
+    private SettingDirectiveNode ParseSettingDirective(ref int index, ImmutableList<Token> precedingTokens)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.SettingKeyword);
         Token settingKeyword = tokens[index];
@@ -297,7 +307,7 @@ public sealed partial class Parser
 
         if (Settings.TypeSettings.Contains(identifier.Text))
         {
-            TypeNode type = ParseType(ref index);
+            TypeNode type = ParseType(ref index, []);
 
             Token semicolon = Expect(TokenKind.Semicolon, ref index);
 
@@ -309,6 +319,7 @@ public sealed partial class Parser
                 Type = type,
                 SemicolonToken = semicolon,
                 Index = nodeIndex,
+                PrecedingTokens = precedingTokens,
             };
         }
         else if (Settings.ExpressionSettings.Contains(identifier.Text))
@@ -321,7 +332,7 @@ public sealed partial class Parser
 
         SettingDirectiveNode ParseExpressionSetting(ref int index)
         {
-            ExpressionNode expression = ParseExpression(ref index);
+            ExpressionNode expression = ParseExpression(ref index, []);
 
             Token semicolon = Expect(TokenKind.Semicolon, ref index);
 
@@ -333,11 +344,12 @@ public sealed partial class Parser
                 Expression = expression,
                 SemicolonToken = semicolon,
                 Index = nodeIndex,
+                PrecedingTokens = precedingTokens,
             };
         }
     }
 
-    private TopLevelNode ParsePublicTopLevelNode(ref int index)
+    private TopLevelNode ParsePublicTopLevelNode(ref int index, ImmutableList<Token> precedingTokens)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.PublicKeyword);
         Token publicKeyword = tokens[index];
@@ -362,6 +374,7 @@ public sealed partial class Parser
                         DefaultOptionToken = spectrumDeclaration.DefaultOption,
                         SemicolonToken = spectrumDeclaration.Semicolon,
                         Index = spectrumDeclaration.Index,
+                        PrecedingTokens = precedingTokens,
                     };
                 }
             case TokenKind.OutcomeKeyword:
@@ -381,15 +394,16 @@ public sealed partial class Parser
                         DefaultOptionToken = outcomeDeclaration.DefaultOption,
                         SemicolonToken = outcomeDeclaration.Semicolon,
                         Index = nodeIndex,
+                        PrecedingTokens = precedingTokens,
                     };
                 }
             default:
                 ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index - 1]));
-                return ParseTopLevelNode(ref index);
+                return ParseTopLevelNode(ref index, precedingTokens.Add(tokens[index - 1]));
         }
     }
 
-    private InterfaceSymbolDeclarationNode ParseInterfaceDeclaration(ref int index)
+    private InterfaceSymbolDeclarationNode ParseInterfaceDeclaration(ref int index, ImmutableList<Token> precedingTokens)
     {
         Debug.Assert(tokens[index].Kind == TokenKind.InterfaceKeyword);
         Token interfaceKeyword = tokens[index];
@@ -404,7 +418,7 @@ public sealed partial class Parser
 
         while (tokens[index].Kind is not TokenKind.ClosedParenthesis)
         {
-            InterfaceMethodDeclarationNode nextMethod = ParseInterfaceMethodDeclaration(ref index);
+            InterfaceMethodDeclarationNode nextMethod = ParseInterfaceMethodDeclaration(ref index, []);
 
             methods.Add(nextMethod);
 
@@ -426,16 +440,17 @@ public sealed partial class Parser
             ClosedParenthesisToken = closedParenthesis,
             SemicolonToken = semicolon,
             Index = nodeIndex,
+            PrecedingTokens = precedingTokens,
         };
     }
 
-    private InterfaceMethodDeclarationNode ParseInterfaceMethodDeclaration(ref int index)
+    private InterfaceMethodDeclarationNode ParseInterfaceMethodDeclaration(ref int index, ImmutableList<Token> precedingTokens)
     {
         long nodeIndex = tokens[index].Index;
 
         Token kind = ExpectOneOf(ref index, TokenKind.ActionKeyword, TokenKind.ChoiceKeyword);
         Token name = Expect(TokenKind.Identifier, ref index);
-        (Token openParenthesis, ImmutableArray<ParameterDeclarationNode> parameterList, Token closedParenthesis) = ParseParameterList(ref index);
+        (Token openParenthesis, ImmutableArray<ParameterDeclarationNode> parameterList, Token closedParenthesis) = ParseParameterList(ref index, []);
 
         Token? comma = null;
 
@@ -454,10 +469,11 @@ public sealed partial class Parser
             ClosedParenthesisToken = closedParenthesis,
             CommaToken = comma,
             Index = nodeIndex,
+            PrecedingTokens = precedingTokens,
         };
     }
 
-    private ReferenceSymbolDeclarationNode ParseReferenceDeclaration(ref int index)
+    private ReferenceSymbolDeclarationNode ParseReferenceDeclaration(ref int index, ImmutableList<Token> precedingTokens)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.ReferenceKeyword);
         Token referenceKeyword = tokens[index];
@@ -477,6 +493,7 @@ public sealed partial class Parser
             InterfaceNameToken = interfaceName,
             SemicolonToken = semicolon,
             Index = nodeIndex,
+            PrecedingTokens = precedingTokens,
         };
     }
 }

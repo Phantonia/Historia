@@ -38,6 +38,7 @@ public sealed partial class Binder
                     Symbol = table[symbolDeclaration.Name],
                     NameToken = symbolDeclaration.NameToken,
                     Index = symbolDeclaration.Index,
+                    PrecedingTokens = [],
                 });
             default:
                 Debug.Assert(false);
@@ -93,6 +94,7 @@ public sealed partial class Binder
                 Type = propertyDeclaration.Type,
                 CommaToken = propertyDeclaration.CommaToken,
                 Index = propertySymbol.Index,
+                PrecedingTokens = [],
             });
         }
 
@@ -105,6 +107,7 @@ public sealed partial class Binder
             },
             Symbol = recordSymbol,
             Index = recordDeclaration.Index,
+            PrecedingTokens = [],
         };
 
         return (table, boundRecordDeclaration);
@@ -153,6 +156,7 @@ public sealed partial class Binder
             Original = unionDeclaration,
             Symbol = unionSymbol,
             Index = unionDeclaration.Index,
+            PrecedingTokens = [],
         };
 
         return (table, boundUnionDeclaration);
@@ -179,6 +183,7 @@ public sealed partial class Binder
             Original = enumDeclaration,
             Symbol = symbol,
             Index = enumDeclaration.Index,
+            PrecedingTokens = [],
         };
 
         return (table, boundEnumDeclaration);
@@ -201,6 +206,7 @@ public sealed partial class Binder
             Symbol = sceneSymbol,
             NameToken = sceneDeclaration.NameToken,
             Index = sceneDeclaration.Index,
+            PrecedingTokens = [],
         };
 
         return (table, boundSceneDeclaration);

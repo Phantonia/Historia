@@ -212,6 +212,7 @@ public sealed partial class FlowAnalyzer
                     CallSiteIndex = callSites.Count,
                     Index = vertex.Index,
                     Tracker = tracker,
+                    PrecedingTokens = [],
                 },
                 Kind = FlowVertexKind.Invisible,
             };
@@ -236,6 +237,7 @@ public sealed partial class FlowAnalyzer
         {
             Tracker = tracker,
             Index = scene.Index + 2,
+            PrecedingTokens = [],
         };
 
         FlowVertex resolutionVertex = new()

@@ -53,7 +53,13 @@ public sealed partial class Binder
                         return (table, type);
                     }
 
-                    BoundTypeNode boundType = new() { Original = type, Symbol = typeSymbol, Index = type.Index };
+                    BoundTypeNode boundType = new()
+                    {
+                        Original = type,
+                        Symbol = typeSymbol,
+                        Index = type.Index,
+                        PrecedingTokens = [],
+                    };
                     return (table, boundType);
                 }
             default:
@@ -150,6 +156,7 @@ public sealed partial class Binder
                 CommaToken = argumentContainer.Arguments[i].CommaToken,
                 Property = properties[i],
                 Index = argumentContainer.Index,
+                PrecedingTokens = [],
             };
 
             boundArguments[i] = boundArgument;

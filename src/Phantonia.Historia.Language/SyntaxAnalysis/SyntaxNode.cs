@@ -16,7 +16,7 @@ public abstract record SyntaxNode : ISyntaxNode
 
     public abstract IEnumerable<SyntaxNode> Children { get; }
 
-    public ImmutableArray<Token> PrecedingTokens { get; init; } = [];
+    public required ImmutableList<Token> PrecedingTokens { get; init; } = [];
 
     public IEnumerable<SyntaxNode> FlattenHierarchie()
     {

@@ -153,6 +153,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             Original = switchStatement,
             OutgoingEdges = flowGraph.OutgoingEdges[switchStatement.Index],
             Index = switchStatement.Index,
+            PrecedingTokens = [],
         };
 
         flowGraph = flowGraph.SetVertex(switchStatement.Index, flowGraph.Vertices[switchStatement.Index] with
@@ -275,6 +276,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             Original = loopSwitchStatement,
             OutgoingEdges = flowGraph.OutgoingEdges[loopSwitchStatement.Index],
             Index = loopSwitchStatement.Index,
+            PrecedingTokens = [],
         };
 
         flowGraph = flowGraph.SetVertex(loopSwitchStatement.Index, flowGraph.Vertices[loopSwitchStatement.Index] with
@@ -358,6 +360,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             Original = branchOnStatement,
             OutgoingEdges = flowGraph.OutgoingEdges[branchOnStatement.Index],
             Index = branchOnStatement.Index,
+            PrecedingTokens = [],
         };
 
         flowGraph = flowGraph.SetVertex(branchOnStatement.Index, flowGraph.Vertices[branchOnStatement.Index] with
@@ -389,6 +392,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             Original = chooseStatement,
             OutgoingEdges = flowGraph.OutgoingEdges[chooseStatement.Index],
             Index = chooseStatement.Index,
+            PrecedingTokens = [],
         };
 
         flowGraph = flowGraph.SetVertex(chooseStatement.Index, flowGraph.Vertices[chooseStatement.Index] with
@@ -431,6 +435,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             Original = ifStatement,
             OutgoingEdges = flowGraph.OutgoingEdges[ifStatement.Index],
             Index = ifStatement.Index,
+            PrecedingTokens = [],
         };
 
         flowGraph = flowGraph.SetVertex(ifStatement.Index, flowGraph.Vertices[ifStatement.Index] with

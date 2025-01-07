@@ -222,6 +222,7 @@ public sealed partial class Binder
 
         BoundOutcomeDeclarationStatementNode boundStatement = new()
         {
+            Outcome = symbol,
             OutcomeKeywordToken = outcomeDeclaration.OutcomeKeywordToken,
             NameToken = outcomeDeclaration.NameToken,
             OpenParenthesisToken = outcomeDeclaration.OpenParenthesisToken,
@@ -232,7 +233,7 @@ public sealed partial class Binder
             DefaultOptionToken = outcomeDeclaration.DefaultOptionToken,
             SemicolonToken = outcomeDeclaration.SemicolonToken,
             Index = outcomeDeclaration.Index,
-            Outcome = symbol,
+            PrecedingTokens = [],
         };
 
         return (table, boundStatement);
@@ -249,6 +250,7 @@ public sealed partial class Binder
 
         BoundSpectrumDeclarationStatementNode boundStatement = new()
         {
+            Spectrum = symbol,
             SpectrumKeywordToken = spectrumDeclaration.SpectrumKeywordToken,
             NameToken = spectrumDeclaration.NameToken,
             OpenParenthesisToken = spectrumDeclaration.OpenParenthesisToken,
@@ -258,7 +260,7 @@ public sealed partial class Binder
             DefaultOptionToken = spectrumDeclaration.DefaultOptionToken,
             SemicolonToken = spectrumDeclaration.SemicolonToken,
             Index = spectrumDeclaration.Index,
-            Spectrum = symbol,
+            PrecedingTokens = [],
         };
 
         return (table, boundStatement);
@@ -292,12 +294,13 @@ public sealed partial class Binder
 
                     BoundOutcomeAssignmentStatementNode boundAssignment = new()
                     {
+                        Outcome = outcomeSymbol,
                         VariableNameToken = assignmentStatement.VariableNameToken,
                         EqualsSignToken = assignmentStatement.EqualsSignToken,
                         AssignedExpression = assignmentStatement.AssignedExpression,
                         SemicolonToken = assignmentStatement.SemicolonToken,
                         Index = assignmentStatement.Index,
-                        Outcome = outcomeSymbol,
+                        PrecedingTokens = [],
                     };
 
                     return (table, boundAssignment);
@@ -347,6 +350,7 @@ public sealed partial class Binder
             AdjustmentAmount = typedAmount,
             SemicolonToken = adjustmentStatement.SemicolonToken,
             Index = adjustmentStatement.Index,
+            PrecedingTokens = [],
         };
 
         return (table, boundStatement);
@@ -424,6 +428,7 @@ public sealed partial class Binder
             Options = [.. boundOptions],
             ClosedBraceToken = branchOnStatement.ClosedBraceToken,
             Index = branchOnStatement.Index,
+            PrecedingTokens = [],
         };
 
         return (table, boundStatement);
@@ -450,6 +455,7 @@ public sealed partial class Binder
             SceneNameToken = callStatement.SceneNameToken,
             SemicolonToken = callStatement.SemicolonToken,
             Index = callStatement.Index,
+            PrecedingTokens = [],
         };
 
         return (table, boundCallStatement);
@@ -471,6 +477,7 @@ public sealed partial class Binder
             Original = runStatement,
             Arguments = [.. boundArguments],
             Index = runStatement.Index,
+            PrecedingTokens = [],
         };
 
         return (table, boundRunStatement);
@@ -520,6 +527,7 @@ public sealed partial class Binder
             Options = [.. boundOptions],
             Original = chooseStatement,
             Index = chooseStatement.Index,
+            PrecedingTokens = [],
         };
 
         return (table, boundChooseStatement);

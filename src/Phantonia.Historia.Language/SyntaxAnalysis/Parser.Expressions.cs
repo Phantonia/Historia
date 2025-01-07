@@ -7,11 +7,11 @@ namespace Phantonia.Historia.Language.SyntaxAnalysis;
 
 public sealed partial class Parser
 {
-    private ExpressionNode ParseExpression(ref int index)
+    private ExpressionNode ParseExpression(ref int index, ImmutableList<Token> precedingTokens)
     {
         long nodeIndex = tokens[index].Index;
 
-        ExpressionNode leftHandSide = ParseConjunctiveExpression(ref index);
+        ExpressionNode leftHandSide = ParseConjunctiveExpression(ref index, precedingTokens);
 
         if (tokens[index].Kind is not TokenKind.OrKeyword)
         {
@@ -21,7 +21,7 @@ public sealed partial class Parser
         Token operatorToken = tokens[index];
 
         index++;
-        ExpressionNode rightHandSide = ParseExpression(ref index);
+        ExpressionNode rightHandSide = ParseExpression(ref index, []);
 
         // this way all expressions are right associative
         // no problem as both AND and OR are associative
@@ -34,14 +34,15 @@ public sealed partial class Parser
             OperatorToken = operatorToken,
             RightExpression = rightHandSide,
             Index = nodeIndex,
+            PrecedingTokens = precedingTokens,
         };
     }
 
-    private ExpressionNode ParseConjunctiveExpression(ref int index)
+    private ExpressionNode ParseConjunctiveExpression(ref int index, ImmutableList<Token> precedingTokens)
     {
         long nodeIndex = tokens[index].Index;
 
-        ExpressionNode leftHandSide = ParseSimpleExpression(ref index);
+        ExpressionNode leftHandSide = ParseSimpleExpression(ref index, precedingTokens);
 
         if (tokens[index].Kind is not TokenKind.AndKeyword)
         {
@@ -51,7 +52,7 @@ public sealed partial class Parser
         Token operatorToken = tokens[index];
 
         index++;
-        ExpressionNode rightHandSide = ParseConjunctiveExpression(ref index);
+        ExpressionNode rightHandSide = ParseConjunctiveExpression(ref index, []);
 
         // see comment about associativity in ParseExpression method
 
@@ -61,10 +62,11 @@ public sealed partial class Parser
             OperatorToken = operatorToken,
             RightExpression = rightHandSide,
             Index = nodeIndex,
+            PrecedingTokens = precedingTokens,
         };
     }
 
-    private ExpressionNode ParseSimpleExpression(ref int index)
+    private ExpressionNode ParseSimpleExpression(ref int index, ImmutableList<Token> precedingTokens)
     {
         switch (tokens[index].Kind)
         {
@@ -73,21 +75,23 @@ public sealed partial class Parser
                 {
                     LiteralToken = tokens[index],
                     Index = tokens[index++].Index,
+                    PrecedingTokens = precedingTokens,
                 };
             case TokenKind.StringLiteral:
                 return new StringLiteralExpressionNode
                 {
                     LiteralToken = tokens[index],
                     Index = tokens[index++].Index,
+                    PrecedingTokens = precedingTokens,
                 };
             case TokenKind.Identifier:
-                return ParseIdentifierExpression(ref index);
+                return ParseIdentifierExpression(ref index, precedingTokens);
             case TokenKind.OpenParenthesis:
                 {
                     Token openParenthesis = tokens[index];
                     index++;
 
-                    ExpressionNode? expression = ParseExpression(ref index);
+                    ExpressionNode? expression = ParseExpression(ref index, []);
                     
                     Token closedParenthesis = Expect(TokenKind.ClosedParenthesis, ref index);
 
@@ -97,26 +101,29 @@ public sealed partial class Parser
                         InnerExpression = expression,
                         ClosedParenthesisToken = closedParenthesis,
                         Index = openParenthesis.Index,
+                        PrecedingTokens = precedingTokens,
                     };
                 }
             case TokenKind.NotKeyword:
-                return ParseNotExpression(ref index);
+                return ParseNotExpression(ref index, precedingTokens);
             case TokenKind.EndOfFile:
                 ErrorFound?.Invoke(Errors.UnexpectedEndOfFile(tokens[index]));
                 return new MissingExpressionNode
                 {
                     Index = tokens[index].Index,
+                    PrecedingTokens = precedingTokens,
                 };
             default:
                 {
-                    ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index]));
+                    Token unexpectedToken = tokens[index];
+                    ErrorFound?.Invoke(Errors.UnexpectedToken(unexpectedToken));
                     index++;
-                    return ParseExpression(ref index);
+                    return ParseExpression(ref index, precedingTokens.Add(unexpectedToken));
                 }
         }
     }
 
-    private ExpressionNode ParseIdentifierExpression(ref int index)
+    private ExpressionNode ParseIdentifierExpression(ref int index, ImmutableList<Token> precedingTokens)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.Identifier);
 
@@ -140,10 +147,11 @@ public sealed partial class Parser
                         DotToken = dot,
                         OptionNameToken = optionName,
                         Index = nodeIndex,
+                        PrecedingTokens = precedingTokens,
                     };
                 }
             case TokenKind.OpenParenthesis:
-                (Token openParenthesis, ImmutableArray<ArgumentNode> arguments, Token closedParenthesis) = ParseArgumentList(ref index);
+                (Token openParenthesis, ImmutableArray<ArgumentNode> arguments, Token closedParenthesis) = ParseArgumentList(ref index, []);
 
                 return new RecordCreationExpressionNode
                 {
@@ -152,6 +160,7 @@ public sealed partial class Parser
                     Arguments = arguments,
                     ClosedParenthesisToken = closedParenthesis,
                     Index = nodeIndex,
+                    PrecedingTokens = precedingTokens,
                 };
             case TokenKind.IsKeyword:
                 {
@@ -166,6 +175,7 @@ public sealed partial class Parser
                         IsKeywordToken = isKeyword,
                         OptionNameToken = optionName,
                         Index = nodeIndex,
+                        PrecedingTokens = precedingTokens,
                     };
                 }
             default:
@@ -173,11 +183,12 @@ public sealed partial class Parser
                 {
                     IdentifierToken = name,
                     Index = nodeIndex,
+                    PrecedingTokens = precedingTokens,
                 };
         }
     }
 
-    private (Token openParenthesis, ImmutableArray<ArgumentNode>, Token closedParenthesis) ParseArgumentList(ref int index)
+    private (Token openParenthesis, ImmutableArray<ArgumentNode>, Token closedParenthesis) ParseArgumentList(ref int index, ImmutableList<Token> precedingTokens)
     {
         Token openParenthesis = Expect(TokenKind.OpenParenthesis, ref index);
 
@@ -194,7 +205,7 @@ public sealed partial class Parser
                 Token equals = tokens[index + 1];
                 index += 2;
 
-                ExpressionNode expression = ParseExpression(ref index);
+                ExpressionNode expression = ParseExpression(ref index, []);
 
                 Token? comma = null;
 
@@ -210,11 +221,12 @@ public sealed partial class Parser
                     Expression = expression,
                     CommaToken = comma,
                     Index = argumentIndex,
+                    PrecedingTokens = precedingTokens,
                 });
             }
             else
             {
-                ExpressionNode expression = ParseExpression(ref index);
+                ExpressionNode expression = ParseExpression(ref index, []);
 
                 Token? comma = null;
 
@@ -230,6 +242,7 @@ public sealed partial class Parser
                     Expression = expression,
                     CommaToken = comma,
                     Index = expression.Index,
+                    PrecedingTokens = precedingTokens,
                 });
             }
 
@@ -248,20 +261,21 @@ public sealed partial class Parser
         return (openParenthesis, arguments.ToImmutable(), closedParenthesis);
     }
 
-    private NotExpressionNode ParseNotExpression(ref int index)
+    private NotExpressionNode ParseNotExpression(ref int index, ImmutableList<Token> precedingTokens)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.NotKeyword);
         Token notKeyword = tokens[index];
         long nodeIndex = notKeyword.Index;
         index++;
 
-        ExpressionNode innerExpression = ParseSimpleExpression(ref index);
+        ExpressionNode innerExpression = ParseSimpleExpression(ref index, []);
 
         return new NotExpressionNode
         {
             NotKeywordToken = notKeyword,
             InnerExpression = innerExpression,
             Index = nodeIndex,
+            PrecedingTokens = precedingTokens,
         };
     }
 }

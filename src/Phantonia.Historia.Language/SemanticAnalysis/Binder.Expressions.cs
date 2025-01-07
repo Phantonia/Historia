@@ -33,6 +33,7 @@ public sealed partial class Binder
                         Original = parenthesizedExpression,
                         SourceType = typedInnerExpression.SourceType,
                         Index = parenthesizedExpression.Index,
+                        PrecedingTokens = [],
                     };
 
                     return (table, typedExpression);
@@ -48,6 +49,7 @@ public sealed partial class Binder
                         Original = expression,
                         SourceType = intType,
                         Index = expression.Index,
+                        PrecedingTokens = [],
                     };
 
                     return (table, typedExpression);
@@ -63,6 +65,7 @@ public sealed partial class Binder
                         Original = expression,
                         SourceType = stringType,
                         Index = expression.Index,
+                        PrecedingTokens = [],
                     };
 
                     return (table, typedExpression);
@@ -117,6 +120,7 @@ public sealed partial class Binder
                 Original = recordCreation,
                 SourceType = recordSymbol,
                 Index = recordCreation.Index,
+                PrecedingTokens = [],
             };
 
             return (table, incompleteTypedExpression);
@@ -132,6 +136,7 @@ public sealed partial class Binder
                 BoundArguments = boundArguments.Cast<BoundArgumentNode>().ToImmutableArray(),
                 Record = recordSymbol,
                 Index = recordCreation.Index,
+                PrecedingTokens = [],
             };
 
             TypedExpressionNode typedRecordCreation = new()
@@ -139,6 +144,7 @@ public sealed partial class Binder
                 Original = boundRecordCreation,
                 SourceType = recordSymbol,
                 Index = boundRecordCreation.Index,
+                PrecedingTokens = [],
             };
 
             return (table, typedRecordCreation);
@@ -150,6 +156,7 @@ public sealed partial class Binder
                 Original = recordCreation,
                 SourceType = recordSymbol,
                 Index = recordCreation.Index,
+                PrecedingTokens = [],
             };
 
             return (table, typedRecordCreation);
@@ -185,6 +192,7 @@ public sealed partial class Binder
             OptionNameToken = enumOptionExpression.OptionNameToken,
             Index = enumOptionExpression.Index,
             EnumSymbol = enumSymbol,
+            PrecedingTokens = [],
         };
 
         TypedExpressionNode typedExpression = new()
@@ -192,6 +200,7 @@ public sealed partial class Binder
             Original = boundExpression,
             SourceType = enumSymbol,
             Index = boundExpression.Index,
+            PrecedingTokens = [],
         };
 
         return (table, typedExpression);
@@ -226,9 +235,11 @@ public sealed partial class Binder
                 Original = expression,
                 Outcome = outcome,
                 Index = expression.Index,
+                PrecedingTokens = [],
             },
             SourceType = booleanType,
             Index = expression.Index,
+            PrecedingTokens = [],
         };
 
         return (table, typedExpression);
@@ -274,9 +285,11 @@ public sealed partial class Binder
             {
                 LeftExpression = typedLeftHandSide,
                 RightExpression = typedRightHandSide,
+                PrecedingTokens = [],
             },
             SourceType = booleanType,
             Index = logicExpression.Index,
+            PrecedingTokens = [],
         };
 
         return (table, typedLogicExpression);
@@ -309,6 +322,7 @@ public sealed partial class Binder
             },
             SourceType = booleanType,
             Index = notExpression.Index,
+            PrecedingTokens = [],
         };
 
         return (table, typedNotExpression);

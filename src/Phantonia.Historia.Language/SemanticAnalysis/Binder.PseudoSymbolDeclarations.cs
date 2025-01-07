@@ -57,6 +57,7 @@ public sealed partial class Binder
             NameToken = referenceDeclaration.NameToken,
             Symbol = table[referenceDeclaration.Name],
             Index = referenceDeclaration.Index,
+            PrecedingTokens = [],
         };
 
         return (table, boundDeclaration);
@@ -80,6 +81,7 @@ public sealed partial class Binder
             },
             Symbol = table[interfaceDeclaration.Name],
             Index = interfaceDeclaration.Index,
+            PrecedingTokens = [],
         };
 
         return (table, boundDeclaration);
@@ -128,6 +130,7 @@ public sealed partial class Binder
             },
             Symbol = table[recordDeclaration.Name],
             Index = recordDeclaration.Index,
+            PrecedingTokens = [],
         };
 
         return (table, boundDeclaration);
@@ -152,6 +155,7 @@ public sealed partial class Binder
             },
             Symbol = table[unionDeclaration.Name],
             Index = unionDeclaration.Index,
+            PrecedingTokens = [],
         };
 
         return (table, boundDeclaration);
@@ -165,6 +169,7 @@ public sealed partial class Binder
             Original = enumDeclaration,
             Symbol = table[enumDeclaration.Name],
             Index = enumDeclaration.Index,
+            PrecedingTokens = [],
         };
 
         return (table, boundDeclaration);

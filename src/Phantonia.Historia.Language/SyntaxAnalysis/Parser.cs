@@ -17,17 +17,17 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
         int index = 0;
         ImmutableArray<TopLevelNode>.Builder topLevelBuilder = ImmutableArray.CreateBuilder<TopLevelNode>();
 
-        TopLevelNode nextTopLevelNode = ParseTopLevelNode(ref index);
+        TopLevelNode nextTopLevelNode = ParseTopLevelNode(ref index, []);
 
         while (nextTopLevelNode is not MissingTopLevelNode)
         {
             topLevelBuilder.Add(nextTopLevelNode);
 
-            nextTopLevelNode = ParseTopLevelNode(ref index);
+            nextTopLevelNode = ParseTopLevelNode(ref index, []);
         }
 
         // add missing tln anyway if it has preceding tokens
-        if (nextTopLevelNode.PrecedingTokens.Length > 0)
+        if (nextTopLevelNode.PrecedingTokens.Count > 0)
         {
             topLevelBuilder.Add(nextTopLevelNode);
         }
@@ -37,6 +37,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
             TopLevelNodes = topLevelBuilder.ToImmutable(),
             Index = tokens.Length > 0 ? tokens[0].Index : 0,
             Length = tokens[^1].Index,
+            PrecedingTokens = [],
         };
     }
 
@@ -158,6 +159,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
                     DenominatorToken = null,
                     CommaToken = null,
                     Index = optionIndex,
+                    PrecedingTokens = [],
                 });
 
                 break;
@@ -180,6 +182,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
                 DenominatorToken = denominator,
                 CommaToken = comma,
                 Index = optionIndex,
+                PrecedingTokens = [],
             });
         }
 
@@ -200,7 +203,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
         return new SpectrumDeclarationInfo(spectrumKeyword, name, openParenthesis, optionBuilder.ToImmutable(), closedParenthesis, defaultKeyword, defaultOption, semicolon, nodeIndex);
     }
 
-    private TypeNode ParseType(ref int index)
+    private TypeNode ParseType(ref int index, ImmutableList<Token> precedingTokens)
     {
         switch (tokens[index].Kind)
         {
@@ -209,17 +212,20 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
                 {
                     IdentifierToken = tokens[index],
                     Index = tokens[index++].Index,
+                    PrecedingTokens = precedingTokens,
                 };
             case TokenKind.EndOfFile:
                 ErrorFound?.Invoke(Errors.UnexpectedEndOfFile(tokens[index]));
                 return new MissingTypeNode
                 {
                     Index = tokens[index].Index,
+                    PrecedingTokens = precedingTokens,
                 };
             default:
-                ErrorFound?.Invoke(Errors.UnexpectedToken(tokens[index]));
+                Token unexpectedToken = tokens[index];
+                ErrorFound?.Invoke(Errors.UnexpectedToken(unexpectedToken));
                 index++;
-                return ParseType(ref index);
+                return ParseType(ref index, precedingTokens.Add(unexpectedToken));
         }
     }
 }

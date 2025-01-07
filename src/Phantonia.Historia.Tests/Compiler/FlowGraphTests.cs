@@ -19,6 +19,7 @@ public sealed class FlowGraphTests
         public Stub()
         {
             Index = 0;
+            PrecedingTokens = [];
         }
 
         public override IEnumerable<SyntaxNode> Children => Enumerable.Empty<SyntaxNode>();

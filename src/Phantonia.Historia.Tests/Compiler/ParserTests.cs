@@ -1413,4 +1413,34 @@ public sealed class ParserTests
             Assert.Fail();
         }
     }
+
+    [TestMethod]
+    public void TestPrecedingTokens()
+    {
+        string code =
+            """
+            and scene main
+            {
+                ,output 7;
+
+                if setting X is A =
+                {
+                    (output 9;
+                }
+            }
+
+            setting OutputType: "sss" String;
+            """;
+
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex());
+
+        int errorCount = 0;
+        parser.ErrorFound += e => errorCount++;
+
+        StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
+
+        Assert.IsTrue(errorCount > 0);
+    }
 }
