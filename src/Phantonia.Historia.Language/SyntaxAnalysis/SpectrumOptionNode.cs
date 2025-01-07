@@ -35,6 +35,7 @@ public sealed record SpectrumOptionNode() : SyntaxNode
         NumeratorToken?.Reconstruct(writer);
         SlashToken?.Reconstruct(writer);
         DenominatorToken?.Reconstruct(writer);
+        CommaToken?.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"spectrum option {Name} <{(Inclusive ? "=" : "")} {Numerator}/{Denominator}";

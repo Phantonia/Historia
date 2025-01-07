@@ -53,6 +53,11 @@ public record OutcomeDeclarationStatementNode() : StatementNode, IOutcomeDeclara
         {
             OptionNameTokens[^1].Reconstruct(writer);
         }
+
+        ClosedParenthesisToken.Reconstruct(writer);
+        DefaultKeywordToken?.Reconstruct(writer);
+        DefaultOptionToken?.Reconstruct(writer);
+        SemicolonToken.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"declare outcome {Name} ({string.Join(", ", Options)}) {(DefaultOption is not null ? "default " : "")}{DefaultOption}";

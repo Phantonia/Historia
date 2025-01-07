@@ -41,6 +41,6 @@ public abstract record MethodCallStatementNode() : StatementNode, IArgumentConta
             argument.Reconstruct(writer);
         }
 
-        writer.Write(ClosedParenthesisToken);
+        ClosedParenthesisToken.Reconstruct(writer);
     }
 }

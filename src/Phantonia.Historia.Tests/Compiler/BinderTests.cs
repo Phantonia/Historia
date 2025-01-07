@@ -24,7 +24,10 @@ public sealed class BinderTests
         Parser parser = new(lexer.Lex());
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        Binder binder = new(parser.Parse());
+        StoryNode tree = parser.Parse();
+        NodeAssert.ReconstructWorks(code, tree);
+
+        Binder binder = new(tree);
         return binder;
     }
 
@@ -549,7 +552,7 @@ public sealed class BinderTests
         {
             Name = "Line",
             Index = code.IndexOf("record Line"),
-            Properties = ImmutableArray<PropertySymbol>.Empty,
+            Properties = [],
         };
 
         Assert.AreEqual(4, errors.Count);
@@ -606,7 +609,7 @@ public sealed class BinderTests
         Assert.AreEqual("MySwitch", branchOnStatement.OutcomeName);
         Assert.AreEqual("MySwitch", branchOnStatement.Outcome.Name);
 
-        Assert.IsTrue(new[] { "C", "A", "B" }.SequenceEqual(branchOnStatement.Options.OfType<NamedBranchOnOptionNode>().Select(o => o.OptionName)));
+        Assert.IsTrue(branchOnStatement.Options.OfType<NamedBranchOnOptionNode>().Select(o => o.OptionName).SequenceEqual(["C", "A", "B"]));
     }
 
     [TestMethod]
@@ -763,7 +766,7 @@ public sealed class BinderTests
         Assert.IsNotNull(boundOutcomeDeclaration);
 
         Assert.AreEqual("WorldEnding", boundOutcomeDeclaration.Outcome.Name);
-        Assert.IsTrue(new[] { "Yes", "No" }.SequenceEqual(boundOutcomeDeclaration.Outcome.OptionNames));
+        Assert.IsTrue(boundOutcomeDeclaration.Outcome.OptionNames.SequenceEqual(["Yes", "No"]));
         Assert.IsNull(boundOutcomeDeclaration.Outcome.DefaultOption);
 
         BoundOutcomeAssignmentStatementNode? boundAssignment = mainScene.Body.Statements[1] as BoundOutcomeAssignmentStatementNode;
@@ -779,7 +782,7 @@ public sealed class BinderTests
     [TestMethod]
     public void TestWrongOutcomes()
     {
-        void TestForError(string code, Error expectedError)
+        static void TestForError(string code, Error expectedError)
         {
             Binder binder = PrepareBinder(code);
 
@@ -1396,7 +1399,7 @@ public sealed class BinderTests
     [TestMethod]
     public void TestForbiddenNamespaces()
     {
-        void Test(string forbiddenNamespace)
+        static void Test(string forbiddenNamespace)
         {
             string code =
                 $$"""

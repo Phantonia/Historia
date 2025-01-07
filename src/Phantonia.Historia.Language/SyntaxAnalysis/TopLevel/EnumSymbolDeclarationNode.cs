@@ -28,6 +28,7 @@ public sealed record EnumSymbolDeclarationNode() : TypeSymbolDeclarationNode
     protected override void ReconstructCore(TextWriter writer)
     {
         EnumKeywordToken.Reconstruct(writer);
+        NameToken.Reconstruct(writer);
         OpenParenthesisToken.Reconstruct(writer);
 
         Debug.Assert(OptionTokens.Length - CommaTokens.Length is 1 or 0);

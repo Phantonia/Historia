@@ -31,6 +31,7 @@ public sealed class ParserTests
         Parser parser = new(lexer.Lex());
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         Assert.AreEqual(1, story.TopLevelNodes.Length);
         SceneSymbolDeclarationNode? scene = story.TopLevelNodes[0] as SceneSymbolDeclarationNode;
@@ -69,7 +70,8 @@ public sealed class ParserTests
 
         parser.ErrorFound += errors.Add;
 
-        _ = parser.Parse();
+        StoryNode tree = parser.Parse();
+        NodeAssert.ReconstructWorks(code, tree);
 
         Assert.AreEqual(2, errors.Count);
 
@@ -111,6 +113,7 @@ public sealed class ParserTests
         parser.ErrorFound += errors.Add;
 
         StoryNode story = parser.Parse(); // assert this does not throw
+        NodeAssert.ReconstructWorks(code, story);
 
         Error expectedError = Errors.ExpectedToken(tokens[^1], TokenKind.ClosedBrace);
 
@@ -145,6 +148,7 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         // trust me, this is the cleanest way to write that down
         // actually that's very cool, it's just that we have a lot of nesting
@@ -242,6 +246,7 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         Assert.AreEqual(3, story.TopLevelNodes.Length);
 
@@ -296,7 +301,8 @@ public sealed class ParserTests
             Assert.AreEqual(code.IndexOf("Int"), e.Index);
         };
 
-        _ = parser.Parse();
+        StoryNode tree = parser.Parse();
+        NodeAssert.ReconstructWorks(code, tree);
 
         Assert.AreEqual(1, errorCount);
     }
@@ -317,7 +323,8 @@ public sealed class ParserTests
 
         parser.ErrorFound += errors.Add;
 
-        _ = parser.Parse();
+        StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         Assert.AreEqual(3, errors.Count);
 
@@ -347,6 +354,7 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         Assert.IsTrue(story is
         {
@@ -392,6 +400,7 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         Assert.AreEqual(2, story.TopLevelNodes.Length);
         Assert.IsTrue(story.TopLevelNodes[0] is RecordSymbolDeclarationNode
@@ -433,6 +442,7 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         Assert.AreEqual(1, story.TopLevelNodes.Length);
 
@@ -484,7 +494,8 @@ public sealed class ParserTests
         List<Error> errors = [];
         parser.ErrorFound += errors.Add;
 
-        _ = parser.Parse();
+        StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         Assert.IsTrue(errors.Count > 0);
     }
@@ -520,6 +531,7 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[0];
 
@@ -568,7 +580,8 @@ public sealed class ParserTests
         List<Error> errors = [];
         parser.ErrorFound += errors.Add;
 
-        _ = parser.Parse();
+        StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         Error expectedError = Errors.BranchOnOnlyOneOtherLast(code.IndexOf("option C"));
 
@@ -594,6 +607,7 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[0];
 
@@ -635,6 +649,7 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[0];
 
@@ -665,6 +680,7 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         Assert.AreEqual(1, story.TopLevelNodes.Length);
 
@@ -694,6 +710,7 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[0];
 
@@ -792,6 +809,7 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[0];
 
@@ -844,6 +862,7 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         for (int i = 0; i < 3; i++)
         {
@@ -875,6 +894,7 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         SceneSymbolDeclarationNode? mainScene = story.TopLevelNodes[0] as SceneSymbolDeclarationNode;
         Assert.IsTrue(mainScene is
@@ -896,6 +916,7 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         Assert.AreEqual(1, story.TopLevelNodes.Length);
 
@@ -931,6 +952,7 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         SceneSymbolDeclarationNode? mainScene = story.TopLevelNodes[^1] as SceneSymbolDeclarationNode;
         Assert.IsNotNull(mainScene);
@@ -982,6 +1004,7 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         SceneSymbolDeclarationNode? mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[^1];
 
@@ -1039,6 +1062,8 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
+
         SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[0];
 
         Assert.AreEqual(6, mainScene.Body.Statements.Length);
@@ -1068,7 +1093,8 @@ public sealed class ParserTests
         List<Error> errors = [];
         parser.ErrorFound += errors.Add;
 
-        _ = parser.Parse();
+        StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         Assert.AreEqual(1, errors.Count);
         Assert.AreEqual(Errors.ExpectedVisibleStatementAsCheckpoint(new Token
@@ -1120,6 +1146,7 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         Assert.AreEqual(5, story.TopLevelNodes.Length);
 
@@ -1185,7 +1212,8 @@ public sealed class ParserTests
         List<Error> errors = [];
         parser.ErrorFound += errors.Add;
 
-        _ = parser.Parse();
+        StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         Error firstError = Errors.MustHaveAtLeastOneOption(code.IndexOf("} // switch"));
         Error secondError = Errors.MustHaveAtLeastOneOption(code.IndexOf("} // choose"));
@@ -1224,7 +1252,8 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         // we just assert that this goes through without errors or exceptions
-        _ = parser.Parse();
+        StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
     }
 
     [TestMethod]
@@ -1243,6 +1272,7 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         ExpressionNode expression = ((ExpressionSettingDirectiveNode)story.TopLevelNodes[0]).Expression;
 
@@ -1320,6 +1350,7 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[1];
 
@@ -1360,6 +1391,7 @@ public sealed class ParserTests
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         StoryNode story = parser.Parse();
+        NodeAssert.ReconstructWorks(code, story);
 
         SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[1];
 

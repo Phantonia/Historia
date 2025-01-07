@@ -30,7 +30,7 @@ public record SpectrumAdjustmentStatementNode() : StatementNode
         StrengthenOrWeakenKeywordToken.Reconstruct(writer);
         SpectrumNameToken.Reconstruct(writer);
         ByKeywordToken.Reconstruct(writer);
-        AdjustmentAmount.Reconstruct();
+        AdjustmentAmount.Reconstruct(writer);
         SemicolonToken.Reconstruct(writer);
     }
 

@@ -17,13 +17,16 @@ namespace Phantonia.Historia.Tests.Compiler;
 [TestClass]
 public sealed class FlowAnalyzerTests
 {
-    private FlowAnalyzer PrepareFlowAnalyzer(string code)
+    private static FlowAnalyzer PrepareFlowAnalyzer(string code)
     {
         Lexer lexer = new(code);
         Parser parser = new(lexer.Lex());
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        Binder binder = new(parser.Parse());
+        StoryNode tree = parser.Parse();
+        NodeAssert.ReconstructWorks(code, tree);
+
+        Binder binder = new(tree);
         binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         BindingResult result = binder.Bind();
