@@ -21,6 +21,8 @@ public sealed class FieldsEmitter(StoryNode boundStory, SymbolTable symbolTable,
 
         GenerateFields();
 
+        writer.WriteLine();
+
         writer.EndBlock(); // struct
         Debug.Assert(writer.Indent == initialIndent);
     }
@@ -44,13 +46,8 @@ public sealed class FieldsEmitter(StoryNode boundStory, SymbolTable symbolTable,
                 case OutcomeSymbol outcome:
                     writer.Write("public int ");
                     GeneralEmission.GenerateOutcomeFieldName(outcome, writer);
-
-                    if (outcome.DefaultOption is not null)
-                    {
-                        writer.Write($" = {outcome.OptionNames.IndexOf(outcome.DefaultOption)}");
-                    }
-
                     writer.WriteLine(';');
+
                     break;
                 case CallerTrackerSymbol tracker:
                     writer.Write("public int ");

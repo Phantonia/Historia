@@ -1743,4 +1743,50 @@ public sealed class EmitterTests
 
         Assert.IsTrue(stateMachine.FinishedStory);
     }
+
+    enum OutcomeX
+    {
+        Unset = 0,
+        A,
+        B,
+    }
+
+    [TestMethod]
+    public void TestPublicOutcome()
+    {
+        string code =
+            """
+            public outcome X(A, B);
+
+            scene main
+            {
+                X = A;
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
+
+        OutcomeX GetOutcome()
+        {
+            PropertyInfo? property = stateMachine.GetType().GetProperty("OutcomeX");
+            Assert.IsNotNull(property);
+
+            object? value = property.GetValue(stateMachine);
+            Assert.IsNotNull(value);
+
+            return (OutcomeX)value;
+        }
+
+        Assert.AreEqual(OutcomeX.Unset, GetOutcome());
+        Assert.IsTrue(stateMachine.TryContinue());
+        Assert.AreEqual(OutcomeX.A, GetOutcome());
+    }
 }

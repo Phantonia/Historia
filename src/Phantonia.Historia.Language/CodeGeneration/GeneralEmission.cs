@@ -113,9 +113,8 @@ public static class GeneralEmission
         writer.WriteLine('}');
     }
 
-    public static void GeneratePublicOutcomes(SymbolTable symbolTable, bool readOnly, IndentedTextWriter writer)
+    public static void GeneratePublicOutcomes(SymbolTable symbolTable, IndentedTextWriter writer)
     {
-        // TODO: why is 'readOnly' unused?
         foreach (Symbol symbol in symbolTable.AllSymbols)
         {
             if (symbol is not OutcomeSymbol { IsPublic: true } outcome)
@@ -205,9 +204,9 @@ public static class GeneralEmission
             {
                 writer.Write("return (Outcome");
                 writer.Write(outcome.Name);
-                writer.Write(")fields.");
+                writer.Write(")(fields.");
                 GenerateOutcomeFieldName(outcome, writer);
-                writer.WriteLine(';');
+                writer.WriteLine(" + 1);"); // shifting by 1 because of Unset
             }
 
             writer.EndBlock(); // get
@@ -216,7 +215,7 @@ public static class GeneralEmission
 
             writer.WriteLine();
 
-            if (symbol is SpectrumSymbol spectrum2) // name spectrum already exists up there
+            if (outcome is SpectrumSymbol spectrum2) // name spectrum already exists up there
             {
                 writer.Write("public double Value");
                 writer.WriteLine(outcome.Name);
@@ -229,7 +228,7 @@ public static class GeneralEmission
                 GenerateSpectrumPositiveFieldName(spectrum2, writer);
                 writer.Write(" / (double)fields.");
                 GenerateSpectrumTotalFieldName(spectrum2, writer);
-                writer.Write(';');
+                writer.WriteLine(';');
 
                 writer.EndBlock(); // get
 

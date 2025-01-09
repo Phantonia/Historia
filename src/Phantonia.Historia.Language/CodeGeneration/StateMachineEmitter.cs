@@ -27,7 +27,7 @@ public sealed class StateMachineEmitter(StoryNode boundStory, FlowGraph flowGrap
 
         writer.WriteLine();
 
-        GeneralEmission.GeneratePublicOutcomes(symbolTable, readOnly: false, writer); // ends in a writer.WriteLine()
+        GeneralEmission.GeneratePublicOutcomes(symbolTable, writer); // ends in a writer.WriteLine()
 
         GeneralEmission.GenerateReferences(symbolTable, readOnly: false, writer); // ends in writer.WriteLine()
 
@@ -85,16 +85,32 @@ public sealed class StateMachineEmitter(StoryNode boundStory, FlowGraph flowGrap
 
         foreach (Symbol symbol in symbolTable.AllSymbols)
         {
-            if (symbol is not ReferenceSymbol reference)
+            switch (symbol)
             {
-                continue;
-            }
+                case ReferenceSymbol reference:
+                    writer.Write("fields.reference");
+                    writer.Write(reference.Name);
+                    writer.Write(" = reference");
+                    writer.Write(reference.Name);
+                    writer.WriteLine(';');
 
-            writer.Write("fields.reference");
-            writer.Write(reference.Name);
-            writer.Write(" = reference");
-            writer.Write(reference.Name);
-            writer.WriteLine(';');
+                    break;
+                case OutcomeSymbol { IsPublic: true } outcome and not SpectrumSymbol:
+                    writer.Write("fields.");
+                    GeneralEmission.GenerateOutcomeFieldName(outcome, writer);
+
+                    if (outcome.DefaultOption is not null)
+                    {
+                        writer.WriteLine($" = {outcome.OptionNames.IndexOf(outcome.DefaultOption)};");
+                    }
+                    else
+                    {
+                        // hacky but idgaf. the property shifts it by 1 later. this is easier than changing it properly and i'm lazy
+                        writer.WriteLine(" = -1;");
+                    }
+
+                    break;
+            }
         }
 
         int maxOptionCount = GeneralEmission.GetMaximumOptionCount(boundStory);

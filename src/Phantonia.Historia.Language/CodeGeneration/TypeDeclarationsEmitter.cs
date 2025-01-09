@@ -93,7 +93,7 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, Settings setti
             writer.Write(property.Name);
             writer.Write(" = @");
             writer.Write(property.Name);
-            writer.Write(';');
+            writer.WriteLine(';');
         }
 
         writer.WriteLine();

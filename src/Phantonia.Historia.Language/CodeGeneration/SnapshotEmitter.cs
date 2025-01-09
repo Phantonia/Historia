@@ -30,7 +30,7 @@ public sealed class SnapshotEmitter(FlowGraph flowGraph, Settings settings, Symb
 
         writer.WriteLine();
 
-        GeneralEmission.GeneratePublicOutcomes(symbolTable, readOnly: true, writer); // ends in writer.WriteLine()
+        GeneralEmission.GeneratePublicOutcomes(symbolTable, writer); // ends in writer.WriteLine()
 
         GeneralEmission.GenerateReferences(symbolTable, readOnly: true, writer); // ends in writer.WriteLine()
 
