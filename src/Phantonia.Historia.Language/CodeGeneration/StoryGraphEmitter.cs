@@ -1,4 +1,5 @@
 ﻿using Phantonia.Historia.Language.FlowAnalysis;
+using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using System;
 using System.CodeDom.Compiler;
@@ -103,7 +104,7 @@ public sealed class StoryGraphEmitter(FlowGraph flowGraph, Settings settings, In
 
     private void GenerateOptions(IOutputStatementNode outputStatement)
     {
-        if (outputStatement is not SwitchStatementNode switchStatement)
+        if (outputStatement is not IOptionsStatementNode optionsStatement)
         {
             return;
         }
@@ -111,9 +112,9 @@ public sealed class StoryGraphEmitter(FlowGraph flowGraph, Settings settings, In
         GeneralEmission.GenerateType(settings.OptionType, writer);
         writer.Write("[] options = { ");
 
-        foreach (OptionNode option in switchStatement.Options)
+        foreach (ExpressionNode optionExpression in optionsStatement.OptionExpressions)
         {
-            GeneralEmission.GenerateExpression(option.Expression, writer);
+            GeneralEmission.GenerateExpression(optionExpression, writer);
             writer.Write(", ");
         }
 
@@ -217,7 +218,7 @@ public sealed class StoryGraphEmitter(FlowGraph flowGraph, Settings settings, In
             writer.Write(')');
         }
 
-        if (outputStatement is SwitchStatementNode)
+        if (outputStatement is IOptionsStatementNode)
         {
             WrapInReadOnlyList(() => writer.Write("options"), GenerateOptionType);
         }

@@ -1856,4 +1856,42 @@ public sealed class EmitterTests
         AssertComesBefore(o2, o6);
         AssertComesBefore(o4, o6);
     }
+
+    [TestMethod]
+    public void TestLoopSwitchOptionsInStoryGraph()
+    {
+        string code =
+            """
+            scene main
+            {
+                loop switch 0
+                {
+                    option 1 { output 2; }
+                    option 3 { output 4; }
+                }
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        Assembly assembly = DynamicCompiler.Compile(resultCode);
+
+        Type? graphType = assembly.GetType("HistoriaStoryGraph");
+        MethodInfo? createMethod = graphType?.GetMethod("CreateStoryGraph");
+        object? graphObject = createMethod?.Invoke(null, []);
+        StoryGraph<int, int>? graph = graphObject as StoryGraph<int, int>;
+        Assert.IsNotNull(graph);
+
+        long index = code.IndexOf("loop switch 0");
+        StoryVertex<int, int> vertex = graph.Vertices[index];
+
+        Assert.AreEqual(0, vertex.Output);
+        Assert.IsTrue(vertex.Options.SequenceEqual([1, 3]));
+    }
 }

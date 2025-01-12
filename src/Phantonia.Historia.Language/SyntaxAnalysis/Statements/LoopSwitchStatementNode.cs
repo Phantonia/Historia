@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
-public sealed record LoopSwitchStatementNode() : StatementNode, IOutputStatementNode, IBranchingStatementNode
+public sealed record LoopSwitchStatementNode() : StatementNode, IOptionsStatementNode, IBranchingStatementNode
 {
     public required Token? CheckpointKeywordToken { get; init; }
 
@@ -46,4 +46,6 @@ public sealed record LoopSwitchStatementNode() : StatementNode, IOutputStatement
     protected internal override string GetDebuggerDisplay() => $"loopswitch {{ {string.Join(", ", Options.Select(o => o.GetDebuggerDisplay()))} }}";
 
     IEnumerable<StatementBodyNode> IBranchingStatementNode.Bodies => Options.Select(o => o.Body);
+
+    IEnumerable<ExpressionNode> IOptionsStatementNode.OptionExpressions => Options.Select(o => o.Expression);
 }
