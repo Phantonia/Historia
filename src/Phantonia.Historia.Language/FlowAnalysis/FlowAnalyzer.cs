@@ -177,7 +177,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
 
         FlowGraph semanticCopy = FlowGraph.CreateSimpleSemanticFlowGraph(new FlowVertex
         {
-            Index = loopSwitchStatement.Index - 1,
+            Index = CalculateNewIndex(loopSwitchStatement.Index, loopSwitchStatement.Index),
             AssociatedStatement = loopSwitchStatement,
             Kind = FlowVertexKind.PurelySemantic,
         });
@@ -192,12 +192,12 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             flowGraph = flowGraph.AppendToVertex(loopSwitchStatement.Index, nestedFlowGraph);
 
             FlowGraph nestedSemanticCopy = CreateSemanticCopy(nestedFlowGraph, uniqueId: loopSwitchStatement.Index);
-            semanticCopy = semanticCopy.AppendToVertex(loopSwitchStatement.Index - 1, nestedSemanticCopy);
+            semanticCopy = semanticCopy.AppendToVertex(CalculateNewIndex(loopSwitchStatement.Index, loopSwitchStatement.Index), nestedSemanticCopy);
 
             if (option.Kind != LoopSwitchOptionKind.Final)
             {
                 // redirect final edges as weak edges back up
-                foreach (long vertex in flowGraph.OutgoingEdges.Where(p => p.Value.Contains(FlowGraph.FinalEdge)).Select(p => p.Key))
+                foreach (long vertex in nestedFlowGraph.OutgoingEdges.Where(p => p.Value.Contains(FlowGraph.FinalEdge)).Select(p => p.Key))
                 {
                     flowGraph = flowGraph with
                     {
@@ -289,19 +289,14 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
 
     private FlowGraph CreateSemanticCopy(FlowGraph flowGraph, long uniqueId)
     {
-        // for every index in the story, we have index < story.Length
-        // so if each graph for which we want to create a semantic copy has a unique id (usually its start index)
-        // this cannot clash
-        long CalculateNewIndex(long index) => uniqueId * story.Length + index;
-
         FlowVertex SemantifyVertex(FlowVertex vertex) => vertex with
         {
             Kind = FlowVertexKind.PurelySemantic,
-            Index = vertex.Index != FlowGraph.FinalVertex ? CalculateNewIndex(vertex.Index) : FlowGraph.FinalVertex,
+            Index = vertex.Index != FlowGraph.FinalVertex ? CalculateNewIndex(vertex.Index, uniqueId) : FlowGraph.FinalVertex,
         };
 
         ImmutableDictionary<long, FlowVertex> vertices
-            = flowGraph.Vertices.Select(p => KeyValuePair.Create(CalculateNewIndex(p.Key), SemantifyVertex(p.Value)))
+            = flowGraph.Vertices.Select(p => KeyValuePair.Create(CalculateNewIndex(p.Key, uniqueId), SemantifyVertex(p.Value)))
                                 .ToImmutableDictionary();
 
         FlowEdge SemantifyEdge(FlowEdge edge)
@@ -320,16 +315,16 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
                 return edge with
                 {
                     Kind = kind,
-                    ToVertex = edge.ToVertex != FlowGraph.FinalVertex ? CalculateNewIndex(edge.ToVertex) : FlowGraph.FinalVertex,
+                    ToVertex = edge.ToVertex != FlowGraph.FinalVertex ? CalculateNewIndex(edge.ToVertex, uniqueId) : FlowGraph.FinalVertex,
                 };
             }
         }
 
         ImmutableDictionary<long, ImmutableList<FlowEdge>> edges
-            = flowGraph.OutgoingEdges.Select(p => KeyValuePair.Create(CalculateNewIndex(p.Key), p.Value.Select(e => SemantifyEdge(e)).ToImmutableList()))
+            = flowGraph.OutgoingEdges.Select(p => KeyValuePair.Create(CalculateNewIndex(p.Key, uniqueId), p.Value.Select(e => SemantifyEdge(e)).ToImmutableList()))
                                      .ToImmutableDictionary();
 
-        IEnumerable<FlowEdge> newStartEdges = flowGraph.StartEdges.Select(e => e with { ToVertex = e.ToVertex != FlowGraph.FinalVertex ? CalculateNewIndex(e.ToVertex) : FlowGraph.FinalVertex });
+        IEnumerable<FlowEdge> newStartEdges = flowGraph.StartEdges.Select(e => e with { ToVertex = e.ToVertex != FlowGraph.FinalVertex ? CalculateNewIndex(e.ToVertex, uniqueId) : FlowGraph.FinalVertex });
         
         return flowGraph with
         {
@@ -445,4 +440,6 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
 
         return flowGraph;
     }
+
+    private long CalculateNewIndex(long index, long uniqueId) => uniqueId * story.Length + index;
 }

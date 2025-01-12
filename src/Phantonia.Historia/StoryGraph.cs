@@ -74,12 +74,22 @@ public sealed class StoryGraph<TOutput, TOption>(IReadOnlyDictionary<long, Story
     {
         Dictionary<long, T> values = [];
 
+        foreach (StoryEdge edge in StartEdges)
+        {
+            values[edge.ToVertex] = baseValue;
+        }
+
         IEnumerable<long> topologicalSort = TopologicalSort();
 
         List<T> predecessorValues = [];
 
         foreach (long vertex in topologicalSort)
         {
+            if (values.ContainsKey(vertex))
+            {
+                continue;
+            }
+
             foreach (StoryEdge incomingEdge in Vertices[vertex].IncomingEdges)
             {
                 predecessorValues.Add(values[incomingEdge.FromVertex]);

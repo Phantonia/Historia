@@ -1789,4 +1789,71 @@ public sealed class EmitterTests
         Assert.IsTrue(stateMachine.TryContinue());
         Assert.AreEqual(OutcomeX.A, GetOutcome());
     }
+
+    [TestMethod]
+    public void TestStoryGraphWithLoopSwitches()
+    {
+        string code =
+            """
+            scene main
+            {
+                loop switch 0
+                {
+                    final option 5
+                    {
+                        output 6;
+                    }
+
+                    option 1
+                    {
+                        output 2;
+                    }
+
+                    option 3
+                    {
+                        output 4;
+                    }
+                }
+
+                output 7;
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        Assembly assembly = DynamicCompiler.Compile(resultCode);
+
+        Type? graphType = assembly.GetType("HistoriaStoryGraph");
+        MethodInfo? createMethod = graphType?.GetMethod("CreateStoryGraph");
+        object? graphObject = createMethod?.Invoke(null, []);
+        StoryGraph<int, int>? graph = graphObject as StoryGraph<int, int>;
+        Assert.IsNotNull(graph);
+
+        long[] order = graph.TopologicalSort().ToArray();
+
+        void AssertComesBefore(long earlier, long later)
+        {
+            Assert.IsTrue(Array.IndexOf(order, earlier) < Array.IndexOf(order, later));
+        }
+
+        long ls0 = code.IndexOf("loop switch 0");
+        long o2 = code.IndexOf("output 2");
+        long o4 = code.IndexOf("output 4");
+        long o6 = code.IndexOf("output 6");
+        long o7 = code.IndexOf("output 7");
+
+        AssertComesBefore(ls0, o2);
+        AssertComesBefore(ls0, o4);
+        AssertComesBefore(ls0, o6);
+        AssertComesBefore(ls0, o7);
+        AssertComesBefore(o6, o7);
+        AssertComesBefore(o2, o6);
+        AssertComesBefore(o4, o6);
+    }
 }

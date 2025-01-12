@@ -72,7 +72,6 @@ public sealed partial class FlowAnalyzer
 
         foreach (long vertex in order.Skip(1))
         {
-            var x = reversedFlowGraph.OutgoingEdges[vertex].Where(e => e.IsSemantic);
             IEnumerable<VertexData> previousData = reversedFlowGraph.OutgoingEdges[vertex]
                                                                     .Where(e => e.IsSemantic)
                                                                     .Select(e => data[e.ToVertex]);

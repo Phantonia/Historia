@@ -337,7 +337,7 @@ public sealed record FlowGraph
 
     public FlowGraph RemoveInvisible()
     {
-        MutEdges tempEdges = OutgoingEdges.ToDictionary(p => p.Key, p => p.Value.ToList());
+        MutEdges tempEdges = OutgoingEdges.ToDictionary(p => p.Key, p => p.Value.Where(e => e.IsStory || (Vertices.TryGetValue(e.ToVertex, out FlowVertex v) && v.IsVisible)).ToList());
         Dictionary<long, FlowVertex> tempVertices = Vertices.ToDictionary(p => p.Key, p => p.Value);
 
         List<long> newStartVertices = [.. StartEdges.Where(e => e.IsStory).Select(e => e.ToVertex)];
