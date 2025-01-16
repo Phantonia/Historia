@@ -62,6 +62,9 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, Settings setti
         GenerateRecordProperties(record);
 
         GenerateRecordEquality(record);
+        writer.WriteLine();
+
+        GenerateRecordToString(record);
 
         writer.EndBlock(); // struct
     }
@@ -192,6 +195,36 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, Settings setti
         writer.EndBlock(); // != operator
     }
 
+    private void GenerateRecordToString(RecordTypeSymbol record)
+    {
+        writer.WriteLine("public override string ToString()");
+        writer.BeginBlock();
+
+        writer.Write("return \"");
+        writer.Write(record.Name);
+        writer.Write('(');
+
+        if (record.Properties.Length > 0)
+        {
+            writer.Write(record.Properties[0].Name);
+            writer.Write(""" = " + """);
+            writer.Write(record.Properties[0].Name);
+        }
+
+        foreach (PropertySymbol property in record.Properties.Skip(1))
+        {
+            writer.Write(""" + ", " + """);
+            writer.Write('"');
+            writer.Write(property.Name);
+            writer.Write(""" = " + """);
+            writer.Write(property.Name);
+        }
+
+        writer.WriteLine(""" + ")";""");
+
+        writer.EndBlock(); // method
+    }
+
     private void GenerateUnionDeclaration(UnionTypeSymbol union)
     {
         writer.Write("public readonly struct @");
@@ -216,69 +249,182 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, Settings setti
         GenerateUnionRunMethod(union);
         GenerateUnionEvaluateMethod(union);
         GenerateUnionEquality(union);
+        GenerateUnionToString(union);
         GenerateUnionDiscriminatorEnum(union);
         GenerateUnionExplicitInterfaceImplementations(union);
 
         writer.EndBlock(); // type
     }
 
-    private void GenerateUnionExplicitInterfaceImplementations(UnionTypeSymbol union)
+    private void GenerateUnionConstructors(UnionTypeSymbol union)
     {
-        if (union.Subtypes.Length is >= 2 and <= 10)
+        foreach (TypeSymbol subtype in union.Subtypes)
         {
-            for (int i = 0; i < union.Subtypes.Length; i++)
+            writer.Write($"internal @{union.Name}(");
+            GeneralEmission.GenerateType(subtype, writer);
+            writer.WriteLine(" value)");
+
+            writer.BeginBlock();
+
+            writer.Write("this.");
+            GenerateUnionSubtypeName(subtype);
+            writer.WriteLine(" = value;");
+
+            foreach (TypeSymbol otherSubtype in union.Subtypes.Except([subtype]))
             {
-                GeneralEmission.GenerateType(union.Subtypes[i], writer);
-                writer.Write(' ');
-                GenerateUnionInterfaceName(union);
-                writer.Write(".Value");
-                writer.WriteLine(i);
-                writer.BeginBlock();
-
-                writer.WriteLine("get");
-                writer.BeginBlock();
-
-                writer.Write("return this.");
-                GenerateUnionSubtypeName(union.Subtypes[i]);
-                writer.WriteLine(';');
-
-                writer.EndBlock(); // get
-
-                writer.EndBlock(); // Value property
-
-                writer.WriteLine();
+                writer.Write("this.");
+                GenerateUnionSubtypeName(otherSubtype);
+                writer.Write(" = default(");
+                GeneralEmission.GenerateType(otherSubtype, writer);
+                writer.WriteLine(");");
             }
 
-            writer.Write("int ");
-            GenerateUnionInterfaceName(union);
-            writer.WriteLine(".Discriminator");
-            writer.BeginBlock();
+            writer.Write("Discriminator = ");
+            writer.Write(union.Name);
+            writer.Write("Discriminator.");
+            GenerateUnionSubtypeName(subtype);
+            writer.WriteLine(';');
 
-            writer.WriteLine("get");
-            writer.BeginBlock();
-
-            writer.WriteLine("return (int)Discriminator;");
-
-            writer.EndBlock(); // Discriminator.get
-
-            writer.EndBlock(); // property Discriminator
+            writer.EndBlock(); // constructor
+            writer.WriteLine();
         }
     }
 
-    private void GenerateUnionDiscriminatorEnum(UnionTypeSymbol union)
+    private void GenerateUnionProperties(UnionTypeSymbol union)
     {
-        writer.Write("public enum ");
+        foreach (TypeSymbol subtype in union.Subtypes)
+        {
+            writer.Write("public ");
+            GeneralEmission.GenerateType(subtype, writer);
+            writer.Write(' ');
+            GenerateUnionSubtypeName(subtype); // the property gets the same name as the type
+            writer.WriteLine(" { get; }");
+            writer.WriteLine();
+        }
+
+        writer.Write("public ");
         writer.Write(union.Name);
-        writer.WriteLine("Discriminator");
+        writer.WriteLine("Discriminator Discriminator { get; }");
+        writer.WriteLine();
+    }
+
+    private void GenerateUnionAsObjectMethod(UnionTypeSymbol union)
+    {
+        writer.WriteLine("public object? AsObject()");
+        writer.BeginBlock();
+        writer.WriteLine("switch (Discriminator)");
         writer.BeginBlock();
 
         foreach (TypeSymbol subtype in union.Subtypes)
         {
+            writer.Write("case ");
+            writer.Write(union.Name);
+            writer.Write("Discriminator.");
             GenerateUnionSubtypeName(subtype);
-            writer.WriteLine(',');
+            writer.WriteLine(':');
+            writer.Indent++;
+            writer.Write("return this.");
+            GenerateUnionSubtypeName(subtype);
+            writer.WriteLine(';');
+            writer.Indent--;
         }
 
-        writer.EndBlock(); // enum
+        writer.EndBlock(); // switch
+        writer.WriteLine();
+        writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid discriminator\");");
+        writer.EndBlock(); // AsObject method
+        writer.WriteLine();
+    }
+
+    private void GenerateUnionRunMethod(UnionTypeSymbol union)
+    {
+        writer.Write("public void Run(");
+
+        foreach (TypeSymbol subtype in union.Subtypes.Take(union.Subtypes.Length - 1))
+        {
+            writer.Write("global::System.Action<");
+            GeneralEmission.GenerateType(subtype, writer);
+            writer.Write("> action");
+            GenerateUnionSubtypeName(subtype, includeAt: false);
+            writer.Write(", ");
+        }
+
+        writer.Write("global::System.Action<");
+        GeneralEmission.GenerateType(union.Subtypes[^1], writer);
+        writer.Write("> action");
+        GenerateUnionSubtypeName(union.Subtypes[^1], includeAt: false);
+        writer.WriteLine(')');
+
+        writer.BeginBlock();
+        writer.WriteLine("switch (Discriminator)");
+        writer.BeginBlock();
+
+        foreach (TypeSymbol subtype in union.Subtypes)
+        {
+            writer.Write("case ");
+            writer.Write(union.Name);
+            writer.Write("Discriminator.");
+            GenerateUnionSubtypeName(subtype);
+            writer.WriteLine(':');
+            writer.Indent++;
+            writer.Write("action");
+            GenerateUnionSubtypeName(subtype, includeAt: false);
+            writer.Write("(this.");
+            GenerateUnionSubtypeName(subtype);
+            writer.WriteLine(");");
+            writer.WriteLine("return;");
+            writer.Indent--;
+        }
+
+        writer.EndBlock(); // switch
+        writer.WriteLine();
+        writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid discriminator\");");
+        writer.EndBlock(); // Run method
+        writer.WriteLine();
+    }
+
+    private void GenerateUnionEvaluateMethod(UnionTypeSymbol union)
+    {
+        writer.Write("public T Evaluate<T>(");
+
+        foreach (TypeSymbol subtype in union.Subtypes.Take(union.Subtypes.Length - 1))
+        {
+            writer.Write("global::System.Func<");
+            GeneralEmission.GenerateType(subtype, writer);
+            writer.Write(", T> function");
+            GenerateUnionSubtypeName(subtype, includeAt: false);
+            writer.Write(", ");
+        }
+
+        writer.Write("global::System.Func<");
+        GeneralEmission.GenerateType(union.Subtypes[^1], writer);
+        writer.Write(", T> function");
+        GenerateUnionSubtypeName(union.Subtypes[^1], includeAt: false);
+        writer.WriteLine(')');
+        writer.BeginBlock();
+        writer.WriteLine("switch (Discriminator)");
+        writer.BeginBlock();
+
+        foreach (TypeSymbol subtype in union.Subtypes)
+        {
+            writer.Write("case ");
+            writer.Write(union.Name);
+            writer.Write("Discriminator.");
+            GenerateUnionSubtypeName(subtype);
+            writer.WriteLine(':');
+            writer.Indent++;
+            writer.Write("return function");
+            GenerateUnionSubtypeName(subtype, includeAt: false);
+            writer.Write("(this.");
+            GenerateUnionSubtypeName(subtype);
+            writer.WriteLine(");");
+            writer.Indent--;
+        }
+
+        writer.EndBlock(); // switch
+        writer.WriteLine();
+        writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid discriminator\");");
+        writer.EndBlock(); // evaluate method
         writer.WriteLine();
     }
 
@@ -351,102 +497,11 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, Settings setti
         writer.WriteLine();
     }
 
-    private void GenerateUnionEvaluateMethod(UnionTypeSymbol union)
+    private void GenerateUnionToString(UnionTypeSymbol union)
     {
-        writer.Write("public T Evaluate<T>(");
-
-        foreach (TypeSymbol subtype in union.Subtypes.Take(union.Subtypes.Length - 1))
-        {
-            writer.Write("global::System.Func<");
-            GeneralEmission.GenerateType(subtype, writer);
-            writer.Write(", T> function");
-            GenerateUnionSubtypeName(subtype, includeAt: false);
-            writer.Write(", ");
-        }
-
-        writer.Write("global::System.Func<");
-        GeneralEmission.GenerateType(union.Subtypes[^1], writer);
-        writer.Write(", T> function");
-        GenerateUnionSubtypeName(union.Subtypes[^1], includeAt: false);
-        writer.WriteLine(')');
-        writer.BeginBlock();
-        writer.WriteLine("switch (Discriminator)");
+        writer.WriteLine("public override string ToString()");
         writer.BeginBlock();
 
-        foreach (TypeSymbol subtype in union.Subtypes)
-        {
-            writer.Write("case ");
-            writer.Write(union.Name);
-            writer.Write("Discriminator.");
-            GenerateUnionSubtypeName(subtype);
-            writer.WriteLine(':');
-            writer.Indent++;
-            writer.Write("return function");
-            GenerateUnionSubtypeName(subtype, includeAt: false);
-            writer.Write("(this.");
-            GenerateUnionSubtypeName(subtype);
-            writer.WriteLine(");");
-            writer.Indent--;
-        }
-
-        writer.EndBlock(); // switch
-        writer.WriteLine();
-        writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid discriminator\");");
-        writer.EndBlock(); // evaluate method
-        writer.WriteLine();
-    }
-
-    private void GenerateUnionRunMethod(UnionTypeSymbol union)
-    {
-        writer.Write("public void Run(");
-
-        foreach (TypeSymbol subtype in union.Subtypes.Take(union.Subtypes.Length - 1))
-        {
-            writer.Write("global::System.Action<");
-            GeneralEmission.GenerateType(subtype, writer);
-            writer.Write("> action");
-            GenerateUnionSubtypeName(subtype, includeAt: false);
-            writer.Write(", ");
-        }
-
-        writer.Write("global::System.Action<");
-        GeneralEmission.GenerateType(union.Subtypes[^1], writer);
-        writer.Write("> action");
-        GenerateUnionSubtypeName(union.Subtypes[^1], includeAt: false);
-        writer.WriteLine(')');
-
-        writer.BeginBlock();
-        writer.WriteLine("switch (Discriminator)");
-        writer.BeginBlock();
-
-        foreach (TypeSymbol subtype in union.Subtypes)
-        {
-            writer.Write("case ");
-            writer.Write(union.Name);
-            writer.Write("Discriminator.");
-            GenerateUnionSubtypeName(subtype);
-            writer.WriteLine(':');
-            writer.Indent++;
-            writer.Write("action");
-            GenerateUnionSubtypeName(subtype, includeAt: false);
-            writer.Write("(this.");
-            GenerateUnionSubtypeName(subtype);
-            writer.WriteLine(");");
-            writer.WriteLine("return;");
-            writer.Indent--;
-        }
-
-        writer.EndBlock(); // switch
-        writer.WriteLine();
-        writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid discriminator\");");
-        writer.EndBlock(); // Run method
-        writer.WriteLine();
-    }
-
-    private void GenerateUnionAsObjectMethod(UnionTypeSymbol union)
-    {
-        writer.WriteLine("public object? AsObject()");
-        writer.BeginBlock();
         writer.WriteLine("switch (Discriminator)");
         writer.BeginBlock();
 
@@ -460,67 +515,76 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, Settings setti
             writer.Indent++;
             writer.Write("return this.");
             GenerateUnionSubtypeName(subtype);
-            writer.WriteLine(';');
+            writer.WriteLine(".ToString();");
             writer.Indent--;
         }
 
-        writer.EndBlock(); // switch
-        writer.WriteLine();
-        writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid discriminator\");");
-        writer.EndBlock(); // AsObject method
-        writer.WriteLine();
-    }
+        writer.EndBlock();
 
-    private void GenerateUnionProperties(UnionTypeSymbol union)
-    {
-        foreach (TypeSymbol subtype in union.Subtypes)
-        {
-            writer.Write("public ");
-            GeneralEmission.GenerateType(subtype, writer);
-            writer.Write(' ');
-            GenerateUnionSubtypeName(subtype); // the property gets the same name as the type
-            writer.WriteLine(" { get; }");
-            writer.WriteLine();
-        }
+        writer.WriteLine("return string.Empty;");
 
-        writer.Write("public ");
-        writer.Write(union.Name);
-        writer.WriteLine("Discriminator Discriminator { get; }");
+        writer.EndBlock(); // method
         writer.WriteLine();
     }
 
-    private void GenerateUnionConstructors(UnionTypeSymbol union)
+    private void GenerateUnionExplicitInterfaceImplementations(UnionTypeSymbol union)
     {
-        foreach (TypeSymbol subtype in union.Subtypes)
+        if (union.Subtypes.Length is >= 2 and <= 10)
         {
-            writer.Write($"internal @{union.Name}(");
-            GeneralEmission.GenerateType(subtype, writer);
-            writer.WriteLine(" value)");
-
-            writer.BeginBlock();
-
-            writer.Write("this.");
-            GenerateUnionSubtypeName(subtype);
-            writer.WriteLine(" = value;");
-
-            foreach (TypeSymbol otherSubtype in union.Subtypes.Except([subtype]))
+            for (int i = 0; i < union.Subtypes.Length; i++)
             {
-                writer.Write("this.");
-                GenerateUnionSubtypeName(otherSubtype);
-                writer.Write(" = default(");
-                GeneralEmission.GenerateType(otherSubtype, writer);
-                writer.WriteLine(");");
+                GeneralEmission.GenerateType(union.Subtypes[i], writer);
+                writer.Write(' ');
+                GenerateUnionInterfaceName(union);
+                writer.Write(".Value");
+                writer.WriteLine(i);
+                writer.BeginBlock();
+
+                writer.WriteLine("get");
+                writer.BeginBlock();
+
+                writer.Write("return this.");
+                GenerateUnionSubtypeName(union.Subtypes[i]);
+                writer.WriteLine(';');
+
+                writer.EndBlock(); // get
+
+                writer.EndBlock(); // Value property
+
+                writer.WriteLine();
             }
 
-            writer.Write("Discriminator = ");
-            writer.Write(union.Name);
-            writer.Write("Discriminator.");
-            GenerateUnionSubtypeName(subtype);
-            writer.WriteLine(';');
+            writer.Write("int ");
+            GenerateUnionInterfaceName(union);
+            writer.WriteLine(".Discriminator");
+            writer.BeginBlock();
 
-            writer.EndBlock(); // constructor
-            writer.WriteLine();
+            writer.WriteLine("get");
+            writer.BeginBlock();
+
+            writer.WriteLine("return (int)Discriminator;");
+
+            writer.EndBlock(); // Discriminator.get
+
+            writer.EndBlock(); // property Discriminator
         }
+    }
+
+    private void GenerateUnionDiscriminatorEnum(UnionTypeSymbol union)
+    {
+        writer.Write("public enum ");
+        writer.Write(union.Name);
+        writer.WriteLine("Discriminator");
+        writer.BeginBlock();
+
+        foreach (TypeSymbol subtype in union.Subtypes)
+        {
+            GenerateUnionSubtypeName(subtype);
+            writer.WriteLine(',');
+        }
+
+        writer.EndBlock(); // enum
+        writer.WriteLine();
     }
 
     private void GenerateUnionInterfaceName(UnionTypeSymbol union)

@@ -1894,4 +1894,38 @@ public sealed class EmitterTests
         Assert.AreEqual(0, vertex.Output);
         Assert.IsTrue(vertex.Options.SequenceEqual([1, 3]));
     }
+
+    [TestMethod]
+    public void TestToString()
+    {
+        string code =
+            """
+            record Line(Character: String, Text: String);
+            record Title(Text: String, Level: Int);
+            union Output(Line, Title);
+
+            setting OutputType: Output;
+
+            scene main
+            {
+                output Title("The world", Level = 1);
+                output Line("Alice", "Hello World");
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        IStoryStateMachine stateMachine = DynamicCompiler.CompileToStory(resultCode, "HistoriaStoryStateMachine");
+
+        _ = stateMachine.TryContinue();
+        Assert.AreEqual("Title(Text = The world, Level = 1)", stateMachine.Output?.ToString());
+        _ = stateMachine.TryContinue();
+        Assert.AreEqual("Line(Character = Alice, Text = Hello World)", stateMachine.Output?.ToString());
+    }
 }
