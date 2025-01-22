@@ -1213,7 +1213,7 @@ public sealed class EmitterTests
             public outcome X(A, B);
             public spectrum Y(A <= 1/2, B);
 
-            scene main
+            chapter main
             {
                 X = A;
 
@@ -1302,7 +1302,7 @@ public sealed class EmitterTests
             public outcome X(A, B);
             public spectrum Y(A < 2/3, B <= 2/3, C); // don't do this
             
-            scene main
+            chapter main
             {
                 X = B;
                 strengthen Y by 2;
@@ -1414,7 +1414,7 @@ public sealed class EmitterTests
 
             reference Domething: Something;
 
-            scene main
+            chapter main
             {
                 checkpoint output 0;
                 
@@ -1927,5 +1927,34 @@ public sealed class EmitterTests
         Assert.AreEqual("Title(Text = The world, Level = 1)", stateMachine.Output?.ToString());
         _ = stateMachine.TryContinue();
         Assert.AreEqual("Line(Character = Alice, Text = Hello World)", stateMachine.Output?.ToString());
+    }
+
+    [TestMethod]
+    public void TestCheckpointInLoopSwitch()
+    {
+        string code =
+            """
+            chapter main
+            {
+                call A;
+                output 0;
+                call A;
+            }
+
+            scene A
+            {
+                checkpoint output 1;
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        IStoryStateMachine stateMachine = DynamicCompiler.CompileToStory(resultCode, "HistoriaStoryStateMachine");
     }
 }

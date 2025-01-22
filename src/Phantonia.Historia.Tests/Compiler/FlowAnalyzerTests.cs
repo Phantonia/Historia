@@ -1102,7 +1102,7 @@ public sealed class FlowAnalyzerTests
     {
         string code =
             """
-            scene main
+            chapter main
             {
                 outcome X(A, B);
 
@@ -1134,54 +1134,6 @@ public sealed class FlowAnalyzerTests
         _ = flowAnalyzer.PerformFlowAnalysis();
 
         Error expectedError = Errors.OutcomeIsLocked("X", ["main"], code.IndexOf("branchon X // #1"));
-
-        Assert.AreEqual(1, errors.Count);
-        Assert.AreEqual(expectedError, errors[0]);
-    }
-
-    [TestMethod]
-    public void TestCheckpointsAndLoopSwitches()
-    {
-        string code =
-            """
-            scene main
-            {
-                outcome X(A, B);
-
-                X = A;
-
-                loop switch (0)
-                {
-                    option (100)
-                    {
-                        branchon X
-                        {
-                            option A { }
-                            option B { }
-                        }
-                    }
-
-                    option (101)
-                    {
-                        checkpoint output 2;
-                    }
-
-                    final option (102)
-                    {
-                        // do nothing
-                    }
-                }
-            }
-            """;
-
-        FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
-
-        List<Error> errors = [];
-        flowAnalyzer.ErrorFound += errors.Add;
-
-        _ = flowAnalyzer.PerformFlowAnalysis();
-
-        Error expectedError = Errors.OutcomeIsLocked("X", ["main"], code.IndexOf("branchon X"));
 
         Assert.AreEqual(1, errors.Count);
         Assert.AreEqual(expectedError, errors[0]);

@@ -7,7 +7,9 @@ namespace Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 
 public sealed record SceneSymbolDeclarationNode() : SymbolDeclarationNode
 {
-    public required Token SceneKeywordToken { get; init; }
+    public required Token SceneOrChapterKeywordToken { get; init; }
+
+    public bool IsChapter => SceneOrChapterKeywordToken.Kind is TokenKind.ChapterKeyword;
 
     public required StatementBodyNode Body { get; init; }
 
@@ -15,7 +17,7 @@ public sealed record SceneSymbolDeclarationNode() : SymbolDeclarationNode
 
     protected override void ReconstructCore(TextWriter writer)
     {
-        SceneKeywordToken.Reconstruct(writer);
+        SceneOrChapterKeywordToken.Reconstruct(writer);
         NameToken.Reconstruct(writer);
         Body.Reconstruct(writer);
     }

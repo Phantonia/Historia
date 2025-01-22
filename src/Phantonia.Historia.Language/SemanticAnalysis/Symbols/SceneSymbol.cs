@@ -2,5 +2,7 @@
 
 public sealed record SceneSymbol() : Symbol
 {
-    protected internal override string GetDebuggerDisplay() => $"scene symbol {Name}";
+    public required bool IsChapter { get; init; }
+
+    protected internal override string GetDebuggerDisplay() => $"{(IsChapter ? "chapter" : "scene")} symbol {Name}";
 }

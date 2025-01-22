@@ -543,6 +543,7 @@ public sealed class Lexer
         TokenKind kind = text switch
         {
             "scene" => TokenKind.SceneKeyword,
+            "chapter" => TokenKind.ChapterKeyword,
             "setting" => TokenKind.SettingKeyword,
             "record" => TokenKind.RecordKeyword,
             "union" => TokenKind.UnionKeyword,

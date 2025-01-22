@@ -23,6 +23,7 @@ public enum TokenKind
 
     // keywords
     SceneKeyword,
+    ChapterKeyword,
     SettingKeyword,
     RecordKeyword,
     UnionKeyword,

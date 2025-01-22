@@ -191,7 +191,7 @@ public sealed class CheckpointEmitter(
 
         if (!publicOutcomes.Any())
         {
-            writer.Write("return true;");
+            writer.WriteLine("return true;");
             writer.EndBlock();
             return;
         }

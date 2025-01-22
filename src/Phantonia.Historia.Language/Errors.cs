@@ -588,6 +588,42 @@ public static class Errors
         };
     }
 
+    public static Error CheckpointInNonChapter(string sceneName, long index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Checkpoints can only exist in chapters, not scenes like '{sceneName}'",
+            Index = index,
+        };
+    }
+
+    public static Error NonChapterCallsChapter(string chapterName, string sceneName, long index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Chapter '{chapterName}' is being called in non-chapter '{sceneName}'. Chapters can only be called in other chapters",
+            Index = index,
+        };
+    }
+
+    public static Error ChapterCalledInLoopSwitch(string chapterName, long index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Chapter '{chapterName}' is being called in loop switch",
+            Index = index,
+        };
+    }
+
+    public static Error CheckpointInLoopSwitch(long index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Loop switches cannot contain checkpoints",
+            Index = index,
+        };
+    }
+
     public static string GenerateFullMessage(string text, Error error)
     {
         (string wholeLine, int column) = FindLine(text, error.Index);
