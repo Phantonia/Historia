@@ -453,33 +453,33 @@ public sealed partial class Binder
 
     private (BindingContext, StatementNode) BindCallStatement(CallStatementNode callStatement, BindingContext context)
     {
-        if (!context.SymbolTable.IsDeclared(callStatement.SceneName))
+        if (!context.SymbolTable.IsDeclared(callStatement.SubroutineName))
         {
-            ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(callStatement.SceneName, callStatement.Index));
+            ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(callStatement.SubroutineName, callStatement.Index));
             return (context, callStatement);
         }
 
-        if (context.SymbolTable[callStatement.SceneName] is not SceneSymbol sceneSymbol)
+        if (context.SymbolTable[callStatement.SubroutineName] is not SubroutineSymbol subroutine)
         {
-            ErrorFound?.Invoke(Errors.SymbolIsNotOutcome(callStatement.SceneName, callStatement.Index));
+            ErrorFound?.Invoke(Errors.SymbolIsNotOutcome(callStatement.SubroutineName, callStatement.Index));
             return (context, callStatement);
         }
 
-        if (context.IsInScene && sceneSymbol.IsChapter)
+        if (context.IsInScene && subroutine.IsChapter)
         {
-            ErrorFound?.Invoke(Errors.NonChapterCallsChapter(sceneSymbol.Name, callStatement.Index));
+            ErrorFound?.Invoke(Errors.SceneCallsChapter(subroutine.Name, callStatement.Index));
         }
 
-        if (context.IsInLoopSwitch && sceneSymbol.IsChapter)
+        if (context.IsInLoopSwitch && subroutine.IsChapter)
         {
-            ErrorFound?.Invoke(Errors.ChapterCalledInLoopSwitch(sceneSymbol.Name, callStatement.Index));
+            ErrorFound?.Invoke(Errors.ChapterCalledInLoopSwitch(subroutine.Name, callStatement.Index));
         }
 
         BoundCallStatementNode boundCallStatement = new()
         {
-            Scene = sceneSymbol,
+            Subroutine = subroutine,
             CallKeywordToken = callStatement.CallKeywordToken,
-            SceneNameToken = callStatement.SceneNameToken,
+            SubroutineNameToken = callStatement.SubroutineNameToken,
             SemicolonToken = callStatement.SemicolonToken,
             Index = callStatement.Index,
             PrecedingTokens = [],

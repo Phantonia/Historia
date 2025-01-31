@@ -15,7 +15,7 @@ public sealed partial class Parser
         switch (tokens[index].Kind)
         {
             case TokenKind.SceneKeyword or TokenKind.ChapterKeyword:
-                return ParseSceneSymbolDeclaration(ref index, precedingTokens);
+                return ParseSubroutineSymbolDeclaration(ref index, precedingTokens);
             case TokenKind.RecordKeyword:
                 return ParseRecordSymbolDeclaration(ref index, precedingTokens);
             case TokenKind.UnionKeyword:
@@ -85,10 +85,10 @@ public sealed partial class Parser
         }
     }
 
-    private SceneSymbolDeclarationNode ParseSceneSymbolDeclaration(ref int index, ImmutableList<Token> precedingTokens)
+    private SubroutineSymbolDeclarationNode ParseSubroutineSymbolDeclaration(ref int index, ImmutableList<Token> precedingTokens)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.SceneKeyword or TokenKind.ChapterKeyword);
-        Token sceneKeyword = tokens[index];
+        Token declarator = tokens[index];
         long nodeIndex = tokens[index].Index;
 
         index++;
@@ -97,9 +97,9 @@ public sealed partial class Parser
 
         StatementBodyNode body = ParseStatementBody(ref index, []);
 
-        return new SceneSymbolDeclarationNode
+        return new SubroutineSymbolDeclarationNode
         {
-            SceneOrChapterKeywordToken = sceneKeyword,
+            DeclaratorToken = declarator,
             NameToken = name,
             Body = body,
             Index = nodeIndex,

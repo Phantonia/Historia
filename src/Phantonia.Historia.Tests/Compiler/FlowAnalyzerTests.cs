@@ -507,7 +507,7 @@ public sealed class FlowAnalyzerTests
 
         Assert.AreEqual(1, errors.Count);
 
-        Error expectedError = Errors.CyclicSceneDefinition(["B", "A", "B"], code.IndexOf("scene B"));
+        Error expectedError = Errors.CyclicSubroutineDefinition(["B", "A", "B"], code.IndexOf("scene B"));
 
         Assert.AreEqual(expectedError, errors[0]);
     }

@@ -5,5 +5,5 @@ namespace Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 
 public sealed record BoundCallStatementNode() : CallStatementNode
 {
-    public required SceneSymbol Scene { get; init; }
+    public required SubroutineSymbol Subroutine { get; init; }
 }

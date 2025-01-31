@@ -8,9 +8,9 @@ public record CallStatementNode() : StatementNode
 {
     public required Token CallKeywordToken { get; init; }
 
-    public required Token SceneNameToken { get; init; }
+    public required Token SubroutineNameToken { get; init; }
 
-    public string SceneName => SceneNameToken.Text;
+    public string SubroutineName => SubroutineNameToken.Text;
 
     public required Token SemicolonToken { get; init; }
 
@@ -19,9 +19,9 @@ public record CallStatementNode() : StatementNode
     protected override void ReconstructCore(TextWriter writer)
     {
         CallKeywordToken.Reconstruct(writer);
-        SceneNameToken.Reconstruct(writer);
+        SubroutineNameToken.Reconstruct(writer);
         SemicolonToken.Reconstruct(writer);
     }
 
-    protected internal override string GetDebuggerDisplay() => $"call {SceneName}";
+    protected internal override string GetDebuggerDisplay() => $"call {SubroutineName}";
 }

@@ -485,13 +485,13 @@ public sealed partial class Parser
         long nodeIndex = tokens[index].Index;
         index++;
 
-        Token sceneName = Expect(TokenKind.Identifier, ref index);
+        Token subroutineName = Expect(TokenKind.Identifier, ref index);
         Token semicolon = Expect(TokenKind.Semicolon, ref index);
 
         return new CallStatementNode
         {
             CallKeywordToken = callKeyword,
-            SceneNameToken = sceneName,
+            SubroutineNameToken = subroutineName,
             SemicolonToken = semicolon,
             Index = nodeIndex,
             PrecedingTokens = precedingTokens,

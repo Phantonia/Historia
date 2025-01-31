@@ -19,7 +19,7 @@ public sealed partial class Binder
 {
     // binding procedure
     /* 1. collect top level symbols
-     * 2. bind everything except for scene bodies into pseudo symbols
+     * 2. bind everything except for subroutine bodies into pseudo symbols
      * 3. build dependency graph + check it is not cyclic
      * 4. fix pseudo symbols into true symbols
      * 5. bind whole tree
@@ -53,12 +53,12 @@ public sealed partial class Binder
         SymbolTable table = GetBuiltinSymbolTable();
         table = CollectTopLevelSymbols(table);
 
-        if (!table.IsDeclared("main") || table["main"] is not SceneSymbol)
+        if (!table.IsDeclared("main") || table["main"] is not SubroutineSymbol)
         {
-            ErrorFound?.Invoke(Errors.NoMainScene());
+            ErrorFound?.Invoke(Errors.NoMainSubroutine());
         }
 
-        // 2. bind everything except for scene bodies into pseudo symbols
+        // 2. bind everything except for subroutine bodies into pseudo symbols
         (table, StoryNode halfboundStory) = BindPseudoSymbolDeclarations(table);
 
         // 3. build dependency graph + check it is not cyclic
@@ -123,11 +123,11 @@ public sealed partial class Binder
     {
         switch (declaration)
         {
-            case SceneSymbolDeclarationNode { Name: string name, IsChapter: bool isChapter, Index: long index }:
-                return new SceneSymbol
+            case SubroutineSymbolDeclarationNode { Name: string name, Kind: SubroutineKind kind, Index: long index }:
+                return new SubroutineSymbol
                 {
                     Name = name,
-                    IsChapter = isChapter,
+                    Kind = kind,
                     Index = index,
                 };
             case RecordSymbolDeclarationNode recordDeclaration:

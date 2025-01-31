@@ -34,7 +34,7 @@ public sealed class ParserTests
         NodeAssert.ReconstructWorks(code, story);
 
         Assert.AreEqual(1, story.TopLevelNodes.Length);
-        SceneSymbolDeclarationNode? scene = story.TopLevelNodes[0] as SceneSymbolDeclarationNode;
+        SubroutineSymbolDeclarationNode? scene = story.TopLevelNodes[0] as SubroutineSymbolDeclarationNode;
         Assert.IsNotNull(scene);
 
         Assert.AreEqual(2, scene.Body.Statements.Length);
@@ -156,7 +156,7 @@ public sealed class ParserTests
             {
                 TopLevelNodes:
                 [
-                    SceneSymbolDeclarationNode
+                    SubroutineSymbolDeclarationNode
                 {
                     Name: "main",
                     Body: StatementBodyNode
@@ -268,7 +268,7 @@ public sealed class ParserTests
                 Identifier: "String",
             }
         },
-            SceneSymbolDeclarationNode
+            SubroutineSymbolDeclarationNode
         ]);
     }
 
@@ -360,7 +360,7 @@ public sealed class ParserTests
         {
             TopLevelNodes:
             [
-                SceneSymbolDeclarationNode
+                SubroutineSymbolDeclarationNode
             {
                 Name: "main",
                 Body.Statements:
@@ -446,7 +446,7 @@ public sealed class ParserTests
 
         Assert.AreEqual(1, story.TopLevelNodes.Length);
 
-        SceneSymbolDeclarationNode? mainScene = story.TopLevelNodes[0] as SceneSymbolDeclarationNode;
+        SubroutineSymbolDeclarationNode? mainScene = story.TopLevelNodes[0] as SubroutineSymbolDeclarationNode;
         Assert.IsNotNull(mainScene);
         Assert.AreEqual(1, mainScene.Body.Statements.Length);
 
@@ -533,7 +533,7 @@ public sealed class ParserTests
         StoryNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
-        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[0];
+        SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)story.TopLevelNodes[0];
 
         BranchOnStatementNode? branchOnStatement = mainScene.Body.Statements[0] as BranchOnStatementNode;
         Assert.IsNotNull(branchOnStatement);
@@ -609,7 +609,7 @@ public sealed class ParserTests
         StoryNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
-        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[0];
+        SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)story.TopLevelNodes[0];
 
         static void AssertIsCorrectOutcomeDeclaration(StatementNode statement, string name, string[] options, string? defaultOption)
         {
@@ -651,7 +651,7 @@ public sealed class ParserTests
         StoryNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
-        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[0];
+        SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)story.TopLevelNodes[0];
 
         static void AssertIsCorrectAssignment<ExpressionType>(StatementNode statement)
             where ExpressionType : ExpressionNode
@@ -712,7 +712,7 @@ public sealed class ParserTests
         StoryNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
-        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[0];
+        SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)story.TopLevelNodes[0];
 
         Assert.AreEqual(3, mainScene.Body.Statements.Length);
 
@@ -811,7 +811,7 @@ public sealed class ParserTests
         StoryNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
-        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[0];
+        SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)story.TopLevelNodes[0];
 
         Assert.AreEqual(2, mainScene.Body.Statements.Length);
 
@@ -866,7 +866,7 @@ public sealed class ParserTests
 
         for (int i = 0; i < 3; i++)
         {
-            SceneSymbolDeclarationNode? scene = story.TopLevelNodes[i] as SceneSymbolDeclarationNode;
+            SubroutineSymbolDeclarationNode? scene = story.TopLevelNodes[i] as SubroutineSymbolDeclarationNode;
             Assert.IsNotNull(scene);
 
             Assert.AreEqual(((char)(i + 'A')).ToString(), scene.Name);
@@ -896,10 +896,10 @@ public sealed class ParserTests
         StoryNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
-        SceneSymbolDeclarationNode? mainScene = story.TopLevelNodes[0] as SceneSymbolDeclarationNode;
+        SubroutineSymbolDeclarationNode? mainScene = story.TopLevelNodes[0] as SubroutineSymbolDeclarationNode;
         Assert.IsTrue(mainScene is
         {
-            Body.Statements: [CallStatementNode { SceneName: "A" }],
+            Body.Statements: [CallStatementNode { SubroutineName: "A" }],
         });
     }
 
@@ -954,7 +954,7 @@ public sealed class ParserTests
         StoryNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
-        SceneSymbolDeclarationNode? mainScene = story.TopLevelNodes[^1] as SceneSymbolDeclarationNode;
+        SubroutineSymbolDeclarationNode? mainScene = story.TopLevelNodes[^1] as SubroutineSymbolDeclarationNode;
         Assert.IsNotNull(mainScene);
 
         string[] optionNames = ["Alice", "Beverly", "Charlotte"];
@@ -1006,7 +1006,7 @@ public sealed class ParserTests
         StoryNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
-        SceneSymbolDeclarationNode? mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[^1];
+        SubroutineSymbolDeclarationNode? mainScene = (SubroutineSymbolDeclarationNode)story.TopLevelNodes[^1];
 
         Assert.AreEqual(1, mainScene.Body.Statements.Length);
 
@@ -1064,7 +1064,7 @@ public sealed class ParserTests
         StoryNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
-        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[0];
+        SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)story.TopLevelNodes[0];
 
         Assert.AreEqual(6, mainScene.Body.Statements.Length);
 
@@ -1172,7 +1172,7 @@ public sealed class ParserTests
         Assert.AreEqual("Character", reference.Name);
         Assert.AreEqual("ICharacter", reference.InterfaceName);
 
-        SceneSymbolDeclarationNode? mainScene = story.TopLevelNodes[4] as SceneSymbolDeclarationNode;
+        SubroutineSymbolDeclarationNode? mainScene = story.TopLevelNodes[4] as SubroutineSymbolDeclarationNode;
         Assert.IsNotNull(mainScene);
 
         Assert.AreEqual(2, mainScene.Body.Statements.Length);
@@ -1352,7 +1352,7 @@ public sealed class ParserTests
         StoryNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
-        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[1];
+        SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)story.TopLevelNodes[1];
 
         Assert.AreEqual(2, mainScene.Body.Statements.Length);
 
@@ -1393,7 +1393,7 @@ public sealed class ParserTests
         StoryNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
-        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)story.TopLevelNodes[1];
+        SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)story.TopLevelNodes[1];
 
         Assert.AreEqual(2, mainScene.Body.Statements.Length);
 

@@ -13,5 +13,5 @@ public sealed record CallerResolutionStatementNode() : StatementNode
 
     protected override void ReconstructCore(TextWriter writer) { }
 
-    protected internal override string GetDebuggerDisplay() => $"resolve tracker for scene {Tracker.CalledScene.Name}";
+    protected internal override string GetDebuggerDisplay() => $"resolve tracker for scene {Tracker.CalledSubroutine.Name}";
 }

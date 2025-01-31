@@ -232,11 +232,11 @@ public static class Errors
         };
     }
 
-    public static Error NoMainScene()
+    public static Error NoMainSubroutine()
     {
         return new Error
         {
-            ErrorMessage = "A story needs a main scene",
+            ErrorMessage = "A story needs a main scene or chapter",
             Index = 0,
         };
     }
@@ -259,11 +259,11 @@ public static class Errors
         };
     }
 
-    public static Error CyclicSceneDefinition(IEnumerable<string> cycle, long index)
+    public static Error CyclicSubroutineDefinition(IEnumerable<string> cycle, long index)
     {
         return new Error
         {
-            ErrorMessage = $"The scene '{cycle.First()}' directly or indirectly calls itself; cycle: {string.Join(", ", cycle.Select(s => $"'{s}'"))}",
+            ErrorMessage = $"The subroutine '{cycle.First()}' directly or indirectly calls itself; cycle: {string.Join(", ", cycle.Select(s => $"'{s}'"))}",
             Index = index,
         };
     }
@@ -380,7 +380,7 @@ public static class Errors
     {
         return new Error
         {
-            ErrorMessage = $"The outcome '{outcomeName}' might already be assigned once this assignment executes through the following scene calls: {string.Join(", ", callStack.Reverse())}. Keep in mind that outcomes may only be assigned once in a given walkthrough",
+            ErrorMessage = $"The outcome '{outcomeName}' might already be assigned once this assignment executes through the following subroutine calls: {string.Join(", ", callStack.Reverse())}. Keep in mind that outcomes may only be assigned once in a given walkthrough",
             Index = index,
         };
     }
@@ -389,7 +389,7 @@ public static class Errors
     {
         return new Error
         {
-            ErrorMessage = $"The outcome '{outcomeName}' might not be assigned once this statement executes through the following scene calls: {string.Join(", ", callStack.Reverse())}. Consider adding a default option",
+            ErrorMessage = $"The outcome '{outcomeName}' might not be assigned once this statement executes through the following subroutine calls: {string.Join(", ", callStack.Reverse())}. Consider adding a default option",
             Index = index,
         };
     }
@@ -398,7 +398,7 @@ public static class Errors
     {
         return new Error
         {
-            ErrorMessage = $"The spectrum '{spectrumName}' might never be strengthened/weakened, so has an undetermined value, when this statement executes through the following scene calls: {string.Join(", ", callStack.Reverse())}. Consider adding a default option",
+            ErrorMessage = $"The spectrum '{spectrumName}' might never be strengthened/weakened, so has an undetermined value, when this statement executes through the following subroutine calls: {string.Join(", ", callStack.Reverse())}. Consider adding a default option",
             Index = index,
         };
     }
@@ -407,7 +407,7 @@ public static class Errors
     {
         return new Error
         {
-            ErrorMessage = $"The outcome '{outcomeName}' cannot be used anymore because it is locked through the following scene calls: {string.Join(", ", callStack.Reverse())}. " +
+            ErrorMessage = $"The outcome '{outcomeName}' cannot be used anymore because it is locked through the following subroutine calls: {string.Join(", ", callStack.Reverse())}. " +
                 $"Outcomes get locked when they are not public and their value might pass a checkpoint threshold. " +
                 $"To fix this problem, consider turning this outcome into a public outcome",
             Index = index,
@@ -418,7 +418,7 @@ public static class Errors
     {
         return new Error
         {
-            ErrorMessage = $"The spectrum '{spectrumName}' cannot be used anymore because it is locked through the following scene calls: {string.Join(", ", callStack.Reverse())}. " +
+            ErrorMessage = $"The spectrum '{spectrumName}' cannot be used anymore because it is locked through the following subroutine calls: {string.Join(", ", callStack.Reverse())}. " +
                 $"Spectrums get locked when they are not public and their value might pass a checkpoint threshold. " +
                 $"To fix this problem, consider turning this spectrum into a public spectrum",
             Index = index,
@@ -588,7 +588,7 @@ public static class Errors
         };
     }
 
-    public static Error CheckpointInNonChapter(string sceneName, long index)
+    public static Error CheckpointInScene(string sceneName, long index)
     {
         return new Error
         {
@@ -597,11 +597,11 @@ public static class Errors
         };
     }
 
-    public static Error NonChapterCallsChapter(string chapterName, long index)
+    public static Error SceneCallsChapter(string chapterName, long index)
     {
         return new Error
         {
-            ErrorMessage = $"Chapter '{chapterName}' is being called in scnee. Chapters can only be called in other chapters",
+            ErrorMessage = $"Chapter '{chapterName}' is being called in a scene. Chapters can only be called in other chapters",
             Index = index,
         };
     }

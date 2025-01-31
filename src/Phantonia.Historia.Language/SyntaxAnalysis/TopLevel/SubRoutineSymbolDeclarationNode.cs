@@ -5,11 +5,15 @@ using System.IO;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 
-public sealed record SceneSymbolDeclarationNode() : SymbolDeclarationNode
+public sealed record SubroutineSymbolDeclarationNode() : SymbolDeclarationNode
 {
-    public required Token SceneOrChapterKeywordToken { get; init; }
+    public required Token DeclaratorToken { get; init; }
 
-    public bool IsChapter => SceneOrChapterKeywordToken.Kind is TokenKind.ChapterKeyword;
+    public SubroutineKind Kind => (SubroutineKind)DeclaratorToken.Kind;
+
+    public bool IsChapter => Kind is SubroutineKind.Chapter;
+
+    public bool IsScene => Kind is SubroutineKind.Scene;
 
     public required StatementBodyNode Body { get; init; }
 
@@ -17,7 +21,7 @@ public sealed record SceneSymbolDeclarationNode() : SymbolDeclarationNode
 
     protected override void ReconstructCore(TextWriter writer)
     {
-        SceneOrChapterKeywordToken.Reconstruct(writer);
+        DeclaratorToken.Reconstruct(writer);
         NameToken.Reconstruct(writer);
         Body.Reconstruct(writer);
     }

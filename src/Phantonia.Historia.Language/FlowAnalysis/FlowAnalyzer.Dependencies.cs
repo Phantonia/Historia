@@ -8,22 +8,22 @@ namespace Phantonia.Historia.Language.FlowAnalysis;
 
 public sealed partial class FlowAnalyzer
 {
-    private (IEnumerable<SceneSymbol>? topologicalOrder, IReadOnlyDictionary<SceneSymbol, int> referenceCounts) PerformDependencyAnalysis(IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs)
+    private (IEnumerable<SubroutineSymbol>? topologicalOrder, IReadOnlyDictionary<SubroutineSymbol, int> referenceCounts) PerformDependencyAnalysis(IReadOnlyDictionary<SubroutineSymbol, FlowGraph> subroutineFlowGraphs)
     {
         Dictionary<long, IReadOnlySet<long>> dependencies = [];
         Dictionary<long, Symbol> symbols = [];
         Dictionary<long, int> referenceCounts = [];
 
-        foreach (SceneSymbol subroutine in sceneFlowGraphs.Keys)
+        foreach (SubroutineSymbol subroutine in subroutineFlowGraphs.Keys)
         {
             referenceCounts[subroutine.Index] = 0;
         }
 
-        foreach ((SceneSymbol scene, FlowGraph flowGraph) in sceneFlowGraphs)
+        foreach ((SubroutineSymbol subroutine, FlowGraph flowGraph) in subroutineFlowGraphs)
         {
             IReadOnlyDictionary<long, int> theseDependenciesAndReferenceCounts = GetDependenciesAndReferenceCounts(flowGraph);
-            dependencies[scene.Index] = (SortedSet<long>)[.. theseDependenciesAndReferenceCounts.Keys];
-            symbols[scene.Index] = scene;
+            dependencies[subroutine.Index] = (SortedSet<long>)[.. theseDependenciesAndReferenceCounts.Keys];
+            symbols[subroutine.Index] = subroutine;
 
             foreach ((long dep, int refCount) in theseDependenciesAndReferenceCounts)
             {
@@ -32,7 +32,7 @@ public sealed partial class FlowAnalyzer
             }
         }
 
-        foreach (SceneSymbol subroutine in sceneFlowGraphs.Keys)
+        foreach (SubroutineSymbol subroutine in subroutineFlowGraphs.Keys)
         {
             if (subroutine.IsChapter && subroutine.Name is not "main" && referenceCounts[subroutine.Index] != 1)
             {
@@ -46,19 +46,19 @@ public sealed partial class FlowAnalyzer
             Symbols = symbols,
         };
 
-        Dictionary<SceneSymbol, int> finalReferenceCounts = referenceCounts.ToDictionary(p => (SceneSymbol)dependencyGraph.Symbols[p.Key], p => p.Value);
+        Dictionary<SubroutineSymbol, int> finalReferenceCounts = referenceCounts.ToDictionary(p => (SubroutineSymbol)dependencyGraph.Symbols[p.Key], p => p.Value);
 
-        // spec 1.2.2 "No scene may ever directly or indirectly depend on itself."
+        // spec 1.2.2 "No subroutine may ever directly or indirectly depend on itself."
         if (dependencyGraph.IsCyclic(out IEnumerable<long>? cycle))
         {
-            ErrorFound?.Invoke(Errors.CyclicSceneDefinition(cycle.Select(i => dependencyGraph.Symbols[i].Name), dependencyGraph.Symbols[cycle.First()].Index));
+            ErrorFound?.Invoke(Errors.CyclicSubroutineDefinition(cycle.Select(i => dependencyGraph.Symbols[i].Name), dependencyGraph.Symbols[cycle.First()].Index));
             return (null, finalReferenceCounts);
         }
 
-        IEnumerable<SceneSymbol> topologicalOrder =
+        IEnumerable<SubroutineSymbol> topologicalOrder =
             dependencyGraph.TopologicalSort()
-                           .Select(i => (SceneSymbol)dependencyGraph.Symbols[i])
-                           .SkipWhile(s => s.Name != "main"); // when we have uncalled scenes they might appear before "main" here. we can just ignore them
+                           .Select(i => (SubroutineSymbol)dependencyGraph.Symbols[i])
+                           .SkipWhile(s => s.Name != "main"); // when we have uncalled subroutines they might appear before "main" here. we can just ignore them
 
         return (topologicalOrder, finalReferenceCounts);
     }
@@ -70,10 +70,10 @@ public sealed partial class FlowAnalyzer
         foreach (FlowVertex vertex in flowGraph.Vertices.Values)
         {
             // skip purely semantic vertices
-            if (vertex.IsStory && vertex.AssociatedStatement is BoundCallStatementNode { Scene: SceneSymbol calledScene })
+            if (vertex.IsStory && vertex.AssociatedStatement is BoundCallStatementNode { Subroutine: SubroutineSymbol calledSubroutine })
             {
-                referenceCounts.TryAdd(calledScene.Index, 0);
-                referenceCounts[calledScene.Index]++;
+                referenceCounts.TryAdd(calledSubroutine.Index, 0);
+                referenceCounts[calledSubroutine.Index]++;
             }
         }
 

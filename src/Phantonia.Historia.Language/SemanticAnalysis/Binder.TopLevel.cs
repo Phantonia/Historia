@@ -23,7 +23,7 @@ public sealed partial class Binder
 
         switch (declaration)
         {
-            case SceneSymbolDeclarationNode sceneDeclaration:
+            case SubroutineSymbolDeclarationNode sceneDeclaration:
                 return BindSceneDeclaration(sceneDeclaration, settings, context);
             case RecordSymbolDeclarationNode recordDeclaration:
                 return BindRecordDeclaration(recordDeclaration, context);
@@ -190,11 +190,11 @@ public sealed partial class Binder
         return (context, boundEnumDeclaration);
     }
 
-    private (BindingContext, BoundSymbolDeclarationNode) BindSceneDeclaration(SceneSymbolDeclarationNode sceneDeclaration, Settings settings, BindingContext context)
+    private (BindingContext, BoundSymbolDeclarationNode) BindSceneDeclaration(SubroutineSymbolDeclarationNode sceneDeclaration, Settings settings, BindingContext context)
     {
-        Debug.Assert(context.SymbolTable.IsDeclared(sceneDeclaration.Name) && context.SymbolTable[sceneDeclaration.Name] is SceneSymbol);
+        Debug.Assert(context.SymbolTable.IsDeclared(sceneDeclaration.Name) && context.SymbolTable[sceneDeclaration.Name] is SubroutineSymbol);
 
-        SceneSymbol sceneSymbol = (SceneSymbol)context.SymbolTable[sceneDeclaration.Name];
+        SubroutineSymbol sceneSymbol = (SubroutineSymbol)context.SymbolTable[sceneDeclaration.Name];
 
         // this will be necessary for nested scenes
         // no such thing yet but let's be prepared

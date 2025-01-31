@@ -11,11 +11,11 @@ namespace Phantonia.Historia.Language.FlowAnalysis;
 
 public sealed partial class FlowAnalyzer
 {
-    private void PerformReachabilityAnalysis(IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs, out ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtCheckpoints)
+    private void PerformReachabilityAnalysis(IReadOnlyDictionary<SubroutineSymbol, FlowGraph> subroutineFlowGraphs, out ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtCheckpoints)
     {
-        SceneSymbol mainScene = (SceneSymbol)symbolTable["main"];
+        SubroutineSymbol mainSubroutine = (SubroutineSymbol)symbolTable["main"];
         VertexData defaultVertexData = GetDefaultData();
-        VertexData finalVertexData = ProcessScene(sceneFlowGraphs[mainScene], defaultVertexData, sceneFlowGraphs, [mainScene]);
+        VertexData finalVertexData = ProcessSubroutine(subroutineFlowGraphs[mainSubroutine], defaultVertexData, subroutineFlowGraphs, [mainSubroutine]);
         definitelyAssignedOutcomesAtCheckpoints = finalVertexData.DefinitelyAssignedOutcomesAtCheckpoints;
     }
 
@@ -52,13 +52,13 @@ public sealed partial class FlowAnalyzer
         };
     }
 
-    private VertexData ProcessScene(FlowGraph sceneFlowGraph,
+    private VertexData ProcessSubroutine(FlowGraph subroutineFlowGraph,
                                     VertexData defaultVertexData,
-                                    IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs,
-                                    ImmutableStack<SceneSymbol> callStack)
+                                    IReadOnlyDictionary<SubroutineSymbol, FlowGraph> subroutineFlowGraphs,
+                                    ImmutableStack<SubroutineSymbol> callStack)
     {
-        FlowGraph reversedFlowGraph = sceneFlowGraph.Reverse();
-        IEnumerable<long> order = sceneFlowGraph.TopologicalSort();
+        FlowGraph reversedFlowGraph = subroutineFlowGraph.Reverse();
+        IEnumerable<long> order = subroutineFlowGraph.TopologicalSort();
 
         if (!order.Any())
         {
@@ -68,29 +68,29 @@ public sealed partial class FlowAnalyzer
         Dictionary<long, VertexData> data = [];
 
         long firstVertex = order.First();
-        data[firstVertex] = ProcessVertex(sceneFlowGraph, firstVertex, previousData: [defaultVertexData], defaultVertexData, sceneFlowGraphs, callStack);
+        data[firstVertex] = ProcessVertex(subroutineFlowGraph, firstVertex, previousData: [defaultVertexData], defaultVertexData, subroutineFlowGraphs, callStack);
 
         foreach (long vertex in order.Skip(1))
         {
             IEnumerable<VertexData> previousData = reversedFlowGraph.OutgoingEdges[vertex]
                                                                     .Where(e => e.IsSemantic)
                                                                     .Select(e => data[e.ToVertex]);
-            data[vertex] = ProcessVertex(sceneFlowGraph, vertex, previousData, defaultVertexData, sceneFlowGraphs, callStack);
+            data[vertex] = ProcessVertex(subroutineFlowGraph, vertex, previousData, defaultVertexData, subroutineFlowGraphs, callStack);
         }
 
         IEnumerable<VertexData> finalVertexData =
-            data.Where(p => sceneFlowGraph.OutgoingEdges[p.Key].Contains(FlowGraph.FinalEdge))
+            data.Where(p => subroutineFlowGraph.OutgoingEdges[p.Key].Contains(FlowGraph.FinalEdge))
                 .Select(p => p.Value);
 
-        return ProcessVertex(sceneFlowGraph, FlowGraph.FinalVertex, finalVertexData, defaultVertexData, sceneFlowGraphs, callStack);
+        return ProcessVertex(subroutineFlowGraph, FlowGraph.FinalVertex, finalVertexData, defaultVertexData, subroutineFlowGraphs, callStack);
     }
 
     private VertexData ProcessVertex(FlowGraph flowGraph,
                                      long vertex,
                                      IEnumerable<VertexData> previousData,
                                      VertexData defaultVertexData,
-                                     IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs,
-                                     ImmutableStack<SceneSymbol> callStack)
+                                     IReadOnlyDictionary<SubroutineSymbol, FlowGraph> subroutineFlowGraphs,
+                                     ImmutableStack<SubroutineSymbol> callStack)
     {
         VertexData thisVertexData = defaultVertexData;
 
@@ -119,13 +119,13 @@ public sealed partial class FlowAnalyzer
             thisVertexData = PerformLocking(vertex, thisVertexData);
         }
 
-        if (statement is BoundCallStatementNode { Scene: SceneSymbol calledScene })
+        if (statement is BoundCallStatementNode { Subroutine: SubroutineSymbol calledSubroutine })
         {
-            // this processes a scene as often as it is called
+            // this processes a subroutine as often as it is called
             // we just assume that is not a lot
             // it is necessary to process it as 'thisVertexData' might differ a lot for different callsites
             // we might optimize this to process local outcomes only once and only process global outcomes multiple times
-            return ProcessScene(sceneFlowGraphs[calledScene], thisVertexData, sceneFlowGraphs, callStack.Push(calledScene));
+            return ProcessSubroutine(subroutineFlowGraphs[calledSubroutine], thisVertexData, subroutineFlowGraphs, callStack.Push(calledSubroutine));
         }
 
         return thisVertexData;
@@ -135,7 +135,7 @@ public sealed partial class FlowAnalyzer
         FlowGraph flowGraph,
         long vertex,
         IEnumerable<VertexData> previousData,
-        ImmutableStack<SceneSymbol> callStack,
+        ImmutableStack<SubroutineSymbol> callStack,
         VertexData thisVertexData,
         StatementNode? statement,
         OutcomeSymbol outcome)

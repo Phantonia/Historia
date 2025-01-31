@@ -11,38 +11,38 @@ namespace Phantonia.Historia.Language.FlowAnalysis;
 
 public sealed partial class FlowAnalyzer
 {
-    private (FlowGraph, SymbolTable) MergeFlowGraphs(IEnumerable<SceneSymbol> topologicalOrder, IReadOnlyDictionary<SceneSymbol, FlowGraph> sceneFlowGraphs, IReadOnlyDictionary<SceneSymbol, int> referenceCounts)
+    private (FlowGraph, SymbolTable) MergeFlowGraphs(IEnumerable<SubroutineSymbol> topologicalOrder, IReadOnlyDictionary<SubroutineSymbol, FlowGraph> subroutineFlowGraphs, IReadOnlyDictionary<SubroutineSymbol, int> referenceCounts)
     {
         Debug.Assert(topologicalOrder.First().Name == "main");
 
-        FlowGraph mainFlowGraph = sceneFlowGraphs[topologicalOrder.First()];
+        FlowGraph mainFlowGraph = subroutineFlowGraphs[topologicalOrder.First()];
 
-        foreach (SceneSymbol scene in topologicalOrder.Skip(1))
+        foreach (SubroutineSymbol subroutine in topologicalOrder.Skip(1))
         {
-            if (!referenceCounts.TryGetValue(scene, out int refCount) || refCount == 0)
+            if (!referenceCounts.TryGetValue(subroutine, out int refCount) || refCount == 0)
             {
                 continue;
             }
 
             if (refCount == 1)
             {
-                mainFlowGraph = EmbedSingleReferenceScene(mainFlowGraph, sceneFlowGraphs[scene], scene);
+                mainFlowGraph = EmbedSingleReferenceSubroutine(mainFlowGraph, subroutineFlowGraphs[subroutine], subroutine);
             }
             else
             {
                 CallerTrackerSymbol tracker = new()
                 {
-                    CalledScene = scene,
-                    Name = $"${scene.Name}", // unspeakable name
+                    CalledSubroutine = subroutine,
+                    Name = $"${subroutine.Name}", // unspeakable name
                     CallSiteCount = refCount,
                     // the indices are the literal character indices in the source code
-                    // and since a scene declaration is at least scene A{}, one more than its index is not taken
-                    Index = scene.Index + 1,
+                    // and since a subroutine declaration is at least scene A{} or chapter A{}, one more than its index is not taken
+                    Index = subroutine.Index + 1,
                 };
 
                 symbolTable = symbolTable.Declare(tracker);
 
-                mainFlowGraph = EmbedMultiReferenceScene(mainFlowGraph, sceneFlowGraphs[scene], scene, tracker);
+                mainFlowGraph = EmbedMultiReferenceSubroutine(mainFlowGraph, subroutineFlowGraphs[subroutine], subroutine, tracker);
             }
         }
 
@@ -51,15 +51,15 @@ public sealed partial class FlowAnalyzer
         return (mainFlowGraph, symbolTable);
     }
 
-    private static FlowGraph EmbedSingleReferenceScene(FlowGraph mainFlowGraph, FlowGraph sceneFlowGraph, SceneSymbol scene)
+    private static FlowGraph EmbedSingleReferenceSubroutine(FlowGraph mainFlowGraph, FlowGraph subroutineFlowGraph, SubroutineSymbol subroutine)
     {
-        // 1. add all scene vertices
-        foreach (long vertex in sceneFlowGraph.Vertices.Keys)
+        // 1. add all subroutine vertices
+        foreach (long vertex in subroutineFlowGraph.Vertices.Keys)
         {
             mainFlowGraph = mainFlowGraph with
             {
-                Vertices = mainFlowGraph.Vertices.Add(vertex, sceneFlowGraph.Vertices[vertex]),
-                OutgoingEdges = mainFlowGraph.OutgoingEdges.Add(vertex, sceneFlowGraph.OutgoingEdges[vertex]),
+                Vertices = mainFlowGraph.Vertices.Add(vertex, subroutineFlowGraph.Vertices[vertex]),
+                OutgoingEdges = mainFlowGraph.OutgoingEdges.Add(vertex, subroutineFlowGraph.OutgoingEdges[vertex]),
             };
         }
 
@@ -69,7 +69,7 @@ public sealed partial class FlowAnalyzer
 
         foreach (FlowVertex vertex in mainFlowGraph.Vertices.Values)
         {
-            if (!vertex.IsStory || (vertex.AssociatedStatement is not BoundCallStatementNode { Scene: SceneSymbol calledScene } || calledScene != scene))
+            if (!vertex.IsStory || (vertex.AssociatedStatement is not BoundCallStatementNode { Subroutine: SubroutineSymbol calledSubroutine } || calledSubroutine != subroutine))
             {
                 continue;
             }
@@ -84,12 +84,12 @@ public sealed partial class FlowAnalyzer
         Debug.Assert(callVertex != int.MinValue);
         Debug.Assert(nextVertex != int.MinValue);
 
-        // 3. for all vertices V s.t. (V -> callVertex) instead let (V -> sceneFlowGraph.StartVertex)
+        // 3. for all vertices V s.t. (V -> callVertex) instead let (V -> subroutineFlowGraph.StartVertex)
         if (mainFlowGraph.StartEdges.Any(e => e.ToVertex == callVertex))
         {
             List<FlowEdge> newStartEdges = [.. mainFlowGraph.StartEdges];
             newStartEdges.RemoveAll(e => e.ToVertex == callVertex);
-            newStartEdges.AddRange(sceneFlowGraph.StartEdges);
+            newStartEdges.AddRange(subroutineFlowGraph.StartEdges);
 
             mainFlowGraph = mainFlowGraph with
             {
@@ -108,7 +108,7 @@ public sealed partial class FlowAnalyzer
                             vertex.Index,
                             mainFlowGraph.OutgoingEdges[vertex.Index]
                                          .Remove(FlowEdge.CreateStrongTo(callVertex)) // there are no weak edges to call vertices (only weak edges back to loop switches)
-                                         .AddRange(sceneFlowGraph.StartEdges)),
+                                         .AddRange(subroutineFlowGraph.StartEdges)),
                 };
 
                 if (mainFlowGraph.Vertices[vertex.Index].AssociatedStatement is FlowBranchingStatementNode branchingStatement)
@@ -125,11 +125,11 @@ public sealed partial class FlowAnalyzer
                     }
 
                     Debug.Assert(edgeIndex >= 0);
-                    Debug.Assert(sceneFlowGraph.IsConformable);
+                    Debug.Assert(subroutineFlowGraph.IsConformable);
 
                     branchingStatement = branchingStatement with
                     {
-                        OutgoingEdges = branchingStatement.OutgoingEdges.SetItem(edgeIndex, sceneFlowGraph.StartEdges.Single(e => e.IsStory)),
+                        OutgoingEdges = branchingStatement.OutgoingEdges.SetItem(edgeIndex, subroutineFlowGraph.StartEdges.Single(e => e.IsStory)),
                     };
 
                     mainFlowGraph = mainFlowGraph.SetVertex(vertex.Index, mainFlowGraph.Vertices[vertex.Index] with
@@ -140,10 +140,10 @@ public sealed partial class FlowAnalyzer
             }
         }
 
-        // 4. for all vertices V s.t. V is in sceneFlowGraph and V points to the empty vertex, remove edge to empty vertex and instead let (V -> N)
-        foreach (FlowVertex vertex in sceneFlowGraph.Vertices.Values)
+        // 4. for all vertices V s.t. V is in subroutineFlowGraph and V points to the empty vertex, remove edge to empty vertex and instead let (V -> N)
+        foreach (FlowVertex vertex in subroutineFlowGraph.Vertices.Values)
         {
-            if (sceneFlowGraph.OutgoingEdges[vertex.Index].Contains(FlowGraph.FinalEdge))
+            if (subroutineFlowGraph.OutgoingEdges[vertex.Index].Contains(FlowGraph.FinalEdge))
             {
                 mainFlowGraph = mainFlowGraph with
                 {
@@ -179,15 +179,15 @@ public sealed partial class FlowAnalyzer
         return mainFlowGraph;
     }
 
-    private static FlowGraph EmbedMultiReferenceScene(FlowGraph mainFlowGraph, FlowGraph sceneFlowGraph, SceneSymbol scene, CallerTrackerSymbol tracker)
+    private static FlowGraph EmbedMultiReferenceSubroutine(FlowGraph mainFlowGraph, FlowGraph subroutineFlowGraph, SubroutineSymbol subroutine, CallerTrackerSymbol tracker)
     {
-        // 1. add all scene vertices
-        foreach (long vertex in sceneFlowGraph.Vertices.Keys)
+        // 1. add all subroutine vertices
+        foreach (long vertex in subroutineFlowGraph.Vertices.Keys)
         {
             mainFlowGraph = mainFlowGraph with
             {
-                Vertices = mainFlowGraph.Vertices.Add(vertex, sceneFlowGraph.Vertices[vertex]),
-                OutgoingEdges = mainFlowGraph.OutgoingEdges.Add(vertex, sceneFlowGraph.OutgoingEdges[vertex]),
+                Vertices = mainFlowGraph.Vertices.Add(vertex, subroutineFlowGraph.Vertices[vertex]),
+                OutgoingEdges = mainFlowGraph.OutgoingEdges.Add(vertex, subroutineFlowGraph.OutgoingEdges[vertex]),
             };
         }
 
@@ -197,7 +197,7 @@ public sealed partial class FlowAnalyzer
 
         foreach (FlowVertex vertex in mainFlowGraph.Vertices.Values)
         {
-            if (vertex.AssociatedStatement is not BoundCallStatementNode { Scene: SceneSymbol calledScene } || calledScene != scene)
+            if (vertex.AssociatedStatement is not BoundCallStatementNode { Subroutine: SubroutineSymbol calledSubroutine } || calledSubroutine != subroutine)
             {
                 continue;
             }
@@ -224,7 +224,7 @@ public sealed partial class FlowAnalyzer
                 Vertices = mainFlowGraph.Vertices.SetItem(vertex.Index, trackerVertex),
                 OutgoingEdges = mainFlowGraph.OutgoingEdges.SetItem(
                     vertex.Index,
-                    [.. sceneFlowGraph.StartEdges]),
+                    [.. subroutineFlowGraph.StartEdges]),
             };
 
             // flow branching statements are fine because they used to point to the call statement
@@ -236,7 +236,7 @@ public sealed partial class FlowAnalyzer
         CallerResolutionStatementNode resolution = new()
         {
             Tracker = tracker,
-            Index = scene.Index + 2,
+            Index = subroutine.Index + 2,
             PrecedingTokens = [],
         };
 
@@ -260,10 +260,10 @@ public sealed partial class FlowAnalyzer
             OutgoingEdges = mainFlowGraph.OutgoingEdges.Add(resolutionVertex.Index, edgesBuilder.ToImmutable()),
         };
 
-        // 4. for all vertices V s.t. V is in scene flow graph and V -> empty vertex, make V instead point to resolutionVertex
-        foreach (FlowVertex vertex in sceneFlowGraph.Vertices.Values)
+        // 4. for all vertices V s.t. V is in subroutine flow graph and V -> empty vertex, make V instead point to resolutionVertex
+        foreach (FlowVertex vertex in subroutineFlowGraph.Vertices.Values)
         {
-            if (sceneFlowGraph.OutgoingEdges[vertex.Index].Contains(FlowGraph.FinalEdge))
+            if (subroutineFlowGraph.OutgoingEdges[vertex.Index].Contains(FlowGraph.FinalEdge))
             {
                 mainFlowGraph = mainFlowGraph with
                 {

@@ -20,25 +20,25 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
 
     public FlowAnalysisResult PerformFlowAnalysis()
     {
-        Dictionary<SceneSymbol, FlowGraph> sceneFlowGraphs = [];
+        Dictionary<SubroutineSymbol, FlowGraph> subroutineFlowGraphs = [];
 
         foreach (TopLevelNode symbolDeclaration in story.TopLevelNodes)
         {
             if (symbolDeclaration is BoundSymbolDeclarationNode
                 {
-                    Original: SceneSymbolDeclarationNode
+                    Original: SubroutineSymbolDeclarationNode
                     {
                         Body: StatementBodyNode body,
                     },
-                    Symbol: SceneSymbol scene,
+                    Symbol: SubroutineSymbol subroutine,
                 })
             {
-                FlowGraph sceneFlowGraph = GenerateBodyFlowGraph(body);
-                sceneFlowGraphs[scene] = sceneFlowGraph;
+                FlowGraph subroutineFlowGraph = GenerateBodyFlowGraph(body);
+                subroutineFlowGraphs[subroutine] = subroutineFlowGraph;
             }
         }
 
-        (IEnumerable<SceneSymbol>? topologicalOrder, IReadOnlyDictionary<SceneSymbol, int> referenceCounts) = PerformDependencyAnalysis(sceneFlowGraphs);
+        (IEnumerable<SubroutineSymbol>? topologicalOrder, IReadOnlyDictionary<SubroutineSymbol, int> referenceCounts) = PerformDependencyAnalysis(subroutineFlowGraphs);
 
         if (topologicalOrder is null)
         {
@@ -50,9 +50,9 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             };
         }
 
-        PerformReachabilityAnalysis(sceneFlowGraphs, out ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtCheckpoints);
+        PerformReachabilityAnalysis(subroutineFlowGraphs, out ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtCheckpoints);
 
-        (FlowGraph mainFlowGraph, SymbolTable updatedSymbolTable) = MergeFlowGraphs(topologicalOrder, sceneFlowGraphs, referenceCounts);
+        (FlowGraph mainFlowGraph, SymbolTable updatedSymbolTable) = MergeFlowGraphs(topologicalOrder, subroutineFlowGraphs, referenceCounts);
 
         return new FlowAnalysisResult
         {

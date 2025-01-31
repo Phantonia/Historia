@@ -47,13 +47,9 @@ public sealed class BinderTests
         {
             errorCount++;
 
-            const string ErrorMessage = """
-                                        Error: A story needs a main scene
-                                        setting OutputType: String;
-                                        ^
-                                        """;
+            Error expectedError = Errors.NoMainSubroutine();
 
-            Assert.AreEqual(ErrorMessage, Errors.GenerateFullMessage(code, e));
+            Assert.AreEqual(expectedError, e);
         };
 
         _ = binder.Bind();
@@ -467,9 +463,9 @@ public sealed class BinderTests
             BoundSymbolDeclarationNode? mainSceneDeclaration = result.BoundStory.TopLevelNodes[2] as BoundSymbolDeclarationNode;
             Assert.IsNotNull(mainSceneDeclaration);
 
-            Assert.IsTrue(mainSceneDeclaration.Symbol is SceneSymbol { Name: "main" });
+            Assert.IsTrue(mainSceneDeclaration.Symbol is SubroutineSymbol { Name: "main" });
 
-            SceneSymbolDeclarationNode? sceneDeclaration = mainSceneDeclaration.Original as SceneSymbolDeclarationNode;
+            SubroutineSymbolDeclarationNode? sceneDeclaration = mainSceneDeclaration.Original as SubroutineSymbolDeclarationNode;
             Assert.IsNotNull(sceneDeclaration);
 
             Assert.AreEqual(3, sceneDeclaration.Body.Statements.Length);
@@ -603,7 +599,7 @@ public sealed class BinderTests
 
         StoryNode boundStory = binder.Bind().BoundStory!;
 
-        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)((BoundSymbolDeclarationNode)boundStory.TopLevelNodes[0]).Original;
+        SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)((BoundSymbolDeclarationNode)boundStory.TopLevelNodes[0]).Original;
         BoundBranchOnStatementNode branchOnStatement = (BoundBranchOnStatementNode)mainScene.Body.Statements[2];
 
         Assert.AreEqual("MySwitch", branchOnStatement.OutcomeName);
@@ -760,7 +756,7 @@ public sealed class BinderTests
 
         StoryNode boundStory = binder.Bind().BoundStory!;
 
-        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)((BoundSymbolDeclarationNode)boundStory.TopLevelNodes[0]).Original;
+        SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)((BoundSymbolDeclarationNode)boundStory.TopLevelNodes[0]).Original;
 
         BoundOutcomeDeclarationStatementNode? boundOutcomeDeclaration = mainScene.Body.Statements[0] as BoundOutcomeDeclarationStatementNode;
         Assert.IsNotNull(boundOutcomeDeclaration);
@@ -875,7 +871,7 @@ public sealed class BinderTests
         });
 
         BoundSymbolDeclarationNode? mainScene = boundStory.TopLevelNodes[2] as BoundSymbolDeclarationNode;
-        SceneSymbolDeclarationNode? scene = mainScene?.Original as SceneSymbolDeclarationNode;
+        SubroutineSymbolDeclarationNode? scene = mainScene?.Original as SubroutineSymbolDeclarationNode;
         Assert.IsNotNull(scene);
 
         Assert.AreEqual(2, scene.Body.Statements.Length);
@@ -1060,7 +1056,7 @@ public sealed class BinderTests
 
         BindingResult result = binder.Bind();
 
-        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)((BoundSymbolDeclarationNode)result.BoundStory!.TopLevelNodes[0]).Original;
+        SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)((BoundSymbolDeclarationNode)result.BoundStory!.TopLevelNodes[0]).Original;
 
         BoundSpectrumDeclarationStatementNode relationshipDeclaration = (BoundSpectrumDeclarationStatementNode)mainScene.Body.Statements[0];
 
@@ -1136,7 +1132,7 @@ public sealed class BinderTests
 
         StoryNode boundStory = result.BoundStory!;
 
-        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)((BoundSymbolDeclarationNode)result.BoundStory!.TopLevelNodes[0]).Original;
+        SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)((BoundSymbolDeclarationNode)result.BoundStory!.TopLevelNodes[0]).Original;
 
         BoundSpectrumDeclarationStatementNode? boundSpectrumDeclaration = mainScene.Body.Statements[0] as BoundSpectrumDeclarationStatementNode;
         Assert.IsNotNull(boundSpectrumDeclaration);
@@ -1223,7 +1219,7 @@ public sealed class BinderTests
 
             Assert.IsTrue(table.IsDeclared(name));
 
-            SceneSymbol? scene = table[name] as SceneSymbol;
+            SubroutineSymbol? scene = table[name] as SubroutineSymbol;
             Assert.IsNotNull(scene);
 
             Assert.AreEqual(name, scene.Name);
@@ -1233,7 +1229,7 @@ public sealed class BinderTests
 
             Assert.AreEqual(scene, boundScene.Symbol);
 
-            SceneSymbolDeclarationNode? sceneDeclaration = boundScene.Original as SceneSymbolDeclarationNode;
+            SubroutineSymbolDeclarationNode? sceneDeclaration = boundScene.Original as SubroutineSymbolDeclarationNode;
             Assert.IsNotNull(sceneDeclaration);
         }
     }
@@ -1257,13 +1253,13 @@ public sealed class BinderTests
         BindingResult result = binder.Bind();
         Assert.IsTrue(result.IsValid);
 
-        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)((BoundSymbolDeclarationNode)result.BoundStory.TopLevelNodes[0]).Original;
+        SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)((BoundSymbolDeclarationNode)result.BoundStory.TopLevelNodes[0]).Original;
 
         Assert.AreEqual(1, mainScene.Body.Statements.Length);
         Assert.IsTrue(mainScene.Body.Statements[0] is BoundCallStatementNode
         {
-            Scene.Name: "A",
-            SceneName: "A",
+            Subroutine.Name: "A",
+            SubroutineName: "A",
         });
     }
 
@@ -1658,7 +1654,7 @@ public sealed class BinderTests
         Assert.AreEqual(characterType, boundEnumDeclaration.Symbol);
 
         BoundSymbolDeclarationNode boundMainScene = (BoundSymbolDeclarationNode)result.BoundStory.TopLevelNodes[^1];
-        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)boundMainScene.Original;
+        SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)boundMainScene.Original;
 
         for (int i = 0; i < 3; i++)
         {
@@ -1786,7 +1782,7 @@ public sealed class BinderTests
         InterfaceSymbol? intface = result.SymbolTable["ICharacter"] as InterfaceSymbol;
         Assert.IsNotNull(intface);
 
-        SceneSymbolDeclarationNode? mainScene = (result.BoundStory.TopLevelNodes[4] as BoundSymbolDeclarationNode)?.Original as SceneSymbolDeclarationNode;
+        SubroutineSymbolDeclarationNode? mainScene = (result.BoundStory.TopLevelNodes[4] as BoundSymbolDeclarationNode)?.Original as SubroutineSymbolDeclarationNode;
         Assert.IsNotNull(mainScene);
 
         BoundRunStatementNode? runStatement = mainScene.Body.Statements[0] as BoundRunStatementNode;
@@ -1915,7 +1911,7 @@ public sealed class BinderTests
         TypeSymbol booleanType = (TypeSymbol)result.SymbolTable!["Boolean"];
         OutcomeSymbol xOutcome = (OutcomeSymbol)result.SymbolTable["X"];
 
-        SceneSymbolDeclarationNode mainScene = (SceneSymbolDeclarationNode)((BoundSymbolDeclarationNode)result.BoundStory!.TopLevelNodes[1]).Original;
+        SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)((BoundSymbolDeclarationNode)result.BoundStory!.TopLevelNodes[1]).Original;
 
         IfStatementNode ifStatement = (IfStatementNode)mainScene.Body.Statements[1];
 
@@ -2090,7 +2086,7 @@ public sealed class BinderTests
 
         Assert.IsTrue(errors.Count > 0);
 
-        HashSet<Error> expectedErrors = [Errors.ChapterCalledInLoopSwitch("C", code.IndexOf("call C")), Errors.NonChapterCallsChapter("B", code.IndexOf("call B"))];
+        HashSet<Error> expectedErrors = [Errors.ChapterCalledInLoopSwitch("C", code.IndexOf("call C")), Errors.SceneCallsChapter("B", code.IndexOf("call B"))];
 
         Assert.IsTrue(expectedErrors.SetEquals(errors));
     }
