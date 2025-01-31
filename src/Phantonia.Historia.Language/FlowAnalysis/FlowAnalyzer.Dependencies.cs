@@ -14,6 +14,11 @@ public sealed partial class FlowAnalyzer
         Dictionary<long, Symbol> symbols = [];
         Dictionary<long, int> referenceCounts = [];
 
+        foreach (SceneSymbol subroutine in sceneFlowGraphs.Keys)
+        {
+            referenceCounts[subroutine.Index] = 0;
+        }
+
         foreach ((SceneSymbol scene, FlowGraph flowGraph) in sceneFlowGraphs)
         {
             IReadOnlyDictionary<long, int> theseDependenciesAndReferenceCounts = GetDependenciesAndReferenceCounts(flowGraph);
@@ -24,6 +29,14 @@ public sealed partial class FlowAnalyzer
             {
                 referenceCounts.TryAdd(dep, 0);
                 referenceCounts[dep] += refCount;
+            }
+        }
+
+        foreach (SceneSymbol subroutine in sceneFlowGraphs.Keys)
+        {
+            if (subroutine.IsChapter && subroutine.Name is not "main" && referenceCounts[subroutine.Index] != 1)
+            {
+                ErrorFound?.Invoke(Errors.ChapterMustBeCalledExactlyOnce(subroutine.Name, referenceCounts[subroutine.Index], subroutine.Index));
             }
         }
 

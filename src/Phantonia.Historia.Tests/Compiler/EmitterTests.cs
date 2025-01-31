@@ -1928,33 +1928,4 @@ public sealed class EmitterTests
         _ = stateMachine.TryContinue();
         Assert.AreEqual("Line(Character = Alice, Text = Hello World)", stateMachine.Output?.ToString());
     }
-
-    [TestMethod]
-    public void TestCheckpointInLoopSwitch()
-    {
-        string code =
-            """
-            chapter main
-            {
-                call A;
-                output 0;
-                call A;
-            }
-
-            scene A
-            {
-                checkpoint output 1;
-            }
-            """;
-
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
-
-        Assert.IsTrue(result.IsValid);
-        Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
-
-        IStoryStateMachine stateMachine = DynamicCompiler.CompileToStory(resultCode, "HistoriaStoryStateMachine");
-    }
 }

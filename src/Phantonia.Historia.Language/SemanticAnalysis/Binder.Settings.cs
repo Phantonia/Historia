@@ -59,14 +59,19 @@ public sealed partial class Binder
 
     private (SymbolTable, SettingDirectiveNode) BindSingleSettingDirective(SettingDirectiveNode directive, SymbolTable table)
     {
+        BindingContext context = new()
+        {
+            SymbolTable = table,
+        };
+
         switch (directive)
         {
             case TypeSettingDirectiveNode typeSetting:
-                (table, TypeNode boundType) = BindType(typeSetting.Type, table);
-                return (table, typeSetting with { Type = boundType });
+                (context, TypeNode boundType) = BindType(typeSetting.Type, context);
+                return (context.SymbolTable, typeSetting with { Type = boundType });
             case ExpressionSettingDirectiveNode expressionSetting:
-                (table, ExpressionNode boundExpression) = BindAndTypeExpression(expressionSetting.Expression, table);
-                return (table, expressionSetting with { Expression = boundExpression });
+                (context, ExpressionNode boundExpression) = BindAndTypeExpression(expressionSetting.Expression, context);
+                return (context.SymbolTable, expressionSetting with { Expression = boundExpression });
             default:
                 Debug.Assert(false);
                 return default;

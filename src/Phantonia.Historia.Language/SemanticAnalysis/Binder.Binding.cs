@@ -13,6 +13,11 @@ public sealed partial class Binder
 {
     private (SymbolTable, StoryNode) BindTree(StoryNode halfboundStory, Settings settings, SymbolTable table)
     {
+        BindingContext context = new()
+        {
+            SymbolTable = table,
+        };
+
         List<TopLevelNode> topLevelNodes = [.. halfboundStory.TopLevelNodes];
 
         for (int i = 0; i < topLevelNodes.Count; i++)
@@ -25,32 +30,32 @@ public sealed partial class Binder
                 continue;
             }
 
-            (table, TopLevelNode boundDeclaration) = BindTopLevelNode(topLevelNode, settings, table);
+            (context, TopLevelNode boundDeclaration) = BindTopLevelNode(topLevelNode, settings, context);
             topLevelNodes[i] = boundDeclaration;
         }
 
         StoryNode boundStory = halfboundStory with { TopLevelNodes = [.. topLevelNodes] };
-        return (table, boundStory);
+        return (context.SymbolTable, boundStory);
     }
 
-    private (SymbolTable, TypeNode) BindType(TypeNode type, SymbolTable table)
+    private (BindingContext, TypeNode) BindType(TypeNode type, BindingContext context)
     {
         switch (type)
         {
             case IdentifierTypeNode identifierType:
                 {
-                    if (!table.IsDeclared(identifierType.Identifier))
+                    if (!context.SymbolTable.IsDeclared(identifierType.Identifier))
                     {
                         ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(identifierType.Identifier, identifierType.Index));
-                        return (table, type);
+                        return (context, type);
                     }
 
-                    Symbol symbol = table[identifierType.Identifier];
+                    Symbol symbol = context.SymbolTable[identifierType.Identifier];
 
                     if (symbol is not TypeSymbol typeSymbol)
                     {
                         ErrorFound?.Invoke(Errors.NonTypeSymbolUsedAsType(identifierType.Identifier, identifierType.Index));
-                        return (table, type);
+                        return (context, type);
                     }
 
                     BoundTypeNode boundType = new()
@@ -60,7 +65,8 @@ public sealed partial class Binder
                         Index = type.Index,
                         PrecedingTokens = [],
                     };
-                    return (table, boundType);
+
+                    return (context, boundType);
                 }
             default:
                 Debug.Assert(false);
@@ -68,11 +74,11 @@ public sealed partial class Binder
         }
     }
 
-    private (SymbolTable, OutcomeSymbol?) BindOutcomeDeclaration(IOutcomeDeclarationNode outcomeDeclaration, SymbolTable table)
+    private (BindingContext, OutcomeSymbol?) BindOutcomeDeclaration(IOutcomeDeclarationNode outcomeDeclaration, BindingContext context)
     {
         bool error = false;
 
-        if (table.IsDeclared(outcomeDeclaration.Name))
+        if (context.SymbolTable.IsDeclared(outcomeDeclaration.Name))
         {
             ErrorFound?.Invoke(Errors.DuplicatedSymbolName(outcomeDeclaration.Name, outcomeDeclaration.Index));
             error = true;
@@ -88,19 +94,22 @@ public sealed partial class Binder
 
         if (symbol is null || error)
         {
-            return (table, null);
+            return (context, null);
         }
 
-        table = table.Declare(symbol);
+        context = context with
+        {
+            SymbolTable = context.SymbolTable.Declare(symbol),
+        };
 
-        return (table, symbol);
+        return (context, symbol);
     }
 
-    private (SymbolTable, SpectrumSymbol?) BindSpectrumDeclaration(ISpectrumDeclarationNode spectrumDeclaration, SymbolTable table)
+    private (BindingContext, SpectrumSymbol?) BindSpectrumDeclaration(ISpectrumDeclarationNode spectrumDeclaration, BindingContext context)
     {
         bool error = false;
 
-        if (table.IsDeclared(spectrumDeclaration.Name))
+        if (context.SymbolTable.IsDeclared(spectrumDeclaration.Name))
         {
             ErrorFound?.Invoke(Errors.DuplicatedSymbolName(spectrumDeclaration.Name, spectrumDeclaration.Index));
             error = true;
@@ -110,15 +119,18 @@ public sealed partial class Binder
 
         if (symbol is null || error)
         {
-            return (table, null);
+            return (context, null);
         }
 
-        table = table.Declare(symbol);
+        context = context with
+        {
+            SymbolTable = context.SymbolTable.Declare(symbol),
+        };
 
-        return (table, symbol);
+        return (context, symbol);
     }
 
-    private (SymbolTable, List<ArgumentNode>) BindArgumentList(IArgumentContainerNode argumentContainer, SymbolTable table, IReadOnlyList<PropertySymbol> properties, string parameterOrProperty)
+    private (BindingContext, List<ArgumentNode>) BindArgumentList(IArgumentContainerNode argumentContainer, BindingContext context, IReadOnlyList<PropertySymbol> properties, string parameterOrProperty)
     {
         List<ArgumentNode> boundArguments = [.. argumentContainer.Arguments];
 
@@ -133,7 +145,7 @@ public sealed partial class Binder
 
             TypeSymbol propertyType = properties[i].Type;
 
-            (table, ExpressionNode maybeTypedExpression) = BindAndTypeExpression(argumentContainer.Arguments[i].Expression, table);
+            (context, ExpressionNode maybeTypedExpression) = BindAndTypeExpression(argumentContainer.Arguments[i].Expression, context);
 
             if (maybeTypedExpression is not TypedExpressionNode typedExpression)
             {
@@ -162,6 +174,6 @@ public sealed partial class Binder
             boundArguments[i] = boundArgument;
         }
 
-        return (table, boundArguments);
+        return (context, boundArguments);
     }
 }

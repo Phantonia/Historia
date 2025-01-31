@@ -2041,4 +2041,57 @@ public sealed class BinderTests
         Error expectedError = Errors.RecordDoesNotExist("X", code.IndexOf('X'));
         Assert.AreEqual(errors[0], expectedError);
     }
+
+    [TestMethod]
+    public void TestChaptersCalledInLoopSwitchAndScene()
+    {
+        string code =
+            """
+            chapter main
+            {
+                call A;
+                
+                loop switch 0
+                {
+                    option 1
+                    {
+                        call C; // error: chapter called in loop switch
+                    }
+
+                    option 2
+                    {
+                        output 3;
+                    }
+                }
+            }
+
+            scene A
+            {
+                call B; // error: scene calls chapter
+            }
+
+            chapter B
+            {
+                output 100;
+            }
+
+            chapter C
+            {
+                output 200;
+            }
+            """;
+
+        Binder binder = PrepareBinder(code);
+
+        List<Error> errors = [];
+        binder.ErrorFound += errors.Add;
+
+        _ = binder.Bind();
+
+        Assert.IsTrue(errors.Count > 0);
+
+        HashSet<Error> expectedErrors = [Errors.ChapterCalledInLoopSwitch("C", code.IndexOf("call C")), Errors.NonChapterCallsChapter("B", code.IndexOf("call B"))];
+
+        Assert.IsTrue(expectedErrors.SetEquals(errors));
+    }
 }

@@ -78,8 +78,6 @@ public sealed partial class Binder
         // 6. bind whole tree
         (table, StoryNode boundStory) = BindTree(halfboundStory, settings, table);
 
-        EnforceChapterAndCheckpointRules(boundStory);
-
         return new BindingResult(boundStory, settings, table);
     }
 
@@ -473,45 +471,45 @@ public sealed partial class Binder
     }
 
     // TODO: find a better place for this method
-    private void EnforceChapterAndCheckpointRules(StoryNode boundStory)
-    {
-        // chapters can never be called in non-chapter scenes
-        // non-chapters cannot contain checkpoints
-        foreach (TopLevelNode topLevelNode in boundStory.TopLevelNodes)
-        {
-            if (topLevelNode is not SceneSymbolDeclarationNode { IsChapter: false, Name: string sceneName })
-            {
-                continue;
-            }
+    //private void EnforceChapterAndCheckpointRules(StoryNode boundStory)
+    //{
+    //    // chapters can never be called in non-chapter scenes
+    //    // non-chapters cannot contain checkpoints
+    //    foreach (TopLevelNode topLevelNode in boundStory.TopLevelNodes)
+    //    {
+    //        if (topLevelNode is not SceneSymbolDeclarationNode { IsChapter: false, Name: string sceneName })
+    //        {
+    //            continue;
+    //        }
 
-            foreach (SyntaxNode node in topLevelNode.FlattenHierarchie())
-            {
-                if (node is BoundCallStatementNode { Scene.IsChapter: true, Scene.Name: string chapterName })
-                {
-                    ErrorFound?.Invoke(Errors.NonChapterCallsChapter(chapterName, sceneName, node.Index));
-                }
-                else if (node is IOutputStatementNode { IsCheckpoint: true })
-                {
-                    ErrorFound?.Invoke(Errors.CheckpointInNonChapter(sceneName, node.Index));
-                }
-            }
-        }
+    //        foreach (SyntaxNode node in topLevelNode.FlattenHierarchie())
+    //        {
+    //            if (node is BoundCallStatementNode { Scene.IsChapter: true, Scene.Name: string chapterName })
+    //            {
+    //                ErrorFound?.Invoke(Errors.NonChapterCallsChapter(chapterName, sceneName, node.Index));
+    //            }
+    //            else if (node is IOutputStatementNode { IsCheckpoint: true })
+    //            {
+    //                ErrorFound?.Invoke(Errors.CheckpointInNonChapter(sceneName, node.Index));
+    //            }
+    //        }
+    //    }
 
-        // chapters can never be called in loop switches
-        // loop switches can never contain checkpoints
-        foreach (LoopSwitchStatementNode loopSwitch in boundStory.FlattenHierarchie().OfType<LoopSwitchStatementNode>())
-        {
-            foreach (SyntaxNode node in loopSwitch.FlattenHierarchie())
-            {
-                if (node is BoundCallStatementNode { Scene.IsChapter: true, Scene.Name: string chapterName })
-                {
-                    ErrorFound?.Invoke(Errors.ChapterCalledInLoopSwitch(chapterName, node.Index));
-                }
-                else if (node is IOutputStatementNode { IsCheckpoint: true })
-                {
-                    ErrorFound?.Invoke(Errors.CheckpointInLoopSwitch(node.Index));
-                }
-            }
-        }
-    }
+    //    // chapters can never be called in loop switches
+    //    // loop switches can never contain checkpoints
+    //    foreach (LoopSwitchStatementNode loopSwitch in boundStory.FlattenHierarchie().OfType<LoopSwitchStatementNode>())
+    //    {
+    //        foreach (SyntaxNode node in loopSwitch.FlattenHierarchie())
+    //        {
+    //            if (node is BoundCallStatementNode { Scene.IsChapter: true, Scene.Name: string chapterName })
+    //            {
+    //                ErrorFound?.Invoke(Errors.ChapterCalledInLoopSwitch(chapterName, node.Index));
+    //            }
+    //            else if (node is IOutputStatementNode { IsCheckpoint: true })
+    //            {
+    //                ErrorFound?.Invoke(Errors.CheckpointInLoopSwitch(node.Index));
+    //            }
+    //        }
+    //    }
+    //}
 }

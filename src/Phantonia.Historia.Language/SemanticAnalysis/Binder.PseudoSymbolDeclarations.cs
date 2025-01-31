@@ -93,7 +93,13 @@ public sealed partial class Binder
 
         for (int i = 0; i < parameters.Count; i++)
         {
-            (table, TypeNode boundType) = BindType(parameters[i].Type, table);
+            BindingContext context = new()
+            {
+                SymbolTable = table,
+            };
+
+            (_, TypeNode boundType) = BindType(parameters[i].Type, context);
+
             parameters[i] = parameters[i] with
             {
                 Type = boundType,
@@ -114,7 +120,13 @@ public sealed partial class Binder
 
         for (int i = 0; i < properties.Count; i++)
         {
-            (table, TypeNode boundType) = BindType(properties[i].Type, table);
+            BindingContext context = new()
+            {
+                SymbolTable = table,
+            };
+
+            (context, TypeNode boundType) = BindType(properties[i].Type, context);
+
             properties[i] = properties[i] with
             {
                 Type = boundType,
@@ -140,9 +152,14 @@ public sealed partial class Binder
     {
         List<TypeNode> subtypes = [.. unionDeclaration.Subtypes];
 
+        BindingContext context = new()
+        {
+            SymbolTable = table,
+        };
+
         for (int i = 0; i < subtypes.Count; i++)
         {
-            (table, TypeNode boundType) = BindType(subtypes[i], table);
+            (context, TypeNode boundType) = BindType(subtypes[i], context);
             subtypes[i] = boundType;
         }
 
@@ -158,7 +175,7 @@ public sealed partial class Binder
             PrecedingTokens = [],
         };
 
-        return (table, boundDeclaration);
+        return (context.SymbolTable, boundDeclaration);
     }
 
     private static (SymbolTable, TopLevelNode) BindPseudoEnumDeclaration(EnumSymbolDeclarationNode enumDeclaration, SymbolTable table)

@@ -8,34 +8,35 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Mime;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 
 public sealed partial class Binder
 {
-    private (SymbolTable, TopLevelNode) BindTopLevelNode(TopLevelNode declaration, Settings settings, SymbolTable table)
+    private (BindingContext, TopLevelNode) BindTopLevelNode(TopLevelNode declaration, Settings settings, BindingContext context)
     {
         if (declaration is BoundSymbolDeclarationNode { Original: SymbolDeclarationNode innerDeclaration })
         {
-            return BindTopLevelNode(innerDeclaration, settings, table);
+            return BindTopLevelNode(innerDeclaration, settings, context);
         }
 
         switch (declaration)
         {
             case SceneSymbolDeclarationNode sceneDeclaration:
-                return BindSceneDeclaration(sceneDeclaration, settings, table);
+                return BindSceneDeclaration(sceneDeclaration, settings, context);
             case RecordSymbolDeclarationNode recordDeclaration:
-                return BindRecordDeclaration(recordDeclaration, table);
+                return BindRecordDeclaration(recordDeclaration, context);
             case UnionSymbolDeclarationNode unionDeclaration:
-                return BindUnionDeclaration(unionDeclaration, table);
+                return BindUnionDeclaration(unionDeclaration, context);
             case EnumSymbolDeclarationNode enumDeclaration:
-                return BindEnumDeclaration(enumDeclaration, table);
+                return BindEnumDeclaration(enumDeclaration, context);
             case SymbolDeclarationNode symbolDeclaration
                     and (OutcomeSymbolDeclarationNode or SpectrumSymbolDeclarationNode or ReferenceSymbolDeclarationNode or InterfaceSymbolDeclarationNode):
-                return (table, new BoundSymbolDeclarationNode
+                return (context, new BoundSymbolDeclarationNode
                 {
                     Original = symbolDeclaration,
-                    Symbol = table[symbolDeclaration.Name],
+                    Symbol = context.SymbolTable[symbolDeclaration.Name],
                     NameToken = symbolDeclaration.NameToken,
                     Index = symbolDeclaration.Index,
                     PrecedingTokens = [],
@@ -46,11 +47,11 @@ public sealed partial class Binder
         }
     }
 
-    private (SymbolTable, BoundSymbolDeclarationNode) BindRecordDeclaration(RecordSymbolDeclarationNode recordDeclaration, SymbolTable table)
+    private (BindingContext, BoundSymbolDeclarationNode) BindRecordDeclaration(RecordSymbolDeclarationNode recordDeclaration, BindingContext context)
     {
-        Debug.Assert(table.IsDeclared(recordDeclaration.Name) && table[recordDeclaration.Name] is RecordTypeSymbol);
+        Debug.Assert(context.SymbolTable.IsDeclared(recordDeclaration.Name) && context.SymbolTable[recordDeclaration.Name] is RecordTypeSymbol);
 
-        RecordTypeSymbol recordSymbol = (RecordTypeSymbol)table[recordDeclaration.Name];
+        RecordTypeSymbol recordSymbol = (RecordTypeSymbol)context.SymbolTable[recordDeclaration.Name];
 
         ImmutableArray<ParameterDeclarationNode>.Builder boundPropertyDeclarations = ImmutableArray.CreateBuilder<ParameterDeclarationNode>(recordDeclaration.Properties.Length);
 
@@ -110,14 +111,14 @@ public sealed partial class Binder
             PrecedingTokens = [],
         };
 
-        return (table, boundRecordDeclaration);
+        return (context, boundRecordDeclaration);
     }
 
-    private (SymbolTable, TopLevelNode) BindUnionDeclaration(UnionSymbolDeclarationNode unionDeclaration, SymbolTable table)
+    private (BindingContext, TopLevelNode) BindUnionDeclaration(UnionSymbolDeclarationNode unionDeclaration, BindingContext context)
     {
-        Debug.Assert(table.IsDeclared(unionDeclaration.Name) && table[unionDeclaration.Name] is UnionTypeSymbol);
+        Debug.Assert(context.SymbolTable.IsDeclared(unionDeclaration.Name) && context.SymbolTable[unionDeclaration.Name] is UnionTypeSymbol);
 
-        UnionTypeSymbol unionSymbol = (UnionTypeSymbol)table[unionDeclaration.Name];
+        UnionTypeSymbol unionSymbol = (UnionTypeSymbol)context.SymbolTable[unionDeclaration.Name];
 
         string[] bannedMemberNames =
         [
@@ -159,10 +160,10 @@ public sealed partial class Binder
             PrecedingTokens = [],
         };
 
-        return (table, boundUnionDeclaration);
+        return (context, boundUnionDeclaration);
     }
 
-    private (SymbolTable, TopLevelNode) BindEnumDeclaration(EnumSymbolDeclarationNode enumDeclaration, SymbolTable table)
+    private (BindingContext, TopLevelNode) BindEnumDeclaration(EnumSymbolDeclarationNode enumDeclaration, BindingContext context)
     {
         HashSet<string> options = [];
 
@@ -175,7 +176,7 @@ public sealed partial class Binder
             }
         }
 
-        EnumTypeSymbol symbol = (EnumTypeSymbol)table[enumDeclaration.Name];
+        EnumTypeSymbol symbol = (EnumTypeSymbol)context.SymbolTable[enumDeclaration.Name];
 
         BoundSymbolDeclarationNode boundEnumDeclaration = new()
         {
@@ -186,16 +187,28 @@ public sealed partial class Binder
             PrecedingTokens = [],
         };
 
-        return (table, boundEnumDeclaration);
+        return (context, boundEnumDeclaration);
     }
 
-    private (SymbolTable, BoundSymbolDeclarationNode) BindSceneDeclaration(SceneSymbolDeclarationNode sceneDeclaration, Settings settings, SymbolTable table)
+    private (BindingContext, BoundSymbolDeclarationNode) BindSceneDeclaration(SceneSymbolDeclarationNode sceneDeclaration, Settings settings, BindingContext context)
     {
-        Debug.Assert(table.IsDeclared(sceneDeclaration.Name) && table[sceneDeclaration.Name] is SceneSymbol);
+        Debug.Assert(context.SymbolTable.IsDeclared(sceneDeclaration.Name) && context.SymbolTable[sceneDeclaration.Name] is SceneSymbol);
 
-        SceneSymbol sceneSymbol = (SceneSymbol)table[sceneDeclaration.Name];
+        SceneSymbol sceneSymbol = (SceneSymbol)context.SymbolTable[sceneDeclaration.Name];
 
-        (table, StatementBodyNode boundBody) = BindStatementBody(sceneDeclaration.Body, settings, table);
+        // this will be necessary for nested scenes
+        // no such thing yet but let's be prepared
+        bool previousIsInScene = context.IsInScene;
+
+        if (!sceneDeclaration.IsChapter)
+        {
+            context = context with
+            {
+                IsInScene = true,
+            };
+        }
+
+        (context, StatementBodyNode boundBody) = BindStatementBody(sceneDeclaration.Body, settings, context);
 
         BoundSymbolDeclarationNode boundSceneDeclaration = new()
         {
@@ -209,6 +222,11 @@ public sealed partial class Binder
             PrecedingTokens = [],
         };
 
-        return (table, boundSceneDeclaration);
+        context = context with
+        {
+            IsInScene = previousIsInScene,
+        };
+
+        return (context, boundSceneDeclaration);
     }
 }

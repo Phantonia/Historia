@@ -1332,4 +1332,43 @@ public sealed class FlowAnalyzerTests
         FlowAnalysisResult result = analyzer.PerformFlowAnalysis();
         Assert.IsNotNull(result.MainFlowGraph);
     }
+
+    [TestMethod]
+    public void TestChapterReferenceCount()
+    {
+        string code =
+            """
+            chapter main
+            {
+                call A;
+                call B;
+                call B;
+            }
+
+            chapter A // okay (refCount = 1)
+            {
+                output 0;
+            }
+
+            chapter B // not okay (refCount = 2)
+            {
+                output 1;
+            }
+
+            chapter C // not okay (refCount = 0)
+            {
+                output 2;
+            }
+            """;
+
+        FlowAnalyzer flowAnalyzer = PrepareFlowAnalyzer(code);
+
+        List<Error> errors = [];
+        flowAnalyzer.ErrorFound += errors.Add;
+
+        _ = flowAnalyzer.PerformFlowAnalysis();
+
+        HashSet<Error> expectedErrors = [Errors.ChapterMustBeCalledExactlyOnce("B", 2, code.IndexOf("chapter B")), Errors.ChapterMustBeCalledExactlyOnce("C", 0, code.IndexOf("chapter C"))];
+        Assert.IsTrue(expectedErrors.SequenceEqual(errors));
+    }
 }

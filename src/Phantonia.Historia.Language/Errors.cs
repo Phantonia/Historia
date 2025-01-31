@@ -597,11 +597,11 @@ public static class Errors
         };
     }
 
-    public static Error NonChapterCallsChapter(string chapterName, string sceneName, long index)
+    public static Error NonChapterCallsChapter(string chapterName, long index)
     {
         return new Error
         {
-            ErrorMessage = $"Chapter '{chapterName}' is being called in non-chapter '{sceneName}'. Chapters can only be called in other chapters",
+            ErrorMessage = $"Chapter '{chapterName}' is being called in scnee. Chapters can only be called in other chapters",
             Index = index,
         };
     }
@@ -620,6 +620,15 @@ public static class Errors
         return new Error
         {
             ErrorMessage = $"Loop switches cannot contain checkpoints",
+            Index = index,
+        };
+    }
+
+    public static Error ChapterMustBeCalledExactlyOnce(string chapterName, int referenceCount, long index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Chapter '{chapterName}' is called {referenceCount} times. Note that chapters have to be called exactly once",
             Index = index,
         };
     }

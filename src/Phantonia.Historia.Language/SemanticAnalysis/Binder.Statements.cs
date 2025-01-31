@@ -11,34 +11,40 @@ namespace Phantonia.Historia.Language.SemanticAnalysis;
 
 public sealed partial class Binder
 {
-    private (SymbolTable, StatementBodyNode) BindStatementBody(StatementBodyNode body, Settings settings, SymbolTable table)
+    private (BindingContext, StatementBodyNode) BindStatementBody(StatementBodyNode body, Settings settings, BindingContext context)
     {
-        table = table.OpenScope();
+        context = context with
+        {
+            SymbolTable = context.SymbolTable.OpenScope(),
+        };
 
         List<StatementNode> statements = [.. body.Statements];
 
         for (int i = 0; i < statements.Count; i++)
         {
             StatementNode statement = statements[i];
-            (table, StatementNode boundStatement) = BindStatement(statement, settings, table);
+            (context, StatementNode boundStatement) = BindStatement(statement, settings, context);
             statements[i] = boundStatement;
         }
 
-        table = table.CloseScope();
+        context = context with
+        {
+            SymbolTable = context.SymbolTable.CloseScope(),
+        };
 
-        return (table, body with
+        return (context, body with
         {
             Statements = [.. statements],
         });
     }
 
-    private (SymbolTable, StatementNode) BindStatement(StatementNode statement, Settings settings, SymbolTable table)
+    private (BindingContext, StatementNode) BindStatement(StatementNode statement, Settings settings, BindingContext context)
     {
         switch (statement)
         {
             case OutputStatementNode outputStatement:
                 {
-                    (table, ExpressionNode boundExpression) = BindAndTypeExpression(outputStatement.OutputExpression, table);
+                    (context, ExpressionNode boundExpression) = BindAndTypeExpression(outputStatement.OutputExpression, context);
 
                     if (boundExpression is TypedExpressionNode { SourceType: TypeSymbol sourceType } typedExpression)
                     {
@@ -46,7 +52,7 @@ public sealed partial class Binder
                         {
                             ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, settings.OutputType, "output", boundExpression.Index));
 
-                            return (table, statement);
+                            return (context, statement);
                         }
 
                         boundExpression = RecursivelySetTargetType(typedExpression, settings.OutputType);
@@ -57,39 +63,39 @@ public sealed partial class Binder
                         OutputExpression = boundExpression,
                     };
 
-                    return (table, boundStatement);
+                    return (context, boundStatement);
                 }
             case SwitchStatementNode switchStatement:
-                return BindSwitchStatement(switchStatement, settings, table);
+                return BindSwitchStatement(switchStatement, settings, context);
             case LoopSwitchStatementNode loopSwitchStatement:
-                return BindLoopSwitchStatement(loopSwitchStatement, settings, table);
+                return BindLoopSwitchStatement(loopSwitchStatement, settings, context);
             case OutcomeDeclarationStatementNode outcomeDeclaration:
-                return BindOutcomeDeclarationStatement(outcomeDeclaration, table);
+                return BindOutcomeDeclarationStatement(outcomeDeclaration, context);
             case SpectrumDeclarationStatementNode spectrumDeclaration:
-                return BindSpectrumDeclarationStatement(spectrumDeclaration, table);
+                return BindSpectrumDeclarationStatement(spectrumDeclaration, context);
             case BranchOnStatementNode branchOnStatement:
-                return BindBranchOnStatement(branchOnStatement, settings, table);
+                return BindBranchOnStatement(branchOnStatement, settings, context);
             case AssignmentStatementNode assignmentStatement:
-                return BindAssignmentStatement(assignmentStatement, table);
+                return BindAssignmentStatement(assignmentStatement, context);
             case SpectrumAdjustmentStatementNode adjustmentStatement:
-                return BindSpectrumAdjustmentStatement(adjustmentStatement, table);
+                return BindSpectrumAdjustmentStatement(adjustmentStatement, context);
             case CallStatementNode callStatement:
-                return BindCallStatement(callStatement, table);
+                return BindCallStatement(callStatement, context);
             case RunStatementNode runStatement:
-                return BindRunStatement(runStatement, table);
+                return BindRunStatement(runStatement, context);
             case ChooseStatementNode chooseStatement:
-                return BindChooseStatement(chooseStatement, settings, table);
+                return BindChooseStatement(chooseStatement, settings, context);
             case IfStatementNode ifStatement:
-                return BindIfStatement(ifStatement, settings, table);
+                return BindIfStatement(ifStatement, settings, context);
             default:
                 Debug.Assert(false);
                 return default;
         }
     }
 
-    private (SymbolTable, StatementNode) BindSwitchStatement(SwitchStatementNode switchStatement, Settings settings, SymbolTable table)
+    private (BindingContext, StatementNode) BindSwitchStatement(SwitchStatementNode switchStatement, Settings settings, BindingContext context)
     {
-        (table, ExpressionNode outputExpression) = BindAndTypeExpression(switchStatement.OutputExpression, table);
+        (context, ExpressionNode outputExpression) = BindAndTypeExpression(switchStatement.OutputExpression, context);
 
         {
             if (outputExpression is TypedExpressionNode { SourceType: TypeSymbol sourceType } typedExpression)
@@ -109,7 +115,7 @@ public sealed partial class Binder
 
         for (int i = 0; i < boundOptions.Count; i++)
         {
-            (table, ExpressionNode optionExpression) = BindAndTypeExpression(boundOptions[i].Expression, table);
+            (context, ExpressionNode optionExpression) = BindAndTypeExpression(boundOptions[i].Expression, context);
 
             if (optionExpression is TypedExpressionNode { SourceType: TypeSymbol sourceType } typedExpression)
             {
@@ -123,7 +129,7 @@ public sealed partial class Binder
                 }
             }
 
-            (table, StatementBodyNode optionBody) = BindStatementBody(boundOptions[i].Body, settings, table);
+            (context, StatementBodyNode optionBody) = BindStatementBody(boundOptions[i].Body, settings, context);
 
             boundOptions[i] = boundOptions[i] with
             {
@@ -140,12 +146,18 @@ public sealed partial class Binder
             Options = [.. boundOptions],
         };
 
-        return (table, boundStatement);
+        return (context, boundStatement);
     }
 
-    private (SymbolTable, StatementNode) BindLoopSwitchStatement(LoopSwitchStatementNode loopSwitchStatement, Settings settings, SymbolTable table)
+    private (BindingContext, StatementNode) BindLoopSwitchStatement(LoopSwitchStatementNode loopSwitchStatement, Settings settings, BindingContext context)
     {
-        (table, ExpressionNode outputExpression) = BindAndTypeExpression(loopSwitchStatement.OutputExpression, table);
+        bool previousIsInLoopSwitch = context.IsInLoopSwitch;
+        context = context with
+        {
+            IsInLoopSwitch = true,
+        };
+
+        (context, ExpressionNode outputExpression) = BindAndTypeExpression(loopSwitchStatement.OutputExpression, context);
 
         {
             if (outputExpression is TypedExpressionNode { SourceType: TypeSymbol sourceType } typedExpression)
@@ -165,7 +177,7 @@ public sealed partial class Binder
 
         for (int i = 0; i < boundOptions.Count; i++)
         {
-            (table, ExpressionNode optionExpression) = BindAndTypeExpression(boundOptions[i].Expression, table);
+            (context, ExpressionNode optionExpression) = BindAndTypeExpression(boundOptions[i].Expression, context);
 
             if (optionExpression is TypedExpressionNode { SourceType: TypeSymbol sourceType } typedExpression)
             {
@@ -179,7 +191,7 @@ public sealed partial class Binder
                 }
             }
 
-            (table, StatementBodyNode optionBody) = BindStatementBody(boundOptions[i].Body, settings, table);
+            (context, StatementBodyNode optionBody) = BindStatementBody(boundOptions[i].Body, settings, context);
 
             boundOptions[i] = boundOptions[i] with
             {
@@ -208,16 +220,21 @@ public sealed partial class Binder
             Options = [.. boundOptions],
         };
 
-        return (table, boundStatement);
+        context = context with
+        {
+            IsInLoopSwitch = previousIsInLoopSwitch,
+        };
+
+        return (context, boundStatement);
     }
 
-    private (SymbolTable, StatementNode) BindOutcomeDeclarationStatement(OutcomeDeclarationStatementNode outcomeDeclaration, SymbolTable table)
+    private (BindingContext, StatementNode) BindOutcomeDeclarationStatement(OutcomeDeclarationStatementNode outcomeDeclaration, BindingContext context)
     {
-        (table, OutcomeSymbol? symbol) = BindOutcomeDeclaration(outcomeDeclaration, table);
+        (context, OutcomeSymbol? symbol) = BindOutcomeDeclaration(outcomeDeclaration, context);
 
         if (symbol is null)
         {
-            return (table, outcomeDeclaration);
+            return (context, outcomeDeclaration);
         }
 
         BoundOutcomeDeclarationStatementNode boundStatement = new()
@@ -236,16 +253,16 @@ public sealed partial class Binder
             PrecedingTokens = [],
         };
 
-        return (table, boundStatement);
+        return (context, boundStatement);
     }
 
-    private (SymbolTable, StatementNode) BindSpectrumDeclarationStatement(SpectrumDeclarationStatementNode spectrumDeclaration, SymbolTable table)
+    private (BindingContext, StatementNode) BindSpectrumDeclarationStatement(SpectrumDeclarationStatementNode spectrumDeclaration, BindingContext context)
     {
-        (table, SpectrumSymbol? symbol) = BindSpectrumDeclaration(spectrumDeclaration, table);
+        (context, SpectrumSymbol? symbol) = BindSpectrumDeclaration(spectrumDeclaration, context);
 
         if (symbol is null)
         {
-            return (table, spectrumDeclaration);
+            return (context, spectrumDeclaration);
         }
 
         BoundSpectrumDeclarationStatementNode boundStatement = new()
@@ -263,18 +280,18 @@ public sealed partial class Binder
             PrecedingTokens = [],
         };
 
-        return (table, boundStatement);
+        return (context, boundStatement);
     }
 
-    private (SymbolTable, StatementNode) BindAssignmentStatement(AssignmentStatementNode assignmentStatement, SymbolTable table)
+    private (BindingContext, StatementNode) BindAssignmentStatement(AssignmentStatementNode assignmentStatement, BindingContext context)
     {
-        if (!table.IsDeclared(assignmentStatement.VariableName))
+        if (!context.SymbolTable.IsDeclared(assignmentStatement.VariableName))
         {
             ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(assignmentStatement.VariableName, assignmentStatement.Index));
-            return (table, assignmentStatement);
+            return (context, assignmentStatement);
         }
 
-        Symbol symbol = table[assignmentStatement.VariableName];
+        Symbol symbol = context.SymbolTable[assignmentStatement.VariableName];
 
         switch (symbol)
         {
@@ -283,13 +300,13 @@ public sealed partial class Binder
                     if (assignmentStatement.AssignedExpression is not IdentifierExpressionNode { Identifier: string option })
                     {
                         ErrorFound?.Invoke(Errors.OutcomeAssignedNonIdentifier(assignmentStatement.VariableName, assignmentStatement.AssignedExpression.Index));
-                        return (table, assignmentStatement);
+                        return (context, assignmentStatement);
                     }
 
                     if (!outcomeSymbol.OptionNames.Contains(option))
                     {
                         ErrorFound?.Invoke(Errors.OptionDoesNotExistInOutcome(assignmentStatement.VariableName, option, assignmentStatement.AssignedExpression.Index));
-                        return (table, assignmentStatement);
+                        return (context, assignmentStatement);
                     }
 
                     BoundOutcomeAssignmentStatementNode boundAssignment = new()
@@ -303,43 +320,43 @@ public sealed partial class Binder
                         PrecedingTokens = [],
                     };
 
-                    return (table, boundAssignment);
+                    return (context, boundAssignment);
                 }
             default:
                 ErrorFound?.Invoke(Errors.SymbolCannotBeAssignedTo(symbol.Name, assignmentStatement.Index));
-                return (table, assignmentStatement);
+                return (context, assignmentStatement);
         }
     }
 
-    private (SymbolTable, StatementNode) BindSpectrumAdjustmentStatement(SpectrumAdjustmentStatementNode adjustmentStatement, SymbolTable table)
+    private (BindingContext, StatementNode) BindSpectrumAdjustmentStatement(SpectrumAdjustmentStatementNode adjustmentStatement, BindingContext context)
     {
-        if (!table.IsDeclared(adjustmentStatement.SpectrumName))
+        if (!context.SymbolTable.IsDeclared(adjustmentStatement.SpectrumName))
         {
             ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(adjustmentStatement.SpectrumName, adjustmentStatement.Index));
-            return (table, adjustmentStatement);
+            return (context, adjustmentStatement);
         }
 
-        Symbol symbol = table[adjustmentStatement.SpectrumName];
+        Symbol symbol = context.SymbolTable[adjustmentStatement.SpectrumName];
 
         if (symbol is not SpectrumSymbol spectrumSymbol)
         {
             ErrorFound?.Invoke(Errors.SymbolIsNotSpectrum(adjustmentStatement.SpectrumName, adjustmentStatement.Index));
-            return (table, adjustmentStatement);
+            return (context, adjustmentStatement);
         }
 
-        (table, ExpressionNode amount) = BindAndTypeExpression(adjustmentStatement.AdjustmentAmount, table);
+        (context, ExpressionNode amount) = BindAndTypeExpression(adjustmentStatement.AdjustmentAmount, context);
 
         if (amount is not TypedExpressionNode typedAmount)
         {
-            return (table, adjustmentStatement);
+            return (context, adjustmentStatement);
         }
 
-        if (!TypesAreCompatible(typedAmount.SourceType, (TypeSymbol)table["Int"]))
+        if (!TypesAreCompatible(typedAmount.SourceType, (TypeSymbol)context.SymbolTable["Int"]))
         {
-            ErrorFound?.Invoke(Errors.IncompatibleType(typedAmount.SourceType, (TypeSymbol)table["Int"], "strengthen/weaken amount", typedAmount.Index));
+            ErrorFound?.Invoke(Errors.IncompatibleType(typedAmount.SourceType, (TypeSymbol)context.SymbolTable["Int"], "strengthen/weaken amount", typedAmount.Index));
         }
 
-        typedAmount = RecursivelySetTargetType(typedAmount, (TypeSymbol)table["Int"]);
+        typedAmount = RecursivelySetTargetType(typedAmount, (TypeSymbol)context.SymbolTable["Int"]);
 
         BoundSpectrumAdjustmentStatementNode boundStatement = new()
         {
@@ -353,21 +370,21 @@ public sealed partial class Binder
             PrecedingTokens = [],
         };
 
-        return (table, boundStatement);
+        return (context, boundStatement);
     }
 
-    private (SymbolTable, StatementNode) BindBranchOnStatement(BranchOnStatementNode branchOnStatement, Settings settings, SymbolTable table)
+    private (BindingContext, StatementNode) BindBranchOnStatement(BranchOnStatementNode branchOnStatement, Settings settings, BindingContext context)
     {
-        if (!table.IsDeclared(branchOnStatement.OutcomeName))
+        if (!context.SymbolTable.IsDeclared(branchOnStatement.OutcomeName))
         {
             ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(branchOnStatement.OutcomeName, branchOnStatement.Index));
-            return (table, branchOnStatement);
+            return (context, branchOnStatement);
         }
 
-        if (table[branchOnStatement.OutcomeName] is not OutcomeSymbol outcomeSymbol)
+        if (context.SymbolTable[branchOnStatement.OutcomeName] is not OutcomeSymbol outcomeSymbol)
         {
             ErrorFound?.Invoke(Errors.SymbolIsNotOutcome(branchOnStatement.OutcomeName, branchOnStatement.Index));
-            return (table, branchOnStatement);
+            return (context, branchOnStatement);
         }
 
         HashSet<string> uniqueOptionNames = [];
@@ -395,7 +412,7 @@ public sealed partial class Binder
                 }
             }
 
-            (table, StatementBodyNode boundBody) = BindStatementBody(option.Body, settings, table);
+            (context, StatementBodyNode boundBody) = BindStatementBody(option.Body, settings, context);
 
             if (!error)
             {
@@ -431,21 +448,31 @@ public sealed partial class Binder
             PrecedingTokens = [],
         };
 
-        return (table, boundStatement);
+        return (context, boundStatement);
     }
 
-    private (SymbolTable, StatementNode) BindCallStatement(CallStatementNode callStatement, SymbolTable table)
+    private (BindingContext, StatementNode) BindCallStatement(CallStatementNode callStatement, BindingContext context)
     {
-        if (!table.IsDeclared(callStatement.SceneName))
+        if (!context.SymbolTable.IsDeclared(callStatement.SceneName))
         {
             ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(callStatement.SceneName, callStatement.Index));
-            return (table, callStatement);
+            return (context, callStatement);
         }
 
-        if (table[callStatement.SceneName] is not SceneSymbol sceneSymbol)
+        if (context.SymbolTable[callStatement.SceneName] is not SceneSymbol sceneSymbol)
         {
             ErrorFound?.Invoke(Errors.SymbolIsNotOutcome(callStatement.SceneName, callStatement.Index));
-            return (table, callStatement);
+            return (context, callStatement);
+        }
+
+        if (context.IsInScene && sceneSymbol.IsChapter)
+        {
+            ErrorFound?.Invoke(Errors.NonChapterCallsChapter(sceneSymbol.Name, callStatement.Index));
+        }
+
+        if (context.IsInLoopSwitch && sceneSymbol.IsChapter)
+        {
+            ErrorFound?.Invoke(Errors.ChapterCalledInLoopSwitch(sceneSymbol.Name, callStatement.Index));
         }
 
         BoundCallStatementNode boundCallStatement = new()
@@ -458,16 +485,16 @@ public sealed partial class Binder
             PrecedingTokens = [],
         };
 
-        return (table, boundCallStatement);
+        return (context, boundCallStatement);
     }
 
-    private (SymbolTable, StatementNode) BindRunStatement(RunStatementNode runStatement, SymbolTable table)
+    private (BindingContext, StatementNode) BindRunStatement(RunStatementNode runStatement, BindingContext context)
     {
-        (table, ReferenceSymbol? referenceSymbol, InterfaceMethodSymbol? methodSymbol, IEnumerable<BoundArgumentNode>? boundArguments) = BindMethodCallStatement(runStatement, table);
+        (context, ReferenceSymbol? referenceSymbol, InterfaceMethodSymbol? methodSymbol, IEnumerable<BoundArgumentNode>? boundArguments) = BindMethodCallStatement(runStatement, context);
 
         if (referenceSymbol is null || methodSymbol is null || boundArguments is null)
         {
-            return (table, runStatement);
+            return (context, runStatement);
         }
 
         BoundRunStatementNode boundRunStatement = new()
@@ -480,23 +507,23 @@ public sealed partial class Binder
             PrecedingTokens = [],
         };
 
-        return (table, boundRunStatement);
+        return (context, boundRunStatement);
     }
 
-    private (SymbolTable, StatementNode) BindChooseStatement(ChooseStatementNode chooseStatement, Settings settings, SymbolTable table)
+    private (BindingContext, StatementNode) BindChooseStatement(ChooseStatementNode chooseStatement, Settings settings, BindingContext context)
     {
-        (table, ReferenceSymbol? referenceSymbol, InterfaceMethodSymbol? methodSymbol, IEnumerable<BoundArgumentNode>? boundArguments) = BindMethodCallStatement(chooseStatement, table);
+        (context, ReferenceSymbol? referenceSymbol, InterfaceMethodSymbol? methodSymbol, IEnumerable<BoundArgumentNode>? boundArguments) = BindMethodCallStatement(chooseStatement, context);
 
         if (referenceSymbol is null || methodSymbol is null || boundArguments is null)
         {
-            return (table, chooseStatement);
+            return (context, chooseStatement);
         }
 
         List<OptionNode> boundOptions = [.. chooseStatement.Options];
 
         for (int i = 0; i < boundOptions.Count; i++)
         {
-            (table, ExpressionNode optionExpression) = BindAndTypeExpression(boundOptions[i].Expression, table);
+            (context, ExpressionNode optionExpression) = BindAndTypeExpression(boundOptions[i].Expression, context);
 
             if (optionExpression is TypedExpressionNode { SourceType: TypeSymbol sourceType } typedExpression)
             {
@@ -510,7 +537,7 @@ public sealed partial class Binder
                 }
             }
 
-            (table, StatementBodyNode optionBody) = BindStatementBody(boundOptions[i].Body, settings, table);
+            (context, StatementBodyNode optionBody) = BindStatementBody(boundOptions[i].Body, settings, context);
 
             boundOptions[i] = boundOptions[i] with
             {
@@ -530,16 +557,16 @@ public sealed partial class Binder
             PrecedingTokens = [],
         };
 
-        return (table, boundChooseStatement);
+        return (context, boundChooseStatement);
     }
 
-    private (SymbolTable, StatementNode) BindIfStatement(IfStatementNode ifStatement, Settings settings, SymbolTable table)
+    private (BindingContext, StatementNode) BindIfStatement(IfStatementNode ifStatement, Settings settings, BindingContext context)
     {
-        (table, ExpressionNode boundCondition) = BindAndTypeExpression(ifStatement.Condition, table);
+        (context, ExpressionNode boundCondition) = BindAndTypeExpression(ifStatement.Condition, context);
 
         if (boundCondition is TypedExpressionNode { SourceType: TypeSymbol sourceType })
         {
-            TypeSymbol booleanType = (TypeSymbol)table["Boolean"];
+            TypeSymbol booleanType = (TypeSymbol)context.SymbolTable["Boolean"];
 
             if (!TypesAreCompatible(sourceType, booleanType))
             {
@@ -549,13 +576,13 @@ public sealed partial class Binder
             boundCondition = RecursivelySetTargetType((TypedExpressionNode)boundCondition, booleanType);
         }
 
-        (table, StatementBodyNode? boundThenBlock) = BindStatementBody(ifStatement.ThenBlock, settings, table);
+        (context, StatementBodyNode? boundThenBlock) = BindStatementBody(ifStatement.ThenBlock, settings, context);
 
         StatementBodyNode? boundElseBlock = null;
 
         if (ifStatement.ElseBlock is not null)
         {
-            (table, boundElseBlock) = BindStatementBody(ifStatement.ElseBlock, settings, table);
+            (context, boundElseBlock) = BindStatementBody(ifStatement.ElseBlock, settings, context);
         }
 
         IfStatementNode boundStatement = ifStatement with
@@ -565,22 +592,22 @@ public sealed partial class Binder
             ElseBlock = boundElseBlock,
         };
 
-        return (table, boundStatement);
+        return (context, boundStatement);
     }
 
-    private (SymbolTable table, ReferenceSymbol? referenceSymbol, InterfaceMethodSymbol? methodSymbol, IEnumerable<BoundArgumentNode>? boundArguments)
-        BindMethodCallStatement(MethodCallStatementNode methodCallStatement, SymbolTable table)
+    private (BindingContext context, ReferenceSymbol? referenceSymbol, InterfaceMethodSymbol? methodSymbol, IEnumerable<BoundArgumentNode>? boundArguments)
+        BindMethodCallStatement(MethodCallStatementNode methodCallStatement, BindingContext context)
     {
-        if (!table.IsDeclared(methodCallStatement.ReferenceName))
+        if (!context.SymbolTable.IsDeclared(methodCallStatement.ReferenceName))
         {
             ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(methodCallStatement.ReferenceName, methodCallStatement.Index));
-            return (table, null, null, null);
+            return (context, null, null, null);
         }
 
-        if (table[methodCallStatement.ReferenceName] is not ReferenceSymbol referenceSymbol)
+        if (context.SymbolTable[methodCallStatement.ReferenceName] is not ReferenceSymbol referenceSymbol)
         {
             ErrorFound?.Invoke(Errors.SymbolIsNotReference(methodCallStatement.ReferenceName, methodCallStatement.Index));
-            return (table, null, null, null);
+            return (context, null, null, null);
         }
 
         InterfaceSymbol interfaceSymbol = referenceSymbol.Interface;
@@ -590,7 +617,7 @@ public sealed partial class Binder
         if (methodSymbol is null)
         {
             ErrorFound?.Invoke(Errors.MethodDoesNotExistInInterface(referenceSymbol.Name, interfaceSymbol.Name, methodCallStatement.MethodName, methodCallStatement.Index));
-            return (table, null, null, null);
+            return (context, null, null, null);
         }
 
         InterfaceMethodKind expectedKind = methodCallStatement switch
@@ -612,22 +639,22 @@ public sealed partial class Binder
                     break;
             }
 
-            return (table, null, null, null);
+            return (context, null, null, null);
         }
 
         if (methodCallStatement.Arguments.Length != methodSymbol.Parameters.Length)
         {
             ErrorFound?.Invoke(Errors.WrongAmountOfArgumentsInMethodCall(interfaceSymbol.Name, methodSymbol.Name, methodCallStatement.Arguments.Length, methodSymbol.Parameters.Length, methodCallStatement.Index));
-            return (table, null, null, null);
+            return (context, null, null, null);
         }
 
-        (table, List<ArgumentNode> boundArguments) = BindArgumentList(methodCallStatement, table, methodSymbol.Parameters, "parameter");
+        (context, List<ArgumentNode> boundArguments) = BindArgumentList(methodCallStatement, context, methodSymbol.Parameters, "parameter");
 
         if (!boundArguments.All(a => a is BoundArgumentNode))
         {
-            return (table, null, null, null);
+            return (context, null, null, null);
         }
 
-        return (table, referenceSymbol, methodSymbol, boundArguments.Cast<BoundArgumentNode>());
+        return (context, referenceSymbol, methodSymbol, boundArguments.Cast<BoundArgumentNode>());
     }
 }
