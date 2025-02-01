@@ -103,6 +103,37 @@ public sealed class ChapterEmitter(
 
         foreach ((SubroutineSymbol chapter, SubroutineSymbolDeclarationNode declaration) in chapterDeclarations)
         {
+            writer.WriteLine("/// <summary>");
+            writer.Write("/// Gets a chapter object for chapter '");
+            writer.Write(chapter.Name);
+            writer.WriteLine("'.");
+
+            if (definitelyAssignedOutcomesAtChapters[chapter.Index].Where(o => o.IsPublic).Any()) {
+
+                writer.WriteLine("/// The following outcomes are required: ");
+                writer.WriteLine("""/// <list type="bullet">""");
+
+                foreach (Symbol symbol in symbolTable.AllSymbols)
+                {
+                    if (symbol is not OutcomeSymbol { IsPublic: true } outcome)
+                    {
+                        continue;
+                    }
+
+                    if (definitelyAssignedOutcomesAtChapters[chapter.Index].Any(o => o.Index == symbol.Index))
+                    {
+                        writer.Write("/// <item>");
+                        writer.Write(symbol.Name);
+                        writer.WriteLine("</item>");
+                    }
+                }
+
+                writer.WriteLine("/// </list>");
+            }
+
+            writer.WriteLine("/// Other outcomes might be optional.");
+            writer.WriteLine("/// </summary>");
+
             writer.Write("public static ");
             writer.Write(settings.StoryName);
             writer.Write("Chapter Chapter");
