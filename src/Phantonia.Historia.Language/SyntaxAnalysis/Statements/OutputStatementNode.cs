@@ -7,10 +7,6 @@ namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
 public sealed record OutputStatementNode() : StatementNode, IOutputStatementNode
 {
-    public required Token? CheckpointKeywordToken { get; init; }
-
-    public bool IsCheckpoint => CheckpointKeywordToken is not null;
-
     public required Token OutputKeywordToken { get; init; }
 
     public required ExpressionNode OutputExpression { get; init; }
@@ -21,7 +17,6 @@ public sealed record OutputStatementNode() : StatementNode, IOutputStatementNode
 
     protected override void ReconstructCore(TextWriter writer)
     {
-        CheckpointKeywordToken?.Reconstruct(writer);
         OutputKeywordToken.Reconstruct(writer);
         OutputExpression.Reconstruct(writer);
         SemicolonToken.Reconstruct(writer);

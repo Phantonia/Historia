@@ -43,7 +43,6 @@ public enum TokenKind
     WeakenKeyword,
     ByKeyword,
     CallKeyword,
-    CheckpointKeyword,
     InterfaceKeyword,
     ReferenceKeyword,
     ActionKeyword,

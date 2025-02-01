@@ -67,16 +67,6 @@ public static class Errors
         };
     }
 
-    public static Error ExpectedVisibleStatementAsCheckpoint(Token unexpectedToken)
-    {
-        return new Error
-        {
-            ErrorMessage = $"The 'checkpoint' keyword is only valid for visible statements, so expected one of the following keywords: " +
-                $"'output', 'switch', 'loop switch', instead got '{unexpectedToken.Text}'",
-            Index = unexpectedToken.Index,
-        };
-    }
-
     public static Error MustHaveAtLeastOneOption(long index)
     {
         return new Error
@@ -408,7 +398,7 @@ public static class Errors
         return new Error
         {
             ErrorMessage = $"The outcome '{outcomeName}' cannot be used anymore because it is locked through the following subroutine calls: {string.Join(", ", callStack.Reverse())}. " +
-                $"Outcomes get locked when they are not public and their value might pass a checkpoint threshold. " +
+                $"Outcomes get locked when they are not public and their value might pass a chapter threshold. " +
                 $"To fix this problem, consider turning this outcome into a public outcome",
             Index = index,
         };
@@ -419,7 +409,7 @@ public static class Errors
         return new Error
         {
             ErrorMessage = $"The spectrum '{spectrumName}' cannot be used anymore because it is locked through the following subroutine calls: {string.Join(", ", callStack.Reverse())}. " +
-                $"Spectrums get locked when they are not public and their value might pass a checkpoint threshold. " +
+                $"Spectrums get locked when they are not public and their value might pass a chapter threshold. " +
                 $"To fix this problem, consider turning this spectrum into a public spectrum",
             Index = index,
         };
@@ -588,15 +578,6 @@ public static class Errors
         };
     }
 
-    public static Error CheckpointInScene(string sceneName, long index)
-    {
-        return new Error
-        {
-            ErrorMessage = $"Checkpoints can only exist in chapters, not scenes like '{sceneName}'",
-            Index = index,
-        };
-    }
-
     public static Error SceneCallsChapter(string chapterName, long index)
     {
         return new Error
@@ -611,15 +592,6 @@ public static class Errors
         return new Error
         {
             ErrorMessage = $"Chapter '{chapterName}' is being called in loop switch",
-            Index = index,
-        };
-    }
-
-    public static Error CheckpointInLoopSwitch(long index)
-    {
-        return new Error
-        {
-            ErrorMessage = $"Loop switches cannot contain checkpoints",
             Index = index,
         };
     }

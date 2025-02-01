@@ -15,7 +15,7 @@ public sealed class Emitter(
     Settings settings,
     FlowGraph flowGraph,
     SymbolTable symbolTable,
-    ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtCheckpoints,
+    ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtChapters,
     TextWriter outputWriter)
 {
     private readonly IndentedTextWriter writer = new(outputWriter);
@@ -44,7 +44,7 @@ public sealed class Emitter(
 
         writer.WriteLine();
 
-        SnapshotEmitter snapshotEmitter = new(flowGraph, settings, symbolTable, writer);
+        SnapshotEmitter snapshotEmitter = new(settings, symbolTable, writer);
         snapshotEmitter.GenerateSnapshotClass();
 
         writer.WriteLine();
@@ -59,7 +59,7 @@ public sealed class Emitter(
 
         writer.WriteLine();
 
-        ChapterEmitter chapterEmitter = new(boundStory, flowGraph, symbolTable, settings, definitelyAssignedOutcomesAtCheckpoints, writer);
+        ChapterEmitter chapterEmitter = new(boundStory, flowGraph, symbolTable, settings, definitelyAssignedOutcomesAtChapters, writer);
         chapterEmitter.GenerateChapterType();
 
         if (settings.Namespace != "")

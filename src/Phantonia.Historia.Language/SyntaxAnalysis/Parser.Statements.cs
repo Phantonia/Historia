@@ -40,13 +40,11 @@ public sealed partial class Parser
         switch (tokens[index].Kind)
         {
             case TokenKind.OutputKeyword:
-                return ParseOutputStatement(ref index, checkpointKeyword: null, precedingTokens);
+                return ParseOutputStatement(ref index, precedingTokens);
             case TokenKind.SwitchKeyword:
-                return ParseSwitchStatement(ref index, checkpointKeyword: null, precedingTokens);
+                return ParseSwitchStatement(ref index, precedingTokens);
             case TokenKind.LoopKeyword:
-                return ParseLoopSwitchStatement(ref index, checkpointKeyword: null, precedingTokens);
-            case TokenKind.CheckpointKeyword:
-                return ParseCheckpointStatement(ref index, precedingTokens);
+                return ParseLoopSwitchStatement(ref index, precedingTokens);
             case TokenKind.BranchOnKeyword:
                 return ParseBranchOnStatement(ref index, precedingTokens);
             case TokenKind.CallKeyword:
@@ -114,7 +112,7 @@ public sealed partial class Parser
         }
     }
 
-    private OutputStatementNode ParseOutputStatement(ref int index, Token? checkpointKeyword, ImmutableList<Token> precedingTokens)
+    private OutputStatementNode ParseOutputStatement(ref int index, ImmutableList<Token> precedingTokens)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.OutputKeyword);
         Token outputKeyword = tokens[index];
@@ -129,7 +127,6 @@ public sealed partial class Parser
 
         return new OutputStatementNode
         {
-            CheckpointKeywordToken = checkpointKeyword,
             OutputKeywordToken = outputKeyword,
             OutputExpression = outputExpression,
             SemicolonToken = semicolon,
@@ -172,7 +169,7 @@ public sealed partial class Parser
         };
     }
 
-    private SwitchStatementNode ParseSwitchStatement(ref int index, Token? checkpointKeyword, ImmutableList<Token> precedingTokens)
+    private SwitchStatementNode ParseSwitchStatement(ref int index, ImmutableList<Token> precedingTokens)
     {
         long nodeIndex = tokens[index].Index;
 
@@ -191,7 +188,6 @@ public sealed partial class Parser
 
         return new SwitchStatementNode
         {
-            CheckpointKeywordToken = checkpointKeyword,
             SwitchKeywordToken = switchKeyword,
             OutputExpression = expression,
             OpenBraceToken = openBrace,
@@ -275,7 +271,7 @@ public sealed partial class Parser
         return optionBuilder.ToImmutable();
     }
 
-    private LoopSwitchStatementNode ParseLoopSwitchStatement(ref int index, Token? checkpointKeyword, ImmutableList<Token> precedingTokens)
+    private LoopSwitchStatementNode ParseLoopSwitchStatement(ref int index, ImmutableList<Token> precedingTokens)
     {
         Debug.Assert(tokens[index].Kind is TokenKind.LoopKeyword);
         Token loopKeyword = tokens[index];
@@ -293,7 +289,6 @@ public sealed partial class Parser
 
         return new LoopSwitchStatementNode
         {
-            CheckpointKeywordToken = checkpointKeyword,
             LoopKeywordToken = loopKeyword,
             SwitchKeywordToken = switchKeyword,
             OutputExpression = expression,
@@ -350,50 +345,6 @@ public sealed partial class Parser
         }
 
         return optionBuilder.ToImmutable();
-    }
-
-    private StatementNode ParseCheckpointStatement(ref int index, ImmutableList<Token> precedingTokens)
-    {
-        Debug.Assert(tokens[index].Kind == TokenKind.CheckpointKeyword);
-        Token checkpointKeyword = tokens[index];
-        long nodeIndex = checkpointKeyword.Index;
-        index++;
-
-        switch (tokens[index].Kind)
-        {
-            case TokenKind.OutputKeyword:
-                OutputStatementNode outputStatement = ParseOutputStatement(ref index, checkpointKeyword, precedingTokens);
-
-                outputStatement = outputStatement with
-                {
-                    Index = nodeIndex,
-                };
-
-                return outputStatement;
-            case TokenKind.SwitchKeyword:
-                SwitchStatementNode switchStatement = ParseSwitchStatement(ref index, checkpointKeyword, precedingTokens);
-
-                switchStatement = switchStatement with
-                {
-                    Index = nodeIndex,
-                };
-
-                return switchStatement;
-            case TokenKind.LoopKeyword:
-                LoopSwitchStatementNode? loopSwitchStatement = ParseLoopSwitchStatement(ref index, checkpointKeyword, precedingTokens);
-
-                loopSwitchStatement = loopSwitchStatement with
-                {
-                    Index = nodeIndex,
-                };
-
-                return loopSwitchStatement;
-            default:
-                ErrorFound?.Invoke(Errors.ExpectedVisibleStatementAsCheckpoint(tokens[index]));
-
-                // ignore that we found a 'checkpoint' keyword and just try again
-                return ParseStatement(ref index, precedingTokens.Add(checkpointKeyword));
-        }
     }
 
     private BranchOnStatementNode ParseBranchOnStatement(ref int index, ImmutableList<Token> precedingTokens)

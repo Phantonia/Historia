@@ -85,7 +85,7 @@ public sealed class Compiler
             settings,
             flowAnalysisResult.MainFlowGraph,
             flowAnalysisResult.SymbolTable,
-            flowAnalysisResult.DefinitelyAssignedOutcomesAtCheckpoints,
+            flowAnalysisResult.DefinitelyAssignedOutcomesAtChapters,
             outputWriter);
 
         emitter.GenerateOutputCode();

@@ -9,10 +9,6 @@ namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
 public sealed record SwitchStatementNode() : StatementNode, IOptionsStatementNode, IBranchingStatementNode
 {
-    public required Token? CheckpointKeywordToken { get; init; }
-
-    public bool IsCheckpoint => CheckpointKeywordToken is not null;
-
     public required Token SwitchKeywordToken { get; init; }
 
     public required ExpressionNode OutputExpression { get; init; }
@@ -27,7 +23,6 @@ public sealed record SwitchStatementNode() : StatementNode, IOptionsStatementNod
 
     protected override void ReconstructCore(TextWriter writer)
     {
-        CheckpointKeywordToken?.Reconstruct(writer);
         SwitchKeywordToken.Reconstruct(writer);
         OutputExpression.Reconstruct(writer);
         OpenBraceToken.Reconstruct(writer);

@@ -46,11 +46,11 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             {
                 MainFlowGraph = null,
                 SymbolTable = null,
-                DefinitelyAssignedOutcomesAtCheckpoints = null,
+                DefinitelyAssignedOutcomesAtChapters = null,
             };
         }
 
-        PerformReachabilityAnalysis(subroutineFlowGraphs, out ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtCheckpoints);
+        PerformReachabilityAnalysis(subroutineFlowGraphs, out ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtChapters);
 
         (FlowGraph mainFlowGraph, SymbolTable updatedSymbolTable) = MergeFlowGraphs(topologicalOrder, subroutineFlowGraphs, referenceCounts);
 
@@ -58,7 +58,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
         {
             MainFlowGraph = mainFlowGraph,
             SymbolTable = updatedSymbolTable,
-            DefinitelyAssignedOutcomesAtCheckpoints = definitelyAssignedOutcomesAtCheckpoints,
+            DefinitelyAssignedOutcomesAtChapters = definitelyAssignedOutcomesAtChapters,
         };
     }
 

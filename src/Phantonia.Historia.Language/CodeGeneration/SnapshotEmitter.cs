@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
-public sealed class SnapshotEmitter(FlowGraph flowGraph, Settings settings, SymbolTable symbolTable, IndentedTextWriter writer)
+public sealed class SnapshotEmitter(Settings settings, SymbolTable symbolTable, IndentedTextWriter writer)
 {
     public void GenerateSnapshotClass()
     {
@@ -14,7 +14,7 @@ public sealed class SnapshotEmitter(FlowGraph flowGraph, Settings settings, Symb
 
         writer.BeginBlock();
 
-        GenerateFromCheckpointMethod();
+        GenerateFromChapterMethod();
 
         writer.WriteLine();
 
@@ -45,18 +45,18 @@ public sealed class SnapshotEmitter(FlowGraph flowGraph, Settings settings, Symb
         writer.EndBlock(); // class
     }
 
-    private void GenerateFromCheckpointMethod()
+    private void GenerateFromChapterMethod()
     {
-        if (!flowGraph.Vertices.Any(v => v.Value.IsCheckpoint))
+        if (!symbolTable.AllSymbols.Any(s => s is SubroutineSymbol { Kind: SubroutineKind.Chapter, Name: not "main" }))
         {
             return;
         }
 
         writer.Write("public static ");
         GenerateClassName();
-        writer.Write(" FromCheckpoint(");
+        writer.Write(" FromChapter(");
         writer.Write(settings.StoryName);
-        writer.Write("Checkpoint checkpoint");
+        writer.Write("Chapter chapter");
 
         GenerateReferenceParameterList(symbolTable, writer);
 
@@ -73,7 +73,7 @@ public sealed class SnapshotEmitter(FlowGraph flowGraph, Settings settings, Symb
 
         GenerateReferenceArgumentList(symbolTable, writer);
 
-        writer.WriteLine("stateMachine.RestoreCheckpoint(checkpoint);");
+        writer.WriteLine("stateMachine.RestoreChapter(chapter);");
         writer.WriteLine("return stateMachine.CreateSnapshot();");
 
         writer.EndBlock();

@@ -9,10 +9,6 @@ namespace Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 
 public sealed record LoopSwitchStatementNode() : StatementNode, IOptionsStatementNode, IBranchingStatementNode
 {
-    public required Token? CheckpointKeywordToken { get; init; }
-
-    public bool IsCheckpoint => CheckpointKeywordToken is not null;
-
     public required Token LoopKeywordToken { get; init; }
 
     public required Token SwitchKeywordToken { get; init; }
@@ -29,7 +25,6 @@ public sealed record LoopSwitchStatementNode() : StatementNode, IOptionsStatemen
 
     protected override void ReconstructCore(TextWriter writer)
     {
-        CheckpointKeywordToken?.Reconstruct(writer);
         LoopKeywordToken.Reconstruct(writer);
         SwitchKeywordToken.Reconstruct(writer);
         OutputExpression.Reconstruct(writer);
