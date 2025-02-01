@@ -1794,4 +1794,69 @@ public sealed class EmitterTests
         Assert.AreEqual(2, stateMachine.GetPublicOutcome("X"));
         Assert.AreEqual(2, stateMachine.GetPublicOutcome("Z"));
     }
+
+    [TestMethod]
+    public void TestChaptersInSwitch()
+    {
+        string code =
+            """
+            chapter main
+            {
+                switch 0
+                {
+                    option 1
+                    {
+                        call A;
+                        output 3;
+                    }
+
+                    option 4
+                    {
+                        call B;
+                        output 6;
+                    }
+                }
+
+                output 7;
+            }
+
+            chapter A
+            {
+                output 2;
+            }
+
+            chapter B
+            {
+                output 5;
+            }
+            """;
+        
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
+
+        object chapterA = ReflectionHelper.GetChapter(stateMachine.GetType().Assembly, "HistoriaStory", "A");
+        Assert.IsTrue(ReflectionHelper.IsReady(chapterA));
+        stateMachine.Restore(chapterA);
+        Assert.AreEqual(2, stateMachine.Output);
+        Assert.IsTrue(stateMachine.TryContinue());
+        Assert.AreEqual(3, stateMachine.Output);
+        Assert.IsTrue(stateMachine.TryContinue());
+        Assert.AreEqual(7, stateMachine.Output);
+
+        object chapterB = ReflectionHelper.GetChapter(stateMachine.GetType().Assembly, "HistoriaStory", "B");
+        Assert.IsTrue(ReflectionHelper.IsReady(chapterB));
+        stateMachine.Restore(chapterB);
+        Assert.AreEqual(5, stateMachine.Output);
+        Assert.IsTrue(stateMachine.TryContinue());
+        Assert.AreEqual(6, stateMachine.Output);
+        Assert.IsTrue(stateMachine.TryContinue());
+        Assert.AreEqual(7, stateMachine.Output);
+    }
 }
