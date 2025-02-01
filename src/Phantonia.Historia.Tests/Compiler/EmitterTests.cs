@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NuGet.Frameworks;
 using Phantonia.Historia.Language;
 using Phantonia.Historia.Language.FlowAnalysis;
 using System;
@@ -1858,5 +1859,105 @@ public sealed class EmitterTests
         Assert.AreEqual(6, stateMachine.Output);
         Assert.IsTrue(stateMachine.TryContinue());
         Assert.AreEqual(7, stateMachine.Output);
+    }
+
+    [TestMethod]
+    public void TestEmptyBodies()
+    {
+        string code =
+            """
+            chapter main
+            {
+                call A;
+
+                switch 1
+                {
+                    option 2 { }
+                    option 3 { }
+                }
+
+                output 4;
+
+                loop switch 5
+                {
+                    option 6 { }
+                    loop option 7 { }
+                    final option 8 { }
+                }
+
+                output 9;
+            }
+
+            chapter A { }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
+
+        _ = stateMachine.TryContinue();
+        Assert.AreEqual(1, stateMachine.Output);
+
+        _ = stateMachine.TryContinueWithOption(1);
+        Assert.AreEqual(4, stateMachine.Output);
+
+        _ = stateMachine.TryContinue();
+        Assert.AreEqual(5, stateMachine.Output);
+
+        _ = stateMachine.TryContinueWithOption(1);
+        Assert.AreEqual(5, stateMachine.Output);
+
+        _ = stateMachine.TryContinueWithOption(0);
+        Assert.AreEqual(5, stateMachine.Output);
+
+        _ = stateMachine.TryContinueWithOption(0);
+        Assert.AreEqual(5, stateMachine.Output);
+
+        _ = stateMachine.TryContinueWithOption(1);
+        Assert.AreEqual(9, stateMachine.Output);
+    }
+
+    [TestMethod]
+    public void TestIfWithoutElseAtEndOfChapter()
+    {
+        string code =
+            """
+            public outcome X(A, B);
+
+            chapter main
+            {
+                X = A;
+                call A;
+                output 2;
+            }
+
+            chapter A
+            {
+                if X is B
+                {
+                    output 1;
+                }
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
+
+        _ = stateMachine.TryContinue();
+        Assert.IsFalse(stateMachine.FinishedStory);
+        Assert.AreEqual(2, stateMachine.Output);
     }
 }

@@ -25,6 +25,16 @@ public sealed partial class Parser
 
         Token closedBrace = Expect(TokenKind.ClosedBrace, ref index);
 
+        if (statementBuilder.Count == 0)
+        {
+            NoOpStatementNode noopStatement = new()
+            {
+                Index = nodeIndex + 1,
+                PrecedingTokens = [],
+            };
+            statementBuilder.Add(noopStatement);
+        }
+
         return new StatementBodyNode
         {
             OpenBraceToken = openBrace,
@@ -516,13 +526,28 @@ public sealed partial class Parser
 
         if (tokens[index].Kind is not TokenKind.ElseKeyword)
         {
+            NoOpStatementNode noopStatement = new()
+            {
+                Index = nodeIndex + 2,
+                PrecedingTokens = [],
+            };
+
+            StatementBodyNode emptyElseBlock = new()
+            {
+                OpenBraceToken = Token.Missing(nodeIndex + 1),
+                Statements = [noopStatement],
+                ClosedBraceToken = Token.Missing(tokens[index].Index),
+                Index = nodeIndex + 1,
+                PrecedingTokens = precedingTokens,
+            };
+
             return new IfStatementNode
             {
                 IfKeywordToken = ifKeyword,
                 Condition = condition,
                 ThenBlock = thenBlock,
-                ElseKeywordToken = null,
-                ElseBlock = null,
+                ElseKeywordToken = Token.Missing(nodeIndex + 1),
+                ElseBlock = emptyElseBlock,
                 Index = nodeIndex,
                 PrecedingTokens = precedingTokens,
             };

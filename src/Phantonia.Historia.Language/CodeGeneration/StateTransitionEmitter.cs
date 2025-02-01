@@ -56,8 +56,8 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
 
             switch (flowGraph.Vertices[index].AssociatedStatement)
             {
-                case OutputStatementNode:
-                    GenerateOutputTransition(index, edges);
+                case OutputStatementNode or NoOpStatementNode:
+                    GenerateBasicTransition(index, edges);
                     break;
                 case FlowBranchingStatementNode { Original: SwitchStatementNode switchStatement, OutgoingEdges: ImmutableList<FlowEdge> outgoingEdges }:
                     GenerateSwitchTransition(switchStatement, outgoingEdges);
@@ -123,7 +123,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
         }
     }
 
-    private void GenerateOutputTransition(long index, ImmutableList<FlowEdge> edges)
+    private void GenerateBasicTransition(long index, ImmutableList<FlowEdge> edges)
     {
         Debug.Assert(flowGraph.OutgoingEdges[index].Count(o => o.IsStory) == 1);
         GenerateTransitionTo(edges.First(e => e.IsStory).ToVertex);

@@ -87,6 +87,8 @@ public sealed partial class Binder
                 return BindChooseStatement(chooseStatement, settings, context);
             case IfStatementNode ifStatement:
                 return BindIfStatement(ifStatement, settings, context);
+            case NoOpStatementNode:
+                return (context, statement);
             default:
                 Debug.Assert(false);
                 return default;

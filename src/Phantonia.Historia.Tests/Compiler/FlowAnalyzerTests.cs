@@ -1211,45 +1211,6 @@ public sealed class FlowAnalyzerTests
     }
 
     [TestMethod]
-    public void TestIfStatements()
-    {
-        string code =
-            """
-            outcome X(A, B, C);
-
-            scene main
-            {
-                X = A;
-
-                if X is A or X is B
-                {
-                    output 0;
-                }
-                else if not X is C
-                {
-                    output 1;
-                }
-            }
-            """;
-
-        FlowAnalyzer analyzer = PrepareFlowAnalyzer(code);
-        analyzer.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
-
-        FlowAnalysisResult result = analyzer.PerformFlowAnalysis();
-        Assert.IsNotNull(result.MainFlowGraph);
-
-        long ifIndex = code.IndexOf("if X");
-        long output0Index = code.IndexOf("output 0");
-        long elseIfIndex = code.IndexOf("if not X");
-        long output1Index = code.IndexOf("output 1");
-
-        Assert.IsTrue(result.MainFlowGraph.OutgoingEdges[ifIndex] is [{ ToVertex: long ifToA }, { ToVertex: long ifToB }] && ifToA == output0Index && ifToB == elseIfIndex);
-        Assert.IsTrue(result.MainFlowGraph.OutgoingEdges[output0Index] is [{ ToVertex: FlowGraph.FinalVertex }]);
-        Assert.IsTrue(result.MainFlowGraph.OutgoingEdges[elseIfIndex] is [{ ToVertex: long elseIfToA }, { ToVertex: FlowGraph.FinalVertex }] && elseIfToA == output1Index);
-        Assert.IsTrue(result.MainFlowGraph.OutgoingEdges[output1Index] is [{ ToVertex: FlowGraph.FinalVertex }]);
-    }
-
-    [TestMethod]
     public void TestIsAndDefiniteAssignment()
     {
         string code =

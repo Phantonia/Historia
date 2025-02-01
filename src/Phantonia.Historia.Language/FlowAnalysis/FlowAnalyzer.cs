@@ -129,6 +129,12 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             }),
             BoundChooseStatementNode chooseStatement => GenerateChooseFlowGraph(chooseStatement),
             IfStatementNode ifStatement => GenerateIfFlowGraph(ifStatement),
+            NoOpStatementNode noopStatement => FlowGraph.CreateSimpleFlowGraph(new FlowVertex
+            {
+                Index = noopStatement.Index,
+                AssociatedStatement = noopStatement,
+                Kind = FlowVertexKind.Invisible,
+            }),
             _ => throw new NotImplementedException($"Unknown statement type {statement.GetType().FullName}"),
         };
     }
