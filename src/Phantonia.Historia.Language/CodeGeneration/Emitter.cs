@@ -39,7 +39,7 @@ public sealed class Emitter(
 
         writer.WriteLine();
 
-        StateMachineEmitter stateMachineEmitter = new(boundStory, flowGraph, settings, symbolTable, writer);
+        StateMachineEmitter stateMachineEmitter = new(boundStory, settings, symbolTable, writer);
         stateMachineEmitter.GenerateStateMachineClass();
 
         writer.WriteLine();
@@ -59,8 +59,8 @@ public sealed class Emitter(
 
         writer.WriteLine();
 
-        CheckpointEmitter checkpointEmitter = new(flowGraph, symbolTable, settings, definitelyAssignedOutcomesAtCheckpoints, writer);
-        checkpointEmitter.GenerateCheckpointType();
+        ChapterEmitter chapterEmitter = new(boundStory, flowGraph, symbolTable, settings, definitelyAssignedOutcomesAtCheckpoints, writer);
+        chapterEmitter.GenerateChapterType();
 
         if (settings.Namespace != "")
         {

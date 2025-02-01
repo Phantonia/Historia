@@ -1,5 +1,4 @@
-﻿using Phantonia.Historia.Language.FlowAnalysis;
-using Phantonia.Historia.Language.SemanticAnalysis;
+﻿using Phantonia.Historia.Language.SemanticAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis;
 using System.CodeDom.Compiler;
@@ -7,7 +6,7 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
-public sealed class StateMachineEmitter(StoryNode boundStory, FlowGraph flowGraph, Settings settings, SymbolTable symbolTable, IndentedTextWriter writer)
+public sealed class StateMachineEmitter(StoryNode boundStory, Settings settings, SymbolTable symbolTable, IndentedTextWriter writer)
 {
     public void GenerateStateMachineClass()
     {
@@ -39,7 +38,7 @@ public sealed class StateMachineEmitter(StoryNode boundStory, FlowGraph flowGrap
 
         writer.WriteLine();
 
-        GenerateRestoreCheckpointMethod();
+        GenerateRestoreChapterMethod();
 
         writer.WriteLine();
 
@@ -215,29 +214,29 @@ public sealed class StateMachineEmitter(StoryNode boundStory, FlowGraph flowGrap
         writer.EndBlock(); // RestoreSnapshot method
     }
 
-    private void GenerateRestoreCheckpointMethod()
+    private void GenerateRestoreChapterMethod()
     {
-        if (!flowGraph.Vertices.Any(v => v.Value.IsCheckpoint))
+        if (!symbolTable.AllSymbols.Any(s => s is SubroutineSymbol { Kind: SubroutineKind.Chapter, Name: not "main" }))
         {
             return;
         }
 
-        writer.Write("public void RestoreCheckpoint(");
+        writer.Write("public void RestoreChapter(");
         writer.Write(settings.StoryName);
-        writer.WriteLine("Checkpoint checkpoint)");
+        writer.WriteLine("Chapter chapter)");
 
         writer.BeginBlock();
 
         writer.WriteManyLines(
             """
-            if (!checkpoint.IsReady())
+            if (!chapter.IsReady())
             {
-                throw new global::System.ArgumentException("Checkpoint is not ready, i.e. fully initialized");
+                throw new global::System.ArgumentException("Chapter is not ready, i.e. fully initialized");
             }
             """);
         writer.WriteLine();
 
-        writer.WriteLine("fields.state = checkpoint.Index;");
+        writer.WriteLine("fields.state = chapter.Index;");
         writer.WriteLine();
 
         foreach (Symbol symbol in symbolTable.AllSymbols)
@@ -249,11 +248,11 @@ public sealed class StateMachineEmitter(StoryNode boundStory, FlowGraph flowGrap
 
             if (symbol is SpectrumSymbol spectrum)
             {
-                writer.Write("if (checkpoint.Spectrum");
+                writer.Write("if (chapter.Spectrum");
                 writer.Write(symbol.Name);
-                writer.Write(".Kind == global::Phantonia.Historia.CheckpointOutcomeKind.Required || (checkpoint.Spectrum");
+                writer.Write(".Kind == global::Phantonia.Historia.CheckpointOutcomeKind.Required || (chapter.Spectrum");
                 writer.Write(symbol.Name);
-                writer.Write(".Kind == global::Phantonia.Historia.CheckpointOutcomeKind.Optional && checkpoint.Spectrum");
+                writer.Write(".Kind == global::Phantonia.Historia.CheckpointOutcomeKind.Optional && chapter.Spectrum");
                 writer.Write(symbol.Name);
                 writer.WriteLine(".TotalCount != 0))");
 
@@ -261,13 +260,13 @@ public sealed class StateMachineEmitter(StoryNode boundStory, FlowGraph flowGrap
 
                 writer.Write("fields.");
                 GeneralEmission.GenerateSpectrumPositiveFieldName(spectrum, writer);
-                writer.Write(" = checkpoint.Spectrum");
+                writer.Write(" = chapter.Spectrum");
                 writer.Write(symbol.Name);
                 writer.WriteLine(".PositiveCount;");
 
                 writer.Write("fields.");
                 GeneralEmission.GenerateSpectrumTotalFieldName(spectrum, writer);
-                writer.Write(" = checkpoint.Spectrum");
+                writer.Write(" = chapter.Spectrum");
                 writer.Write(symbol.Name);
                 writer.WriteLine(".TotalCount;");
 
@@ -278,11 +277,11 @@ public sealed class StateMachineEmitter(StoryNode boundStory, FlowGraph flowGrap
                 continue;
             }
 
-            writer.Write("if (checkpoint.Outcome");
+            writer.Write("if (chapter.Outcome");
             writer.Write(symbol.Name);
-            writer.Write(".Kind == global::Phantonia.Historia.CheckpointOutcomeKind.Required || (checkpoint.Outcome");
+            writer.Write(".Kind == global::Phantonia.Historia.CheckpointOutcomeKind.Required || (chapter.Outcome");
             writer.Write(symbol.Name);
-            writer.Write(".Kind == global::Phantonia.Historia.CheckpointOutcomeKind.Optional && checkpoint.Outcome");
+            writer.Write(".Kind == global::Phantonia.Historia.CheckpointOutcomeKind.Optional && chapter.Outcome");
             writer.Write(symbol.Name);
             writer.Write(".Option != Outcome");
             writer.Write(symbol.Name);
@@ -292,7 +291,7 @@ public sealed class StateMachineEmitter(StoryNode boundStory, FlowGraph flowGrap
 
             writer.Write("fields.");
             GeneralEmission.GenerateOutcomeFieldName(outcome, writer);
-            writer.Write(" = (int)checkpoint.Outcome");
+            writer.Write(" = (int)chapter.Outcome");
             writer.Write(symbol.Name);
             writer.WriteLine(".Option - 1;"); // outcome enums have the additional "Unset" option, so all options are shifted upwards by 1
 
@@ -301,13 +300,19 @@ public sealed class StateMachineEmitter(StoryNode boundStory, FlowGraph flowGrap
             writer.WriteLine();
         }
 
+        writer.WriteLine("if (chapter.NeedsStateTransition)");
+        writer.BeginBlock();
+        writer.WriteLine("Heart.StateTransition(ref fields, 0);");
+        writer.EndBlock(); // if
+        writer.WriteLine();
+
         writer.WriteManyLines(
             """
             Output = Heart.GetOutput(ref fields);
             Heart.GetOptions(ref fields, options, ref optionsCount);
             """);
 
-        writer.EndBlock();
+        writer.EndBlock(); // method
     }
 
     private void GenerateExplicitInterfaceImplementations()

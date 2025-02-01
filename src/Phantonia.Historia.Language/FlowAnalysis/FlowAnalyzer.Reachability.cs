@@ -11,12 +11,12 @@ namespace Phantonia.Historia.Language.FlowAnalysis;
 
 public sealed partial class FlowAnalyzer
 {
-    private void PerformReachabilityAnalysis(IReadOnlyDictionary<SubroutineSymbol, FlowGraph> subroutineFlowGraphs, out ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtCheckpoints)
+    private void PerformReachabilityAnalysis(IReadOnlyDictionary<SubroutineSymbol, FlowGraph> subroutineFlowGraphs, out ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtChapters)
     {
         SubroutineSymbol mainSubroutine = (SubroutineSymbol)symbolTable["main"];
         VertexData defaultVertexData = GetDefaultData();
         VertexData finalVertexData = ProcessSubroutine(subroutineFlowGraphs[mainSubroutine], defaultVertexData, subroutineFlowGraphs, [mainSubroutine]);
-        definitelyAssignedOutcomesAtCheckpoints = finalVertexData.DefinitelyAssignedOutcomesAtCheckpoints;
+        definitelyAssignedOutcomesAtChapters = finalVertexData.DefinitelyAssignedOutcomesAtChapters;
     }
 
     private VertexData GetDefaultData()
@@ -48,7 +48,7 @@ public sealed partial class FlowAnalyzer
         return new VertexData
         {
             Outcomes = outcomes.ToImmutable(),
-            DefinitelyAssignedOutcomesAtCheckpoints = ImmutableDictionary<long, IEnumerable<OutcomeSymbol>>.Empty,
+            DefinitelyAssignedOutcomesAtChapters = ImmutableDictionary<long, IEnumerable<OutcomeSymbol>>.Empty,
         };
     }
 
@@ -103,24 +103,24 @@ public sealed partial class FlowAnalyzer
 
         thisVertexData = thisVertexData with
         {
-            DefinitelyAssignedOutcomesAtCheckpoints = previousData.First().DefinitelyAssignedOutcomesAtCheckpoints,
+            DefinitelyAssignedOutcomesAtChapters = previousData.First().DefinitelyAssignedOutcomesAtChapters,
         };
 
         foreach (VertexData previousVertexData in previousData.Skip(1))
         {
             thisVertexData = thisVertexData with
             {
-                DefinitelyAssignedOutcomesAtCheckpoints = thisVertexData.DefinitelyAssignedOutcomesAtCheckpoints.AddRange(previousVertexData.DefinitelyAssignedOutcomesAtCheckpoints),
+                DefinitelyAssignedOutcomesAtChapters = thisVertexData.DefinitelyAssignedOutcomesAtChapters.AddRange(previousVertexData.DefinitelyAssignedOutcomesAtChapters),
             };
-        }
-
-        if (statement is IOutputStatementNode { IsCheckpoint: true })
-        {
-            thisVertexData = PerformLocking(vertex, thisVertexData);
         }
 
         if (statement is BoundCallStatementNode { Subroutine: SubroutineSymbol calledSubroutine })
         {
+            if (calledSubroutine.IsChapter)
+            {
+                thisVertexData = PerformLocking(calledSubroutine, thisVertexData);
+            }
+
             // this processes a subroutine as often as it is called
             // we just assume that is not a lot
             // it is necessary to process it as 'thisVertexData' might differ a lot for different callsites
@@ -256,16 +256,16 @@ public sealed partial class FlowAnalyzer
         return thisVertexData;
     }
 
-    private static VertexData PerformLocking(long vertex, VertexData thisVertexData)
+    private static VertexData PerformLocking(SubroutineSymbol chapter, VertexData thisVertexData)
     {
         thisVertexData = thisVertexData with
         {
-            DefinitelyAssignedOutcomesAtCheckpoints
-                            = thisVertexData.DefinitelyAssignedOutcomesAtCheckpoints
-                                            .SetItem(vertex, thisVertexData.Outcomes.Keys.Where(o => thisVertexData.Outcomes[o].IsDefinitelyAssigned)),
+            DefinitelyAssignedOutcomesAtChapters
+                            = thisVertexData.DefinitelyAssignedOutcomesAtChapters
+                                            .SetItem(chapter.Index, thisVertexData.Outcomes.Keys.Where(o => thisVertexData.Outcomes[o].IsDefinitelyAssigned)),
         };
 
-        foreach (OutcomeSymbol definitelyAssignedOutcome in thisVertexData.DefinitelyAssignedOutcomesAtCheckpoints[vertex])
+        foreach (OutcomeSymbol definitelyAssignedOutcome in thisVertexData.DefinitelyAssignedOutcomesAtChapters[chapter.Index])
         {
             if (definitelyAssignedOutcome.IsPublic)
             {
@@ -293,7 +293,7 @@ public sealed partial class FlowAnalyzer
     {
         public ImmutableDictionary<OutcomeSymbol, OutcomeData> Outcomes { get; init; }
 
-        public ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> DefinitelyAssignedOutcomesAtCheckpoints { get; init; }
+        public ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> DefinitelyAssignedOutcomesAtChapters { get; init; }
     }
 
     private readonly record struct OutcomeData

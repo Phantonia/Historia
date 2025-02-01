@@ -1102,11 +1102,17 @@ public sealed class FlowAnalyzerTests
     {
         string code =
             """
+            outcome X(A, B);
+            
             chapter main
             {
-                outcome X(A, B);
+                call A;
+                call B;
+            }
 
-                checkpoint output 0;
+            chapter A
+            {
+                output 0;
             
                 X = A;
             
@@ -1115,10 +1121,13 @@ public sealed class FlowAnalyzerTests
                     option A { }
                     option B { }
                 }
-            
-                checkpoint output 1;
+            }
 
-                branchon X // #1 => not okay, X got locked by checkpoint output 1
+            chapter B
+            {
+                output 1;
+            
+                branchon X // #1 => not okay, X got locked by chapter
                 {
                     option A { }
                     option B { }
@@ -1133,7 +1142,7 @@ public sealed class FlowAnalyzerTests
 
         _ = flowAnalyzer.PerformFlowAnalysis();
 
-        Error expectedError = Errors.OutcomeIsLocked("X", ["main"], code.IndexOf("branchon X // #1"));
+        Error expectedError = Errors.OutcomeIsLocked("X", ["B", "main"], code.IndexOf("branchon X // #1"));
 
         Assert.AreEqual(1, errors.Count);
         Assert.AreEqual(expectedError, errors[0]);

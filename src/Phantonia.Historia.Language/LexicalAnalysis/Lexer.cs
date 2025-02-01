@@ -563,7 +563,7 @@ public sealed class Lexer
             "weaken" => TokenKind.WeakenKeyword,
             "by" => TokenKind.ByKeyword,
             "call" => TokenKind.CallKeyword,
-            "checkpoint" => TokenKind.CheckpointKeyword,
+            //"checkpoint" => TokenKind.CheckpointKeyword,
             "interface" => TokenKind.InterfaceKeyword,
             "reference" => TokenKind.ReferenceKeyword,
             "action" => TokenKind.ActionKeyword,

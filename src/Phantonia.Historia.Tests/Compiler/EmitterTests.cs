@@ -1206,200 +1206,6 @@ public sealed class EmitterTests
     }
 
     [TestMethod]
-    public void TestCheckpointEmission()
-    {
-        string code =
-            """
-            public outcome X(A, B);
-            public spectrum Y(A <= 1/2, B);
-
-            chapter main
-            {
-                X = A;
-
-                checkpoint output 0;
-
-                strengthen Y by 2;
-
-                checkpoint output 1;
-            }
-            """;
-
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
-
-        Assert.IsTrue(result.IsValid);
-        Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
-
-        Type checkpointType = DynamicCompiler.CompileAndGetType(resultCode, "HistoriaStoryCheckpoint");
-
-        MethodInfo? getForIndexMethod = checkpointType.GetMethod("GetForIndex");
-
-        {
-            long index = code.IndexOf("checkpoint output 0");
-
-            object? checkpoint0 = getForIndexMethod?.Invoke(null, [index]);
-
-            Assert.IsNotNull(checkpoint0);
-
-            long? allegedIndex = (long?)checkpoint0.GetType().GetProperty("Index", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint0);
-            Assert.AreEqual(index, allegedIndex);
-
-            object? outcomeX = checkpointType.GetProperty("OutcomeX", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint0);
-            Assert.IsNotNull(outcomeX);
-            CheckpointOutcomeKind? outcomeKind = (CheckpointOutcomeKind?)outcomeX.GetType().GetProperty("Kind", BindingFlags.Public | BindingFlags.Instance)?.GetValue(outcomeX);
-            Assert.AreEqual(CheckpointOutcomeKind.Required, outcomeKind);
-            object? value = outcomeX.GetType().GetProperty("Option", BindingFlags.Public | BindingFlags.Instance)?.GetValue(outcomeX);
-            Assert.AreEqual(0, (int)value!); // unset
-
-            object? spectrumY = checkpointType.GetProperty("SpectrumY", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint0);
-            Assert.IsNotNull(spectrumY);
-            outcomeKind = (CheckpointOutcomeKind?)spectrumY.GetType().GetProperty("Kind", BindingFlags.Public | BindingFlags.Instance)?.GetValue(spectrumY);
-            Assert.IsNotNull(outcomeKind);
-            Assert.AreEqual(CheckpointOutcomeKind.NotRequired, outcomeKind);
-            int? positiveCount = (int?)spectrumY.GetType().GetProperty("PositiveCount", BindingFlags.Public | BindingFlags.Instance)?.GetValue(spectrumY);
-            Assert.AreEqual(0, positiveCount);
-            int? totalCount = (int?)spectrumY.GetType().GetProperty("TotalCount", BindingFlags.Public | BindingFlags.Instance)?.GetValue(spectrumY);
-            Assert.AreEqual(0, totalCount);
-        }
-
-        {
-            long index = code.IndexOf("checkpoint output 1");
-
-            object? checkpoint1 = getForIndexMethod?.Invoke(null, [index]);
-
-            Assert.IsNotNull(checkpoint1);
-
-            long? allegedIndex = (long?)checkpoint1.GetType().GetProperty("Index", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint1);
-            Assert.AreEqual(index, allegedIndex);
-
-            object? outcomeX = checkpointType.GetProperty("OutcomeX", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint1);
-            Assert.IsNotNull(outcomeX);
-            CheckpointOutcomeKind? outcomeKind = (CheckpointOutcomeKind?)outcomeX.GetType().GetProperty("Kind", BindingFlags.Public | BindingFlags.Instance)?.GetValue(outcomeX);
-            Assert.AreEqual(CheckpointOutcomeKind.Required, outcomeKind);
-            object? value = outcomeX.GetType().GetProperty("Option", BindingFlags.Public | BindingFlags.Instance)?.GetValue(outcomeX);
-            Assert.AreEqual(0, (int)value!); // unset
-
-            object? spectrumY = checkpointType.GetProperty("SpectrumY", BindingFlags.Public | BindingFlags.Instance)?.GetValue(checkpoint1);
-            Assert.IsNotNull(spectrumY);
-            outcomeKind = (CheckpointOutcomeKind?)spectrumY.GetType().GetProperty("Kind", BindingFlags.Public | BindingFlags.Instance)?.GetValue(spectrumY);
-            Assert.IsNotNull(outcomeKind);
-            Assert.AreEqual(CheckpointOutcomeKind.Required, outcomeKind);
-            int? positiveCount = (int?)spectrumY.GetType().GetProperty("PositiveCount", BindingFlags.Public | BindingFlags.Instance)?.GetValue(spectrumY);
-            Assert.AreEqual(0, positiveCount);
-            int? totalCount = (int?)spectrumY.GetType().GetProperty("TotalCount", BindingFlags.Public | BindingFlags.Instance)?.GetValue(spectrumY);
-            Assert.AreEqual(0, totalCount);
-        }
-    }
-
-    [TestMethod]
-    public void TestRestoreCheckpoint()
-    {
-        string code =
-            """
-            public outcome X(A, B);
-            public spectrum Y(A < 2/3, B <= 2/3, C); // don't do this
-            
-            chapter main
-            {
-                X = B;
-                strengthen Y by 2;
-            
-                checkpoint output 0;
-                
-                branchon X
-                {
-                    option A
-                    {
-                        output 1;
-                    }
-                    option B
-                    {
-                        output 0;
-                    }
-                }
-
-                branchon Y
-                {
-                    option A
-                    {
-                        output 0;
-                    }
-                    option B
-                    {
-                        output 1;
-                    }
-                    option C
-                    {
-                        output 0;
-                    }
-                }
-            }
-            """;
-
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
-
-        Assert.IsTrue(result.IsValid);
-        Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
-
-        Assembly assembly = DynamicCompiler.Compile(resultCode);
-
-        Type? stateMachineType = assembly.GetType("HistoriaStoryStateMachine");
-        Assert.IsNotNull(stateMachineType);
-        IStoryStateMachine? stateMachine = (IStoryStateMachine?)Activator.CreateInstance(stateMachineType);
-        MethodInfo? restoreCheckpointMethod = stateMachineType?.GetMethod("RestoreCheckpoint", BindingFlags.Public | BindingFlags.Instance);
-
-        Type? checkpointType = assembly.GetType("HistoriaStoryCheckpoint");
-        Assert.IsNotNull(checkpointType);
-
-        // var checkpoint = HistoriaStoryCheckpoint.GetForIndex(123);
-        MethodInfo? getForIndexMethod = checkpointType.GetMethod("GetForIndex");
-        Assert.IsNotNull(getForIndexMethod);
-
-        int index = code.IndexOf("checkpoint output 0;");
-
-        object? checkpoint = getForIndexMethod.Invoke(null, [index]);
-        Assert.IsNotNull(checkpoint);
-
-        MethodInfo? isReadyMethod = checkpointType?.GetMethod("IsReady", BindingFlags.Public | BindingFlags.Instance);
-        Assert.AreEqual(false, isReadyMethod?.Invoke(checkpoint, []));
-        Assert.ThrowsException<TargetInvocationException>(() => restoreCheckpointMethod?.Invoke(stateMachine, [checkpoint]));
-
-        // checkpoint.OutcomeX = checkpoint.OutcomeX.Assign(OutcomeX.A);
-        PropertyInfo? outcomeXProperty = checkpoint.GetType().GetProperty("OutcomeX", BindingFlags.Public | BindingFlags.Instance);
-        object? outcomeX = outcomeXProperty?.GetValue(checkpoint);
-        object? optionA = assembly.GetType("OutcomeX")?.GetField("A")?.GetValue(null);
-        object? assignedOutcomeX = outcomeX?.GetType().GetMethod("Assign", BindingFlags.Public | BindingFlags.Instance)?.Invoke(outcomeX, [optionA]);
-        outcomeXProperty?.SetValue(checkpoint, assignedOutcomeX);
-
-        Assert.AreEqual(false, isReadyMethod?.Invoke(checkpoint, []));
-        Assert.ThrowsException<TargetInvocationException>(() => restoreCheckpointMethod?.Invoke(stateMachine, [checkpoint]));
-
-        // checkpoint.SpectrumY = checkpoint.SpectrumY.Assign(2, 3);
-        PropertyInfo? spectrumYProperty = checkpoint.GetType().GetProperty("SpectrumY", BindingFlags.Public | BindingFlags.Instance);
-        CheckpointSpectrum spectrumY = (CheckpointSpectrum)spectrumYProperty?.GetValue(checkpoint)!;
-        CheckpointSpectrum assignedSpectrumY = spectrumY.Assign(2, 3);
-        spectrumYProperty?.SetValue(checkpoint, assignedSpectrumY);
-
-        Assert.AreEqual(true, isReadyMethod?.Invoke(checkpoint, []));
-
-        // stateMachine.RestoreCheckpoint(checkpoint);
-        restoreCheckpointMethod?.Invoke(stateMachine, [checkpoint]);
-
-        // test that the outcome and spectrum are good
-        for (int i = 0; i < 2; i++)
-        {
-            Assert.IsTrue(stateMachine?.TryContinue());
-            Assert.AreEqual(1, stateMachine?.Output);
-        }
-    }
-
-    [TestMethod]
     public void TestReferencesAndInterfaces()
     {
         string code =
@@ -1416,8 +1222,6 @@ public sealed class EmitterTests
 
             chapter main
             {
-                checkpoint output 0;
-                
                 run Domething.Do("xyz", 4);
 
                 choose Domething.What("the fuck")
@@ -1927,5 +1731,67 @@ public sealed class EmitterTests
         Assert.AreEqual("Title(Text = The world, Level = 1)", stateMachine.Output?.ToString());
         _ = stateMachine.TryContinue();
         Assert.AreEqual("Line(Character = Alice, Text = Hello World)", stateMachine.Output?.ToString());
+    }
+
+    [TestMethod]
+    public void TestChapters()
+    {
+        string code =
+            """
+            public outcome X(A, B);
+            public spectrum Y(A <= 1/2, B);
+            public outcome Z(A, B);
+            
+            chapter main
+            {
+                output 0;
+                
+                X = A;
+            
+                call C;
+            
+                strengthen Y by 2;
+            
+                call D;
+            }
+
+            chapter C
+            {
+                output 1;
+            }
+
+            chapter D
+            {
+                Z = B;
+                output 2;
+            }
+            """;
+
+        StringWriter sw = new();
+        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        string resultCode = sw.ToString();
+
+        IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
+
+        object chapterC = ReflectionHelper.GetChapter(stateMachine.GetType().Assembly, "HistoriaStory", "C");
+        ReflectionHelper.SetOutcome(chapterC, "X", 1);
+        Assert.IsTrue(ReflectionHelper.IsReady(chapterC));
+        stateMachine.Restore(chapterC);
+        Assert.AreEqual(1, stateMachine.Output);
+        Assert.AreEqual(1, stateMachine.GetPublicOutcome("X"));
+        Assert.AreEqual(0, stateMachine.GetPublicOutcome("Z")); // Z is unset
+
+        object chapterD = ReflectionHelper.GetChapter(stateMachine.GetType().Assembly, "HistoriaStory", "D");
+        ReflectionHelper.SetOutcome(chapterD, "X", 2);
+        ReflectionHelper.SetSpectrum(chapterD, "Y", 1, 3);
+        Assert.IsTrue(ReflectionHelper.IsReady(chapterD));
+        stateMachine.Restore(chapterD);
+        Assert.AreEqual(2, stateMachine.Output);
+        Assert.AreEqual(2, stateMachine.GetPublicOutcome("X"));
+        Assert.AreEqual(2, stateMachine.GetPublicOutcome("Z"));
     }
 }
