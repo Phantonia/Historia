@@ -283,7 +283,15 @@ public sealed class StateMachineEmitter(StoryNode boundStory, Settings settings,
             writer.Write(symbol.Name);
             writer.Write(".Kind == global::Phantonia.Historia.CheckpointOutcomeKind.Optional && chapter.Outcome");
             writer.Write(symbol.Name);
-            writer.Write(".Option != Outcome");
+            writer.Write(".Option != global::");
+
+            if (settings.Namespace is not "")
+            {
+                writer.Write(settings.Namespace);
+                writer.Write('.');
+            }
+
+            writer.Write("Outcome");
             writer.Write(symbol.Name);
             writer.WriteLine(".Unset))");
 

@@ -642,27 +642,24 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, Settings setti
         writer.WriteLine(outcomeSymbol.Name);
         writer.BeginBlock();
 
-        if (outcomeSymbol.DefaultOption is null)
+        // we don't ban someone naming an option Unset
+        // so if they do, we'd call the value for Unset '_Unset' instead
+        // but they could have called an option that too
+        // so we just as many underscores as we need
+        // this is the edge case of the edge case of the edge case of the...
+        int i = 0;
+
+        while (outcomeSymbol.OptionNames.Contains(new string('_', i) + "Unset"))
         {
-            // we don't ban someone naming an option Unset
-            // so if they do, we'd call the value for Unset '_Unset' instead
-            // but they could have called an option that too
-            // so we just as many underscores as we need
-            // this is the edge case of the edge case of the edge case of the...
-            int i = 0;
-
-            while (outcomeSymbol.OptionNames.Contains(new string('_', i) + "Unset"))
-            {
-                i++;
-            }
-
-            for (int j = 0; j < i; j++)
-            {
-                writer.Write('_');
-            }
-
-            writer.WriteLine("Unset = 0,");
+            i++;
         }
+
+        for (int j = 0; j < i; j++)
+        {
+            writer.Write('_');
+        }
+
+        writer.WriteLine("Unset = 0,");
 
         foreach (string option in outcomeSymbol.OptionNames)
         {
