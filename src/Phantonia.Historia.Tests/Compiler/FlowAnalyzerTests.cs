@@ -20,13 +20,21 @@ public sealed class FlowAnalyzerTests
     private static FlowAnalyzer PrepareFlowAnalyzer(string code)
     {
         Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = new(lexer.Lex(), "");
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        StoryNode tree = parser.Parse();
-        NodeAssert.ReconstructWorks(code, tree);
+        CompilationUnitNode unit = parser.Parse();
+        NodeAssert.ReconstructWorks(code, unit);
 
-        Binder binder = new(tree);
+        StoryNode story = new()
+        {
+            CompilationUnits = [unit],
+            Index = 0,
+            Length = unit.Length,
+            PrecedingTokens = [],
+        };
+
+        Binder binder = new(story);
         binder.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         BindingResult result = binder.Bind();

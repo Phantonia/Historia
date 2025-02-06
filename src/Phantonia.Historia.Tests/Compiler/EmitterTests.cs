@@ -1,5 +1,4 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NuGet.Frameworks;
 using Phantonia.Historia.Language;
 using Phantonia.Historia.Language.FlowAnalysis;
 using System;
@@ -13,54 +12,6 @@ namespace Phantonia.Historia.Tests.Compiler;
 [TestClass]
 public sealed class EmitterTests
 {
-    // debug this to generate the class
-    // less than ideal i know
-    // [TestMethod] // emitter not ready for this
-    public void PrivateClassGenerator()
-    {
-        string code =
-            """
-            scene main
-            {
-                output (16);
-                
-                switch (17)
-                {
-                    option (18)
-                    {
-                        output (19);
-                        output (20);
-                    }
-
-                    option (21)
-                    {
-                        output (22);
-
-                        switch (23)
-                        {
-                            option (24)
-                            {
-                                output (25);
-                            }
-
-                            option (26)
-                            { }
-                        }
-                    }
-                }
-
-                output(27);
-            }
-            """;
-
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
-
-        Assert.IsTrue(result.IsValid);
-
-        string csharpText = sw.ToString();
-    }
-
     [TestMethod]
     public void TestEmittedCode()
     {
@@ -99,13 +50,10 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
 
         IStoryStateMachine<int, int> story = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
 
@@ -220,13 +168,12 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
 
-        IStoryStateMachine<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString(), "HistoriaStoryStateMachine");
+        IStoryStateMachine<int, int> story = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
 
         Assert.IsTrue(story.NotStartedStory);
         Assert.IsFalse(story.FinishedStory);
@@ -332,13 +279,12 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
 
-        _ = DynamicCompiler.CompileToStory<string, string>(sw.ToString(), "HistoriaStoryStateMachine");
+        _ = DynamicCompiler.CompileToStory<string, string>(resultCode, "HistoriaStoryStateMachine");
     }
 
     [TestMethod]
@@ -357,15 +303,12 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
 
-        string outputCode = sw.ToString();
-
-        IStoryStateMachine story = DynamicCompiler.CompileToStory(sw.ToString(), "HistoriaStoryStateMachine");
+        IStoryStateMachine story = DynamicCompiler.CompileToStory(resultCode, "HistoriaStoryStateMachine");
 
         Assert.IsTrue(story.NotStartedStory);
         Assert.IsFalse(story.FinishedStory);
@@ -396,13 +339,12 @@ public sealed class EmitterTests
             scene main { }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
 
-        IStoryStateMachine<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString(), "HistoriaStoryStateMachine");
+        IStoryStateMachine<int, int> story = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
 
         Assert.IsTrue(story.NotStartedStory);
         Assert.IsFalse(story.FinishedStory);
@@ -452,13 +394,12 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
 
-        IStoryStateMachine<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString(), "HistoriaStoryStateMachine");
+        IStoryStateMachine<int, int> story = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
 
         Assert.IsTrue(story.NotStartedStory);
         Assert.AreEqual(0, story.Output);
@@ -509,13 +450,12 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
 
-        IStoryStateMachine<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString(), "HistoriaStoryStateMachine");
+        IStoryStateMachine<int, int> story = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
 
         Assert.IsTrue(story.NotStartedStory);
         Assert.IsFalse(story.FinishedStory);
@@ -566,13 +506,12 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
 
-        IStoryStateMachine<int, int> story = DynamicCompiler.CompileToStory<int, int>(sw.ToString(), "HistoriaStoryStateMachine");
+        IStoryStateMachine<int, int> story = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
 
         Assert.IsTrue(story.NotStartedStory);
         Assert.IsFalse(story.FinishedStory);
@@ -598,13 +537,12 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
 
-        _ = DynamicCompiler.CompileToStory<int, int>(sw.ToString(), "MyStory.Plot.StateMachineStateMachine");
+        _ = DynamicCompiler.CompileToStory<int, int>(resultCode, "MyStory.Plot.StateMachineStateMachine");
     }
 
     private enum Character
@@ -637,13 +575,12 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
 
-        IStoryStateMachine story = DynamicCompiler.CompileToStory(sw.ToString(), "HistoriaStoryStateMachine");
+        IStoryStateMachine story = DynamicCompiler.CompileToStory(resultCode, "HistoriaStoryStateMachine");
 
         Assert.IsTrue(story.TryContinue());
 
@@ -699,13 +636,10 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
 
         IStoryStateMachine<int, int> story = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
 
@@ -775,13 +709,10 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
 
         IStoryStateMachine<int, int> story = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
 
@@ -841,13 +772,10 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
 
         IStoryStateMachine<int, int> story = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
 
@@ -881,13 +809,10 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
 
         IStoryStateMachine<int, int> story = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
 
@@ -949,13 +874,10 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
 
         IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
         IStorySnapshot<int, int> snapshot = stateMachine.CreateSnapshot();
@@ -1049,13 +971,10 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
 
         Type storyGraphType = DynamicCompiler.CompileAndGetType(resultCode, "HistoriaStoryGraph");
         Assert.IsTrue(storyGraphType.IsAbstract && storyGraphType.IsSealed); // is static class
@@ -1178,13 +1097,10 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
 
         Type storyGraphType = DynamicCompiler.CompileAndGetType(resultCode, "HistoriaStoryGraph");
         Assert.IsTrue(storyGraphType.IsAbstract && storyGraphType.IsSealed); // is static class
@@ -1242,13 +1158,10 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
 
         Assembly assembly = DynamicCompiler.Compile(resultCode);
 
@@ -1280,13 +1193,10 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
 
         IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
 
@@ -1364,13 +1274,10 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
 
         IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
 
@@ -1417,14 +1324,11 @@ public sealed class EmitterTests
                 output 4;
             }
             """;
-        
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
 
         IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
 
@@ -1465,8 +1369,7 @@ public sealed class EmitterTests
             scene B { }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
@@ -1510,13 +1413,10 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
 
         IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
 
@@ -1569,13 +1469,10 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
 
         IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
 
@@ -1624,13 +1521,10 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
 
         Assembly assembly = DynamicCompiler.Compile(resultCode);
 
@@ -1677,13 +1571,10 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
 
         Assembly assembly = DynamicCompiler.Compile(resultCode);
 
@@ -1718,13 +1609,10 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
 
         IStoryStateMachine stateMachine = DynamicCompiler.CompileToStory(resultCode, "HistoriaStoryStateMachine");
 
@@ -1768,13 +1656,10 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
 
         IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
 
@@ -1831,14 +1716,11 @@ public sealed class EmitterTests
                 output 5;
             }
             """;
-        
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
 
         IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
 
@@ -1891,13 +1773,10 @@ public sealed class EmitterTests
             chapter A { }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
 
         IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
 
@@ -1946,13 +1825,10 @@ public sealed class EmitterTests
             }
             """;
 
-        StringWriter sw = new();
-        CompilationResult result = new Language.Compiler(code, sw).Compile();
+        (CompilationResult result, string resultCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
-
-        string resultCode = sw.ToString();
 
         IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(resultCode, "HistoriaStoryStateMachine");
 

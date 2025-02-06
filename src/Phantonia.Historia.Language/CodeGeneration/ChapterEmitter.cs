@@ -96,7 +96,7 @@ public sealed class ChapterEmitter(
     private void GenerateGetChapterMethods()
     {
         IEnumerable<(SubroutineSymbol, SubroutineSymbolDeclarationNode)> chapterDeclarations =
-            story.TopLevelNodes
+            story.GetTopLevelNodes()
                  .OfType<BoundSymbolDeclarationNode>()
                  .Where(s => s.Symbol is SubroutineSymbol { IsChapter: true, Name: not "main" })
                  .Select(s => ((SubroutineSymbol)s.Symbol, (SubroutineSymbolDeclarationNode)s.Original));

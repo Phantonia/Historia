@@ -6,7 +6,6 @@ using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using Phantonia.Historia.Language.SyntaxAnalysis.Types;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -17,27 +16,37 @@ public sealed partial class Binder
 {
     private (SymbolTable, Settings, StoryNode) BindSettingDirectives(StoryNode halfboundStory, SymbolTable table)
     {
-        List<TopLevelNode> topLevelNodes = [.. halfboundStory.TopLevelNodes];
+        List<CompilationUnitNode> compilationUnits = [.. halfboundStory.CompilationUnits];
 
-        for (int i = 0; i < topLevelNodes.Count; i++)
+        for (int i = 0; i < compilationUnits.Count; i++)
         {
-            TopLevelNode topLevelNode = topLevelNodes[i];
+            List<TopLevelNode> topLevelNodes = [.. compilationUnits[i].TopLevelNodes];
 
-            if (topLevelNode is not SettingDirectiveNode directive)
+            for (int j = 0; j < topLevelNodes.Count; j++)
             {
-                // already bound these
-                continue;
+                TopLevelNode topLevelNode = topLevelNodes[j];
+
+                if (topLevelNode is not SettingDirectiveNode directive)
+                {
+                    // already bound these
+                    continue;
+                }
+
+                (table, SettingDirectiveNode boundDirective) = BindSingleSettingDirective(directive, table);
+                topLevelNodes[j] = boundDirective;
             }
 
-            (table, SettingDirectiveNode boundDirective) = BindSingleSettingDirective(directive, table);
-            topLevelNodes[i] = boundDirective;
+            compilationUnits[i] = compilationUnits[i] with
+            {
+                TopLevelNodes = [.. topLevelNodes],
+            };
         }
 
-        halfboundStory = halfboundStory with { TopLevelNodes = [.. topLevelNodes] };
+        halfboundStory = halfboundStory with { CompilationUnits = [.. compilationUnits] };
 
         Settings settings = new();
 
-        foreach (SettingDirectiveNode directive in topLevelNodes.OfType<SettingDirectiveNode>())
+        foreach (SettingDirectiveNode directive in halfboundStory.GetTopLevelNodes().OfType<SettingDirectiveNode>())
         {
             settings = EvaluateSettingDirective(directive, settings, table);
         }
@@ -48,7 +57,7 @@ public sealed partial class Binder
 
             if (conflictingSymbol is TypeSymbol)
             {
-                long index = story.TopLevelNodes.OfType<ExpressionSettingDirectiveNode>().SingleOrDefault(t => t.SettingName == nameof(Settings.StoryName))?.Expression?.Index ?? 0;
+                long index = story.GetTopLevelNodes().OfType<ExpressionSettingDirectiveNode>().SingleOrDefault(t => t.SettingName == nameof(Settings.StoryName))?.Expression?.Index ?? 0;
 
                 ErrorFound?.Invoke(Errors.ConflictingStoryName(settings.StoryName, index));
             }

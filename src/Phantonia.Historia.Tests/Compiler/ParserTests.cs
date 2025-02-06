@@ -16,6 +16,13 @@ namespace Phantonia.Historia.Tests.Compiler;
 [TestClass]
 public sealed class ParserTests
 {
+    private Parser PrepareParser(string code)
+    {
+        Lexer lexer = new(code);
+        Parser parser = new(lexer.Lex(), "");
+        return parser;
+    }
+
     [TestMethod]
     public void TestSimpleProgram()
     {
@@ -27,10 +34,9 @@ public sealed class ParserTests
                       }
                       """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         Assert.AreEqual(1, story.TopLevelNodes.Length);
@@ -63,14 +69,13 @@ public sealed class ParserTests
                       hello!
                       """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
 
         List<Error> errors = [];
 
         parser.ErrorFound += errors.Add;
 
-        StoryNode tree = parser.Parse();
+        CompilationUnitNode tree = parser.Parse();
         NodeAssert.ReconstructWorks(code, tree);
 
         Assert.AreEqual(2, errors.Count);
@@ -106,13 +111,13 @@ public sealed class ParserTests
 
         Lexer lexer = new(code);
         ImmutableArray<Token> tokens = lexer.Lex();
-        Parser parser = new(tokens);
+        Parser parser = new(tokens, "");
 
         List<Error> errors = [];
 
         parser.ErrorFound += errors.Add;
 
-        StoryNode story = parser.Parse(); // assert this does not throw
+        CompilationUnitNode story = parser.Parse(); // assert this does not throw
         NodeAssert.ReconstructWorks(code, story);
 
         Error expectedError = Errors.ExpectedToken(tokens[^1], TokenKind.ClosedBrace);
@@ -143,11 +148,10 @@ public sealed class ParserTests
                       }
                       """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         // trust me, this is the cleanest way to write that down
@@ -241,11 +245,10 @@ public sealed class ParserTests
             scene main { }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         Assert.AreEqual(3, story.TopLevelNodes.Length);
@@ -280,8 +283,7 @@ public sealed class ParserTests
             setting OutputType Int;
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
 
         int errorCount = 0;
 
@@ -301,7 +303,7 @@ public sealed class ParserTests
             Assert.AreEqual(code.IndexOf("Int"), e.Index);
         };
 
-        StoryNode tree = parser.Parse();
+        CompilationUnitNode tree = parser.Parse();
         NodeAssert.ReconstructWorks(code, tree);
 
         Assert.AreEqual(1, errorCount);
@@ -317,13 +319,13 @@ public sealed class ParserTests
 
         Lexer lexer = new(code);
         ImmutableArray<Token> tokens = lexer.Lex();
-        Parser parser = new(tokens);
+        Parser parser = new(tokens, "");
 
         List<Error> errors = [];
 
         parser.ErrorFound += errors.Add;
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         Assert.AreEqual(3, errors.Count);
@@ -349,11 +351,10 @@ public sealed class ParserTests
             }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         Assert.IsTrue(story is
@@ -395,11 +396,10 @@ public sealed class ParserTests
             scene main { }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         Assert.AreEqual(2, story.TopLevelNodes.Length);
@@ -437,11 +437,10 @@ public sealed class ParserTests
             }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         Assert.AreEqual(1, story.TopLevelNodes.Length);
@@ -488,13 +487,12 @@ public sealed class ParserTests
             6 ; = Hello scene output { ("Hey") setting { }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
 
         List<Error> errors = [];
         parser.ErrorFound += errors.Add;
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         Assert.IsTrue(errors.Count > 0);
@@ -527,10 +525,10 @@ public sealed class ParserTests
             }
             """;
 
-        Parser parser = new(new Lexer(code).Lex());
+        Parser parser = PrepareParser(code);
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)story.TopLevelNodes[0];
@@ -575,12 +573,12 @@ public sealed class ParserTests
             }
             """;
 
-        Parser parser = new(new Lexer(code).Lex());
+        Parser parser = PrepareParser(code);
 
         List<Error> errors = [];
         parser.ErrorFound += errors.Add;
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         Error expectedError = Errors.BranchOnOnlyOneOtherLast(code.IndexOf("option C"));
@@ -602,11 +600,10 @@ public sealed class ParserTests
             }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)story.TopLevelNodes[0];
@@ -644,11 +641,10 @@ public sealed class ParserTests
             }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)story.TopLevelNodes[0];
@@ -675,11 +671,10 @@ public sealed class ParserTests
             union X (Int, String, Y);
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         Assert.AreEqual(1, story.TopLevelNodes.Length);
@@ -705,11 +700,10 @@ public sealed class ParserTests
             }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)story.TopLevelNodes[0];
@@ -804,11 +798,10 @@ public sealed class ParserTests
             }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)story.TopLevelNodes[0];
@@ -857,11 +850,10 @@ public sealed class ParserTests
             }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         for (int i = 0; i < 3; i++)
@@ -889,11 +881,10 @@ public sealed class ParserTests
             }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         SubroutineSymbolDeclarationNode? mainScene = story.TopLevelNodes[0] as SubroutineSymbolDeclarationNode;
@@ -911,11 +902,10 @@ public sealed class ParserTests
             enum Character (Alice, Beverly, Charlotte);
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         Assert.AreEqual(1, story.TopLevelNodes.Length);
@@ -947,11 +937,10 @@ public sealed class ParserTests
             }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         SubroutineSymbolDeclarationNode? mainScene = story.TopLevelNodes[^1] as SubroutineSymbolDeclarationNode;
@@ -999,11 +988,10 @@ public sealed class ParserTests
             }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         SubroutineSymbolDeclarationNode? mainScene = (SubroutineSymbolDeclarationNode)story.TopLevelNodes[^1];
@@ -1055,11 +1043,10 @@ public sealed class ParserTests
             }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         Assert.AreEqual(5, story.TopLevelNodes.Length);
@@ -1120,13 +1107,12 @@ public sealed class ParserTests
             }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
 
         List<Error> errors = [];
         parser.ErrorFound += errors.Add;
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         Error firstError = Errors.MustHaveAtLeastOneOption(code.IndexOf("} // switch"));
@@ -1161,12 +1147,11 @@ public sealed class ParserTests
             }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
         // we just assert that this goes through without errors or exceptions
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
     }
 
@@ -1181,11 +1166,10 @@ public sealed class ParserTests
             setting Namespace: A is B and C is D or E is F and G is H and (I is J or K is L);
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         ExpressionNode expression = ((ExpressionSettingDirectiveNode)story.TopLevelNodes[0]).Expression;
@@ -1259,11 +1243,10 @@ public sealed class ParserTests
             }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)story.TopLevelNodes[1];
@@ -1300,11 +1283,10 @@ public sealed class ParserTests
             }
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
         parser.ErrorFound += e => Assert.Fail(Errors.GenerateFullMessage(code, e));
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         SubroutineSymbolDeclarationNode mainScene = (SubroutineSymbolDeclarationNode)story.TopLevelNodes[1];
@@ -1346,13 +1328,12 @@ public sealed class ParserTests
             setting OutputType: "sss" String;
             """;
 
-        Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = PrepareParser(code);
 
         int errorCount = 0;
         parser.ErrorFound += e => errorCount++;
 
-        StoryNode story = parser.Parse();
+        CompilationUnitNode story = parser.Parse();
         NodeAssert.ReconstructWorks(code, story);
 
         Assert.IsTrue(errorCount > 0);

@@ -8,11 +8,11 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.SyntaxAnalysis;
 
-public sealed partial class Parser(ImmutableArray<Token> tokens)
+public sealed partial class Parser(ImmutableArray<Token> tokens, string path)
 {
     public event Action<Error>? ErrorFound;
 
-    public StoryNode Parse()
+    public CompilationUnitNode Parse()
     {
         int index = 0;
         ImmutableArray<TopLevelNode>.Builder topLevelBuilder = ImmutableArray.CreateBuilder<TopLevelNode>();
@@ -32,8 +32,9 @@ public sealed partial class Parser(ImmutableArray<Token> tokens)
             topLevelBuilder.Add(nextTopLevelNode);
         }
 
-        return new StoryNode
+        return new CompilationUnitNode
         {
+            Path = path,
             TopLevelNodes = topLevelBuilder.ToImmutable(),
             Index = tokens.Length > 0 ? tokens[0].Index : 0,
             Length = tokens[^1].Index,

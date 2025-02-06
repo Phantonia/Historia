@@ -15,7 +15,7 @@ namespace Phantonia.Historia.Language.SemanticAnalysis;
 
 // boobies begone
 // sanity also begone
-public sealed partial class Binder
+public sealed partial class Binder(StoryNode story)
 {
     // binding procedure
     /* 1. collect top level symbols
@@ -25,24 +25,6 @@ public sealed partial class Binder
      * 5. bind whole tree
      * for whole explanation see notion
      */
-
-    public Binder(StoryNode story)
-    {
-        this.story = story;
-    }
-
-    public Binder(IEnumerable<StoryNode> stories)
-    {
-        story = new StoryNode
-        {
-            Index = 0,
-            TopLevelNodes = stories.SelectMany(s => s.TopLevelNodes).ToImmutableArray(),
-            Length = stories.Max(s => s.Length),
-            PrecedingTokens = [],
-        };
-    }
-
-    private readonly StoryNode story;
 
     public event Action<Error>? ErrorFound;
 
@@ -96,7 +78,7 @@ public sealed partial class Binder
     {
         table = table.OpenScope();
 
-        foreach (TopLevelNode declaration in story.TopLevelNodes)
+        foreach (TopLevelNode declaration in story.GetTopLevelNodes())
         {
             Symbol? newSymbol = CreateSymbolFromDeclaration(declaration);
 

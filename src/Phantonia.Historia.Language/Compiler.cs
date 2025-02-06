@@ -10,46 +10,82 @@ using System.IO;
 
 namespace Phantonia.Historia.Language;
 
-public sealed class Compiler
+public static class Compiler
 {
-    public Compiler(string code, TextWriter outputWriter)
+    public static (CompilationResult, string) CompileString(string code)
     {
-        inputReader = new StringReader(code);
-        this.outputWriter = outputWriter;
+        List<Error> errors = [];
+        using StringReader reader = new(code);
+
+        Lexer lexer = new(reader);
+        lexer.ErrorFound += errors.Add;
+        ImmutableArray<Token> tokens = lexer.Lex();
+        lexer.ErrorFound -= errors.Add;
+
+        Parser parser = new(tokens, "");
+        parser.ErrorFound += errors.Add;
+        CompilationUnitNode unit = parser.Parse();
+        parser.ErrorFound -= errors.Add;
+
+        StoryNode story = new()
+        {
+            CompilationUnits = [unit],
+            Index = 0,
+            Length = unit.Length,
+            PrecedingTokens = [],
+        };
+
+        using StringWriter writer = new();
+
+        CompilationResult result = PrecedeWithStory(story, writer, errors);
+        return (result, writer.ToString());
     }
 
-    public Compiler(TextReader inputReader, TextWriter outputWriter)
-    {
-        this.inputReader = inputReader;
-        this.outputWriter = outputWriter;
-    }
-
-    private readonly TextReader inputReader;
-    private readonly TextWriter outputWriter;
-
-    public CompilationResult Compile()
+    public static CompilationResult CompileFiles(string directory, IEnumerable<string> inputPaths, string outputPath)
     {
         List<Error> errors = [];
 
-        void HandleError(Error error)
+        List<CompilationUnitNode> compilationUnits = [];
+        long previousLength = 0;
+
+        foreach (string path in inputPaths)
         {
-            errors.Add(error);
+            string absolutePath = Path.Combine(directory, path);
+            using StreamReader inputReader = new(absolutePath);
+
+            Lexer lexer = new(inputReader, indexOffset: previousLength);
+            lexer.ErrorFound += errors.Add;
+            ImmutableArray<Token> tokens = lexer.Lex();
+            lexer.ErrorFound -= errors.Add;
+
+            Parser parser = new(tokens, path);
+            parser.ErrorFound += errors.Add;
+            CompilationUnitNode unit = parser.Parse();
+            parser.ErrorFound -= errors.Add;
+
+            compilationUnits.Add(unit);
+            previousLength += unit.Length;
         }
 
-        Lexer lexer = new(inputReader);
-        lexer.ErrorFound += HandleError;
-        ImmutableArray<Token> tokens = lexer.Lex();
-        lexer.ErrorFound -= HandleError;
+        StoryNode story = new()
+        {
+            CompilationUnits = [.. compilationUnits],
+            Index = 0,
+            Length = previousLength,
+            PrecedingTokens = [],
+        };
 
-        Parser parser = new(tokens);
-        parser.ErrorFound += HandleError;
-        StoryNode story = parser.Parse();
-        parser.ErrorFound -= HandleError;
+        using StreamWriter outputWriter = new(outputPath);
 
+        return PrecedeWithStory(story, outputWriter, errors);
+    }
+
+    private static CompilationResult PrecedeWithStory(StoryNode story, TextWriter outputWriter, List<Error> errors)
+    {
         Binder binder = new(story);
-        binder.ErrorFound += HandleError;
+        binder.ErrorFound += errors.Add;
         BindingResult bindingResult = binder.Bind();
-        binder.ErrorFound -= HandleError;
+        binder.ErrorFound -= errors.Add;
 
         if (!bindingResult.IsValid || errors.Count > 0)
         {
@@ -67,8 +103,8 @@ public sealed class Compiler
 
         FlowAnalyzer flowAnalyzer = new(boundStory, symbolTable);
         flowAnalyzer.ErrorFound += errors.Add;
-
         FlowAnalysisResult flowAnalysisResult = flowAnalyzer.PerformFlowAnalysis();
+        flowAnalyzer.ErrorFound -= errors.Add;
 
         if (errors.Count > 0)
         {

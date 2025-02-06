@@ -10,20 +10,20 @@ public sealed class Lexer
 {
     private const int TheEnd = -1;
 
-    public Lexer(string code, int indexOffset = 0)
+    public Lexer(string code, long indexOffset = 0)
     {
         inputReader = new StringReader(code);
         currentIndex = indexOffset;
     }
 
-    public Lexer(TextReader inputReader, int indexOffset = 0)
+    public Lexer(TextReader inputReader, long indexOffset = 0)
     {
         this.inputReader = inputReader;
         currentIndex = indexOffset;
     }
 
     private readonly TextReader inputReader;
-    private int currentIndex;
+    private long currentIndex;
     private readonly List<char> triviaBuffer = [];
 
     public event Action<Error>? ErrorFound;
@@ -246,7 +246,7 @@ public sealed class Lexer
 
     private Token LexIntegerLiteral()
     {
-        int startIndex = currentIndex;
+        long startIndex = currentIndex;
 
         List<char> characters = [];
 
@@ -275,7 +275,7 @@ public sealed class Lexer
 
     private Token LexStringLiteral()
     {
-        int startIndex = currentIndex;
+        long startIndex = currentIndex;
         Debug.Assert(inputReader.Peek() is '"' or '\'');
 
         List<char> verbatimCharacters = [];
@@ -387,7 +387,7 @@ public sealed class Lexer
         };
     }
 
-    private bool TryParseNextCharInStringLiteral(out char result, int startIndex, List<char> verbatimCharacters)
+    private bool TryParseNextCharInStringLiteral(out char result, long startIndex, List<char> verbatimCharacters)
     {
         int nextChar = inputReader.ReadInto(verbatimCharacters);
         currentIndex++;
@@ -528,7 +528,7 @@ public sealed class Lexer
 
     private Token LexIdentifierOrKeyword()
     {
-        int startIndex = currentIndex;
+        long startIndex = currentIndex;
 
         List<char> characters = [];
 

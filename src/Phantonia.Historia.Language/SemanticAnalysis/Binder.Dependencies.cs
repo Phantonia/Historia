@@ -20,7 +20,7 @@ public sealed partial class Binder
         Dictionary<long, Symbol> symbols = [];
         Dictionary<long, IReadOnlySet<long>> dependencies = [];
 
-        foreach (TopLevelNode declaration in story.TopLevelNodes)
+        foreach (TopLevelNode declaration in story.GetTopLevelNodes())
         {
             if (declaration is not BoundSymbolDeclarationNode { Original: SymbolDeclarationNode innerDeclaration, Symbol: Symbol symbol }
                 || !NeedsDependencyAnalysis(innerDeclaration))

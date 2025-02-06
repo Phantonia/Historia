@@ -11,16 +11,29 @@ public sealed partial class Binder
 {
     private (SymbolTable, StoryNode) BindPseudoSymbolDeclarations(SymbolTable table)
     {
-        StoryNode boundStory = story;
+        List<CompilationUnitNode> compilationUnits = [.. story.CompilationUnits];
 
-        foreach (TopLevelNode declaration in story.TopLevelNodes)
+        for (int i = 0; i < story.CompilationUnits.Length; i++)
         {
-            (table, TopLevelNode boundDeclaration) = BindPseudoDeclaration(declaration, table);
-            boundStory = boundStory with
+            CompilationUnitNode compilationUnit = story.CompilationUnits[i];
+
+            foreach (TopLevelNode declaration in compilationUnit.TopLevelNodes)
             {
-                TopLevelNodes = boundStory.TopLevelNodes.Replace(declaration, boundDeclaration),
-            };
+                (table, TopLevelNode boundDeclaration) = BindPseudoDeclaration(declaration, table);
+                compilationUnit = compilationUnit with
+                {
+                    TopLevelNodes = compilationUnit.TopLevelNodes.Replace(declaration, boundDeclaration),
+                };
+            }
+
+            compilationUnits[i] = compilationUnit;
+
         }
+
+        StoryNode boundStory = story with
+        {
+            CompilationUnits = [.. compilationUnits],
+        };
 
         return (table, boundStory);
     }

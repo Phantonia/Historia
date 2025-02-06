@@ -22,7 +22,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
     {
         Dictionary<SubroutineSymbol, FlowGraph> subroutineFlowGraphs = [];
 
-        foreach (TopLevelNode symbolDeclaration in story.TopLevelNodes)
+        foreach (TopLevelNode symbolDeclaration in story.GetTopLevelNodes())
         {
             if (symbolDeclaration is BoundSymbolDeclarationNode
                 {

@@ -6,6 +6,7 @@ using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using Phantonia.Historia.Language.SyntaxAnalysis.Types;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 
@@ -18,23 +19,37 @@ public sealed partial class Binder
             SymbolTable = table,
         };
 
-        List<TopLevelNode> topLevelNodes = [.. halfboundStory.TopLevelNodes];
+        List<CompilationUnitNode> compilationUnits = [.. halfboundStory.CompilationUnits];
 
-        for (int i = 0; i < topLevelNodes.Count; i++)
+        for (int i = 0; i < compilationUnits.Count; i++)
         {
-            TopLevelNode topLevelNode = topLevelNodes[i];
+            CompilationUnitNode compilationUnit = compilationUnits[i];
 
-            if (topLevelNode is TypeSymbolDeclarationNode or SettingDirectiveNode)
+            List<TopLevelNode> topLevelNodes = [.. compilationUnit.TopLevelNodes];
+
+            for (int j = 0; j < topLevelNodes.Count; j++)
             {
-                // already bound these
-                continue;
+                if (topLevelNodes[j] is TypeSymbolDeclarationNode or SettingDirectiveNode)
+                {
+                    // already bound these
+                    continue;
+                }
+
+                (context, TopLevelNode boundDeclaration) = BindTopLevelNode(topLevelNodes[j], settings, context);
+                topLevelNodes[j] = boundDeclaration;
             }
 
-            (context, TopLevelNode boundDeclaration) = BindTopLevelNode(topLevelNode, settings, context);
-            topLevelNodes[i] = boundDeclaration;
+            compilationUnits[i] = compilationUnits[i] with
+            {
+                TopLevelNodes = [.. topLevelNodes],
+            };
         }
 
-        StoryNode boundStory = halfboundStory with { TopLevelNodes = [.. topLevelNodes] };
+        StoryNode boundStory = halfboundStory with
+        {
+            CompilationUnits = [.. compilationUnits],
+        };
+
         return (context.SymbolTable, boundStory);
     }
 

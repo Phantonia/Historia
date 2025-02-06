@@ -14,10 +14,20 @@ public sealed class SpecTests
     private Binder PrepareBinder(string code)
     {
         Lexer lexer = new(code);
-        Parser parser = new(lexer.Lex());
+        Parser parser = new(lexer.Lex(), "");
         parser.ErrorFound += e => Assert.Fail($"Error: {e.ErrorMessage}");
 
-        Binder binder = new(parser.Parse());
+        CompilationUnitNode unit = parser.Parse();
+
+        StoryNode story = new()
+        {
+            CompilationUnits = [unit],
+            Index = 0,
+            Length = unit.Length,
+            PrecedingTokens = [],
+        };
+
+        Binder binder = new(story);
         return binder;
     }
 
@@ -40,21 +50,5 @@ public sealed class SpecTests
         _ = binder.Bind();
 
         Assert.IsTrue(errors.Count > 0);
-    }
-
-    [TestMethod]
-    public void MyTestMethod()
-    {
-        string code =
-            """
-            outcome X();
-            scene main { }
-            """;
-
-        StringWriter outputWriter = new();
-        Language.Compiler comp = new(code, outputWriter);
-        CompilationResult result = comp.Compile();
-
-        { }
     }
 }

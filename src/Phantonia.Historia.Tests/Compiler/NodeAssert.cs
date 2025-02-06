@@ -5,7 +5,7 @@ namespace Phantonia.Historia.Tests.Compiler;
 
 public static class NodeAssert
 {
-    public static void ReconstructWorks(string code, StoryNode tree)
+    public static void ReconstructWorks(string code, SyntaxNode tree)
     {
         string reconstructedCode = tree.Reconstruct();
         Assert.AreEqual(code, reconstructedCode);

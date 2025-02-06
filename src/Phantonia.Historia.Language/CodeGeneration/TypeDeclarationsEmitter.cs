@@ -11,7 +11,7 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, Settings setti
 {
     public void GenerateTypeDeclarations()
     {
-        foreach (TopLevelNode topLevelNode in boundStory.TopLevelNodes)
+        foreach (TopLevelNode topLevelNode in boundStory.GetTopLevelNodes())
         {
             if (topLevelNode is not BoundSymbolDeclarationNode
                 {
