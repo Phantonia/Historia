@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
 namespace Phantonia.Historia.Language;
 
@@ -99,7 +100,7 @@ public static class Compiler
         {
             return new CompilationResult
             {
-                Errors = [.. errors],
+                Errors = [.. errors.OrderBy(e => e.Index)],
                 LineIndexing = lineIndexing,
             };
         }
@@ -119,7 +120,7 @@ public static class Compiler
         {
             return new CompilationResult
             {
-                Errors = [.. errors],
+                Errors = [.. errors.OrderBy(e => e.Index)],
                 LineIndexing = lineIndexing,
             };
         }

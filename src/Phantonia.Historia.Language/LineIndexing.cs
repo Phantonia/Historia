@@ -5,7 +5,10 @@ namespace Phantonia.Historia.Language;
 
 public sealed class LineIndexing(ImmutableDictionary<string, ImmutableArray<long>> pathLines)
 {
-    private readonly ImmutableList<(long index, string path)> indexPaths = pathLines.Select(kvp => (kvp.Value[0], kvp.Key)).ToImmutableList();
+    private readonly ImmutableList<(long index, string path)> indexPaths =
+        pathLines.Select(kvp => (index: kvp.Value[0], path: kvp.Key))
+                 .OrderBy(t => t.index)
+                 .ToImmutableList();
 
     // line and character are both 1-based
     public long GetIndex(LineCharacter lineCharacter) => pathLines[lineCharacter.Path][lineCharacter.Line - 1] + lineCharacter.Character - 1;
