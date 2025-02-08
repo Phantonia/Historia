@@ -25,12 +25,15 @@ public sealed class Lexer
     private readonly TextReader inputReader;
     private long currentIndex;
     private readonly List<char> triviaBuffer = [];
+    private readonly List<long> lineIndices = [];
 
     public event Action<Error>? ErrorFound;
 
     // reLex, take it easy
-    public ImmutableArray<Token> Lex()
+    public ImmutableArray<Token> Lex(out IEnumerable<long> lineIndices)
     {
+        this.lineIndices.Add(currentIndex);
+
         ImmutableArray<Token>.Builder tokenBuilder = ImmutableArray.CreateBuilder<Token>();
 
         Token nextToken = LexSingleToken();
@@ -44,8 +47,12 @@ public sealed class Lexer
 
         tokenBuilder.Add(nextToken);
 
+        lineIndices = this.lineIndices;
+
         return tokenBuilder.ToImmutable();
     }
+
+    public ImmutableArray<Token> Lex() => Lex(out _);
 
     private Token LexSingleToken()
     {
@@ -71,6 +78,11 @@ public sealed class Lexer
                         break;
                     }
 
+                    if (inputReader.Peek() is '\n')
+                    {
+                        lineIndices.Add(currentIndex);
+                    }
+
                     _ = inputReader.ReadInto(triviaBuffer);
                     currentIndex++;
                 }
@@ -92,6 +104,11 @@ public sealed class Lexer
                     do
                     {
                         currentIndex++;
+
+                        if (inputReader.Peek() is '\n')
+                        {
+                            lineIndices.Add(currentIndex);
+                        }
                     } while (inputReader.ReadInto(triviaBuffer) is not ('\r' or '\n' or TheEnd));
 
                     continue; // start again from the beginning
@@ -509,6 +526,11 @@ public sealed class Lexer
 
         if (nextChar is '\n' or '\r')
         {
+            if (nextChar is '\n')
+            {
+                lineIndices.Add(currentIndex);
+            }
+
             result = default;
             ErrorFound?.Invoke(Errors.UnterminatedStringLiteral(startIndex));
             return false;

@@ -19,7 +19,7 @@ public static class Compiler
 
         Lexer lexer = new(reader);
         lexer.ErrorFound += errors.Add;
-        ImmutableArray<Token> tokens = lexer.Lex();
+        ImmutableArray<Token> tokens = lexer.Lex(out IEnumerable<long> lineIndices);
         lexer.ErrorFound -= errors.Add;
 
         Parser parser = new(tokens, "");
@@ -37,7 +37,9 @@ public static class Compiler
 
         using StringWriter writer = new();
 
-        CompilationResult result = PrecedeWithStory(story, writer, errors);
+        LineIndexing lineIndexing = new(ImmutableDictionary<string, ImmutableArray<long>>.Empty.Add("", [.. lineIndices]));
+
+        CompilationResult result = PrecedeWithStory(story, writer, errors, lineIndexing);
         return (result, writer.ToString());
     }
 
@@ -48,6 +50,8 @@ public static class Compiler
         List<CompilationUnitNode> compilationUnits = [];
         long previousLength = 0;
 
+        Dictionary<string, ImmutableArray<long>> pathLines = [];
+
         foreach (string path in inputPaths)
         {
             string absolutePath = Path.Combine(directory, path);
@@ -55,8 +59,10 @@ public static class Compiler
 
             Lexer lexer = new(inputReader, indexOffset: previousLength);
             lexer.ErrorFound += errors.Add;
-            ImmutableArray<Token> tokens = lexer.Lex();
+            ImmutableArray<Token> tokens = lexer.Lex(out IEnumerable<long> lineIndices);
             lexer.ErrorFound -= errors.Add;
+
+            pathLines[path] = [.. lineIndices];
 
             Parser parser = new(tokens, path);
             parser.ErrorFound += errors.Add;
@@ -75,12 +81,14 @@ public static class Compiler
             PrecedingTokens = [],
         };
 
+        LineIndexing lineIndexing = new(pathLines.ToImmutableDictionary());
+
         using StreamWriter outputWriter = new(outputPath);
 
-        return PrecedeWithStory(story, outputWriter, errors);
+        return PrecedeWithStory(story, outputWriter, errors, lineIndexing);
     }
 
-    private static CompilationResult PrecedeWithStory(StoryNode story, TextWriter outputWriter, List<Error> errors)
+    private static CompilationResult PrecedeWithStory(StoryNode story, TextWriter outputWriter, List<Error> errors, LineIndexing lineIndexing)
     {
         Binder binder = new(story);
         binder.ErrorFound += errors.Add;
@@ -92,6 +100,7 @@ public static class Compiler
             return new CompilationResult
             {
                 Errors = [.. errors],
+                LineIndexing = lineIndexing,
             };
         }
 
@@ -111,6 +120,7 @@ public static class Compiler
             return new CompilationResult
             {
                 Errors = [.. errors],
+                LineIndexing = lineIndexing,
             };
         }
 
@@ -126,6 +136,9 @@ public static class Compiler
 
         emitter.GenerateOutputCode();
 
-        return new CompilationResult();
+        return new CompilationResult
+        {
+            LineIndexing = lineIndexing,
+        };
     }
 }

@@ -8,5 +8,7 @@ public readonly record struct CompilationResult
 
     public ImmutableArray<Error> Errors { get; init; } = [];
 
+    public required LineIndexing LineIndexing { get; init; }
+
     public bool IsValid => Errors.Length == 0;
 }

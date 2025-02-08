@@ -605,6 +605,12 @@ public static class Errors
         };
     }
 
+    public static string GenerateFullMessage(Error error, LineIndexing lineIndexing)
+    {
+        LineCharacter lineCharacter = lineIndexing.GetLineCharacter(error.Index);
+        return $"Error in {lineCharacter.Path}.hstr, line {lineCharacter.Line}:{lineCharacter.Character}: {error.ErrorMessage}";
+    }
+
     public static string GenerateFullMessage(string text, Error error)
     {
         (string wholeLine, int column) = FindLine(text, error.Index);
