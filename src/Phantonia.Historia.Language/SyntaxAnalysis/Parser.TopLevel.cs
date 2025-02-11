@@ -17,7 +17,12 @@ public sealed partial class Parser
             case TokenKind.SceneKeyword or TokenKind.ChapterKeyword:
                 return ParseSubroutineSymbolDeclaration(ref index, precedingTokens);
             case TokenKind.RecordKeyword:
-                return ParseRecordSymbolDeclaration(ref index, precedingTokens);
+                return ParseRecordSymbolDeclaration(ref index, lineKeyword: null, precedingTokens);
+            case TokenKind.LineKeyword:
+                {
+                    Token lineKeyword = tokens[index++];
+                    return ParseRecordSymbolDeclaration(ref index, lineKeyword, precedingTokens);
+                }
             case TokenKind.UnionKeyword:
                 return ParseUnionSymbolDeclaration(ref index, precedingTokens);
             case TokenKind.EnumKeyword:
@@ -156,7 +161,7 @@ public sealed partial class Parser
         };
     }
 
-    private RecordSymbolDeclarationNode ParseRecordSymbolDeclaration(ref int index, ImmutableList<Token> precedingTokens)
+    private RecordSymbolDeclarationNode ParseRecordSymbolDeclaration(ref int index, Token? lineKeyword, ImmutableList<Token> precedingTokens)
     {
         // spec 1.3.1.1:
         /*
@@ -164,11 +169,7 @@ public sealed partial class Parser
             PropertyDeclaration: identifier ':' Type;
          */
 
-        Debug.Assert(tokens[index].Kind is TokenKind.RecordKeyword);
-        Token recordKeyword = tokens[index];
-        long nodeIndex = recordKeyword.Index;
-
-        index++;
+        Token recordKeyword = Expect(TokenKind.RecordKeyword, ref index);
 
         Token name = Expect(TokenKind.Identifier, ref index);
 
@@ -178,13 +179,14 @@ public sealed partial class Parser
 
         return new RecordSymbolDeclarationNode
         {
+            LineKeywordToken = lineKeyword,
             RecordKeywordToken = recordKeyword,
             NameToken = name,
             OpenParenthesisToken = openParenthesis,
             Properties = propertyDeclarations,
             ClosedParenthesisToken = closedParenthesis,
             SemicolonToken = semicolon,
-            Index = nodeIndex,
+            Index = lineKeyword?.Index ?? recordKeyword.Index,
             PrecedingTokens = precedingTokens,
         };
     }

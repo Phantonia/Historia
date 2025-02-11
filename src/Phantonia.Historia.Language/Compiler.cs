@@ -7,12 +7,13 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
 namespace Phantonia.Historia.Language;
 
 public static class Compiler
 {
-    public static (CompilationResult, string) CompileString(string code)
+    public static (CompilationResult result, string csharpCode) CompileString(string code)
     {
         List<Error> errors = [];
         using StringReader reader = new(code);
@@ -26,6 +27,8 @@ public static class Compiler
         parser.ErrorFound += errors.Add;
         CompilationUnitNode unit = parser.Parse();
         parser.ErrorFound -= errors.Add;
+
+        Debug.Assert(unit.Reconstruct() == code);
 
         StoryNode story = new()
         {
@@ -99,7 +102,7 @@ public static class Compiler
         {
             return new CompilationResult
             {
-                Errors = [.. errors],
+                Errors = [.. errors.OrderBy(e => e.Index)],
                 LineIndexing = lineIndexing,
             };
         }
@@ -119,7 +122,7 @@ public static class Compiler
         {
             return new CompilationResult
             {
-                Errors = [.. errors],
+                Errors = [.. errors.OrderBy(e => e.Index)],
                 LineIndexing = lineIndexing,
             };
         }

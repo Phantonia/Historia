@@ -143,6 +143,24 @@ public static class Errors
         };
     }
 
+    public static Error NoLineRecordWithPropertyCount(int propertyCount, long index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"There exists no line record with {propertyCount} properties",
+            Index = index,
+        };
+    }
+
+    public static Error LineRecordAmbiguous(int propertyCount, IEnumerable<string> competingRecords, long index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"There are multiple line records with {propertyCount} properties: {string.Join(", ", competingRecords)}",
+            Index = index,
+        };
+    }
+
     public static Error SymbolIsNotEnum(string symbolName, long index)
     {
         return new Error
@@ -497,6 +515,15 @@ public static class Errors
         };
     }
 
+    public static Error LineRecordWithTooLittleProperties(string recordName, int propertyCount, long index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Record '{recordName}' is a line record but only has {propertyCount} propert{(propertyCount == 1 ? "y" : "ies")}. Note that line records need to have at least 2 properties.",
+            Index = index,
+        };
+    }
+
     public static Error DuplicatedOptionInEnum(string enumName, string optionName, long index)
     {
         return new Error
@@ -608,7 +635,7 @@ public static class Errors
     public static string GenerateFullMessage(Error error, LineIndexing lineIndexing)
     {
         LineCharacter lineCharacter = lineIndexing.GetLineCharacter(error.Index);
-        return $"Error in {lineCharacter.Path}.hstr, line {lineCharacter.Line}:{lineCharacter.Character}: {error.ErrorMessage}";
+        return $"Error in {lineCharacter.Path}.hstr, line {lineCharacter.Line}: {error.ErrorMessage}";
     }
 
     public static string GenerateFullMessage(string text, Error error)

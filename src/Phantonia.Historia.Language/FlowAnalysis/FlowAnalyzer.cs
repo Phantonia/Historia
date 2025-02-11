@@ -110,7 +110,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
     {
         return statement switch
         {
-            OutputStatementNode or CallStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex
+            OutputStatementNode or CallStatementNode or BoundLineStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex
             {
                 Index = statement.Index,
                 AssociatedStatement = statement,

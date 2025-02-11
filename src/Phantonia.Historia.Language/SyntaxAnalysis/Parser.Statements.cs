@@ -1,6 +1,7 @@
 ﻿using Phantonia.Historia.Language.LexicalAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
+using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 
@@ -113,12 +114,7 @@ public sealed partial class Parser
                     PrecedingTokens = precedingTokens,
                 };
             default:
-                {
-                    Token unexpectedToken = tokens[index];
-                    ErrorFound?.Invoke(Errors.UnexpectedToken(unexpectedToken));
-                    index++;
-                    return ParseStatement(ref index, precedingTokens.Add(unexpectedToken));
-                }
+                return ParseExpressionLeadStatement(ref index, precedingTokens);
         }
     }
 
@@ -160,7 +156,7 @@ public sealed partial class Parser
 
         Token methodName = Expect(TokenKind.Identifier, ref index);
 
-        (Token openParenthesis, ImmutableArray<ArgumentNode> arguments, Token closedParenthesis) = ParseArgumentList(ref index, []);
+        (Token openParenthesis, ImmutableArray<ArgumentNode> arguments, Token closedParenthesis) = ParseArgumentList(ref index, TokenKind.OpenParenthesis, TokenKind.ClosedParenthesis, []);
 
         Token semicolon = Expect(TokenKind.Semicolon, ref index);
 
@@ -221,7 +217,7 @@ public sealed partial class Parser
         Token dot = Expect(TokenKind.Dot, ref index);
         Token methodName = Expect(TokenKind.Identifier, ref index);
 
-        (Token openParenthesis, ImmutableArray<ArgumentNode> arguments, Token closedParenthesis) = ParseArgumentList(ref index, []);
+        (Token openParenthesis, ImmutableArray<ArgumentNode> arguments, Token closedParenthesis) = ParseArgumentList(ref index, TokenKind.OpenParenthesis, TokenKind.ClosedParenthesis, []);
 
         Token openBrace = Expect(TokenKind.OpenBrace, ref index);
 
@@ -467,23 +463,36 @@ public sealed partial class Parser
         long nodeIndex = tokens[index].Index;
         index++;
 
-        // we might have more statements that begin with an identifier later
-        // rewrite this method then
-        Token equals = Expect(TokenKind.Equals, ref index);
-
-        ExpressionNode assignedExpression = ParseExpression(ref index, []);
-
-        Token semicolon = Expect(TokenKind.Semicolon, ref index);
-
-        return new AssignmentStatementNode
+        if (tokens[index].Kind is TokenKind.OpenSquareBracket or TokenKind.Colon)
         {
-            VariableNameToken = identifier,
-            EqualsSignToken = equals,
-            AssignedExpression = assignedExpression,
-            SemicolonToken = semicolon,
-            Index = nodeIndex,
-            PrecedingTokens = precedingTokens,
-        };
+            IdentifierExpressionNode identifierExpression = new()
+            {
+                IdentifierToken = identifier,
+                Index = nodeIndex,
+                PrecedingTokens = precedingTokens,
+            };
+
+            return ParseLineStatement(ref index, identifierExpression);
+        }
+        else
+        {
+            Token equals = tokens[index];
+            index++;
+
+            ExpressionNode assignedExpression = ParseExpression(ref index, []);
+
+            Token semicolon = Expect(TokenKind.Semicolon, ref index);
+
+            return new AssignmentStatementNode
+            {
+                VariableNameToken = identifier,
+                EqualsSignToken = equals,
+                AssignedExpression = assignedExpression,
+                SemicolonToken = semicolon,
+                Index = nodeIndex,
+                PrecedingTokens = precedingTokens,
+            };
+        }
     }
 
     private SpectrumAdjustmentStatementNode ParseSpectrumAdjustmentStatement(ref int index, ImmutableList<Token> precedingTokens)
@@ -586,6 +595,43 @@ public sealed partial class Parser
             ElseBlock = elseBlock,
             Index = nodeIndex,
             PrecedingTokens = precedingTokens,
+        };
+    }
+
+    private StatementNode ParseExpressionLeadStatement(ref int index, ImmutableList<Token> precedingTokens)
+    {
+        ExpressionNode expression = ParseExpression(ref index, precedingTokens);
+
+        // currently, the only way to continue this is by parsing a line statement
+        return ParseLineStatement(ref index, expression);
+    }
+
+    private LineStatementNode ParseLineStatement(ref int index, ExpressionNode characterExpression)
+    {
+        Token? openSquareBracket = null;
+        ImmutableArray<ArgumentNode>? additionalArguments = null;
+        Token? closedSquareBracket = null;
+
+        if (tokens[index].Kind is TokenKind.OpenSquareBracket)
+        {
+            (openSquareBracket, additionalArguments, closedSquareBracket) = ParseArgumentList(ref index, TokenKind.OpenSquareBracket, TokenKind.ClosedSquareBracket, []);
+        }
+
+        Token colon = Expect(TokenKind.Colon, ref index);
+        ExpressionNode textExpression = ParseExpression(ref index, []);
+        Token semicolon = Expect(TokenKind.Semicolon, ref index);
+
+        return new LineStatementNode
+        {
+            CharacterExpression = characterExpression,
+            OpenSquareBracketToken = openSquareBracket,
+            AdditionalArguments = additionalArguments,
+            ClosedSquareBracketToken = closedSquareBracket,
+            ColonToken = colon,
+            TextExpression = textExpression,
+            SemicolonToken = semicolon,
+            PrecedingTokens = [],
+            Index = characterExpression.Index,
         };
     }
 }

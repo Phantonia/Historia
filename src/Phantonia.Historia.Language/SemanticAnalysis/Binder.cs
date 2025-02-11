@@ -151,6 +151,7 @@ public sealed partial class Binder(StoryNode story)
         return new PseudoRecordTypeSymbol
         {
             Name = recordDeclaration.Name,
+            IsLineRecord = recordDeclaration.IsLineRecord,
             Properties = properties.ToImmutable(),
             Index = recordDeclaration.Index,
         };

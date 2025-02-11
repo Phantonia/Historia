@@ -1166,7 +1166,7 @@ public sealed class FlowAnalyzerTests
             
             interface ICharacter
             (
-                action Say(line: String),
+                action Say(text: String),
                 choice Choose(prompt: String),
             );
             

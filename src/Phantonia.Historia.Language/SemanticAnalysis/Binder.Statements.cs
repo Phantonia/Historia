@@ -1,8 +1,11 @@
-﻿using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
+﻿using Phantonia.Historia.Language.LexicalAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
+using Phantonia.Historia.Language.SyntaxAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -43,28 +46,9 @@ public sealed partial class Binder
         switch (statement)
         {
             case OutputStatementNode outputStatement:
-                {
-                    (context, ExpressionNode boundExpression) = BindAndTypeExpression(outputStatement.OutputExpression, context);
-
-                    if (boundExpression is TypedExpressionNode { SourceType: TypeSymbol sourceType } typedExpression)
-                    {
-                        if (!TypesAreCompatible(sourceType, settings.OutputType))
-                        {
-                            ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, settings.OutputType, "output", boundExpression.Index));
-
-                            return (context, statement);
-                        }
-
-                        boundExpression = RecursivelySetTargetType(typedExpression, settings.OutputType);
-                    }
-
-                    OutputStatementNode boundStatement = outputStatement with
-                    {
-                        OutputExpression = boundExpression,
-                    };
-
-                    return (context, boundStatement);
-                }
+                return BindOutputStatement(outputStatement, settings, context);
+            case LineStatementNode lineStatement:
+                return BindLineStatement(lineStatement, settings, context);
             case SwitchStatementNode switchStatement:
                 return BindSwitchStatement(switchStatement, settings, context);
             case LoopSwitchStatementNode loopSwitchStatement:
@@ -93,6 +77,239 @@ public sealed partial class Binder
                 Debug.Assert(false);
                 return default;
         }
+    }
+
+    private (BindingContext, StatementNode) BindOutputStatement(OutputStatementNode outputStatement, Settings settings, BindingContext context)
+    {
+        (context, ExpressionNode boundExpression) = BindAndTypeExpression(outputStatement.OutputExpression, context);
+
+        if (boundExpression is TypedExpressionNode { SourceType: TypeSymbol sourceType } typedExpression)
+        {
+            if (!TypesAreCompatible(sourceType, settings.OutputType))
+            {
+                ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, settings.OutputType, "output", boundExpression.Index));
+
+                return (context, outputStatement);
+            }
+
+            boundExpression = RecursivelySetTargetType(typedExpression, settings.OutputType);
+        }
+
+        OutputStatementNode boundStatement = outputStatement with
+        {
+            OutputExpression = boundExpression,
+        };
+
+        return (context, boundStatement);
+    }
+
+    private (BindingContext, StatementNode) BindLineStatement(LineStatementNode lineStatement, Settings settings, BindingContext context)
+    {
+        RecordTypeSymbol? lineRecord = DetermineApplicableLineRecord(lineStatement, settings, context);
+
+        if (lineRecord is null)
+        {
+            return (context, lineStatement);
+        }
+
+        (context, ExpressionNode boundCharacterExpression) = BindAndTypeCharacterExpression(lineStatement, lineRecord, context);
+
+        List<PropertySymbol> additionalProperties =
+            lineRecord.Properties
+                      .Skip(1)
+                      .Take(lineRecord.Properties.Length - 2)
+                      .ToList();
+
+        (context, IReadOnlyList<ArgumentNode>? boundArguments) = BindArgumentList(lineStatement, context, additionalProperties, "property");
+
+        (context, ExpressionNode boundTextExpression) = BindAndTypeExpression(lineStatement.TextExpression, context);
+
+        {
+            TypeSymbol targetType = lineRecord.Properties[^1].Type;
+
+            if (boundTextExpression is TypedExpressionNode { SourceType: TypeSymbol sourceType } typedExpression)
+            {
+                if (!TypesAreCompatible(sourceType, targetType))
+                {
+                    ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, targetType, "character", lineStatement.CharacterExpression.Index));
+                }
+                else
+                {
+                    boundTextExpression = RecursivelySetTargetType(typedExpression, targetType);
+                }
+            }
+        }
+
+        if (boundArguments.Any(a => a is not BoundArgumentNode))
+        {
+            return (context, lineStatement);
+        }
+
+        IEnumerable<BoundArgumentNode> boundBoundArguments = boundArguments.OfType<BoundArgumentNode>();
+
+        TypedExpressionNode lineCreationExpression = SynthesizeLineCreationExpression(boundCharacterExpression, boundBoundArguments, boundTextExpression, lineRecord, settings);
+
+        BoundLineStatementNode boundLineStatement = new()
+        {
+            LineStatement = lineStatement with
+            {
+                CharacterExpression = boundCharacterExpression,
+                AdditionalArguments = [.. boundArguments],
+                TextExpression = boundTextExpression,
+            },
+            LineCreationExpression = lineCreationExpression,
+            Index = lineStatement.Index,
+            PrecedingTokens = [],
+        };
+
+        return (context, boundLineStatement);
+    }
+
+    private static TypedExpressionNode SynthesizeLineCreationExpression(
+        ExpressionNode boundCharacterExpression,
+        IEnumerable<BoundArgumentNode> boundArguments,
+        ExpressionNode boundTextExpression,
+        RecordTypeSymbol lineRecord,
+        Settings settings)
+    {
+        BoundArgumentNode characterArgument = new()
+        {
+            Property = lineRecord.Properties[0],
+            ParameterNameToken = null,
+            EqualsToken = null,
+            Expression = boundCharacterExpression,
+            CommaToken = Token.Missing(boundCharacterExpression.Index),
+            Index = boundCharacterExpression.Index,
+            PrecedingTokens = [],
+        };
+
+        BoundArgumentNode textArgument = new()
+        {
+            Property = lineRecord.Properties[^1],
+            ParameterNameToken = null,
+            EqualsToken = null,
+            Expression = boundTextExpression,
+            CommaToken = Token.Missing(boundTextExpression.Index),
+            Index = boundTextExpression.Index,
+            PrecedingTokens = [],
+        };
+
+        RecordCreationExpressionNode creationExpression = new()
+        {
+            RecordNameToken = Token.Missing(characterArgument.Index),
+            OpenParenthesisToken = Token.Missing(characterArgument.Index),
+            Arguments = [characterArgument, .. boundArguments, textArgument],
+            ClosedParenthesisToken = Token.Missing(textArgument.Index),
+            Index = boundCharacterExpression.Index,
+            PrecedingTokens = [],
+        };
+
+        BoundRecordCreationExpressionNode boundCreationExpression = new()
+        {
+            BoundArguments = [characterArgument, .. boundArguments, textArgument],
+            Original = creationExpression,
+            Record = lineRecord,
+            Index = creationExpression.Index,
+            PrecedingTokens = [],
+        };
+
+        TypedExpressionNode typedExpression = new()
+        {
+            Original = boundCreationExpression,
+            SourceType = lineRecord,
+            TargetType = settings.OutputType,
+            Index = boundCreationExpression.Index,
+            PrecedingTokens = [],
+        };
+
+        return typedExpression;
+    }
+
+    private RecordTypeSymbol? DetermineApplicableLineRecord(LineStatementNode lineStatement, Settings settings, BindingContext context)
+    {
+        int propertyCount = (lineStatement.AdditionalArguments?.Length ?? 0) + 2;
+
+        IEnumerable<RecordTypeSymbol> applicableRecords =
+            context.SymbolTable
+                   .AllSymbols
+                   .OfType<RecordTypeSymbol>()
+                   .Where(s => s.IsLineRecord && s.Properties.Length == propertyCount);
+
+        int applicableRecordCount = applicableRecords.Count();
+
+        if (applicableRecordCount == 0)
+        {
+            ErrorFound?.Invoke(Errors.NoLineRecordWithPropertyCount((lineStatement.AdditionalArguments?.Length ?? 0) + 2, lineStatement.Index));
+            return null;
+        }
+
+        if (applicableRecordCount > 1)
+        {
+            ErrorFound?.Invoke(Errors.LineRecordAmbiguous((lineStatement.AdditionalArguments?.Length ?? 0) + 2, applicableRecords.Select(r => r.Name), lineStatement.Index));
+            return null;
+        }
+
+        RecordTypeSymbol lineRecord = applicableRecords.Single();
+
+        if (!TypesAreCompatible(lineRecord, settings.OutputType))
+        {
+            ErrorFound?.Invoke(Errors.IncompatibleType(lineRecord, settings.OutputType, "output", lineStatement.Index));
+        }
+
+        return lineRecord;
+    }
+
+    private (BindingContext, ExpressionNode) BindAndTypeCharacterExpression(LineStatementNode lineStatement, RecordTypeSymbol lineRecord, BindingContext context)
+    {
+        ExpressionNode boundCharacterExpression;
+
+        if (lineRecord.Properties[0].Type is EnumTypeSymbol characterEnum
+            && lineStatement.CharacterExpression is IdentifierExpressionNode identifierExpression
+            && characterEnum.Options.Contains(identifierExpression.Identifier))
+        {
+            boundCharacterExpression = new TypedExpressionNode
+            {
+                SourceType = characterEnum,
+                TargetType = characterEnum,
+                Original = new BoundEnumOptionExpressionNode
+                {
+                    EnumSymbol = characterEnum,
+                    EnumNameToken = new Token
+                    {
+                        Kind = TokenKind.Identifier,
+                        Text = characterEnum.Name,
+                        Index = lineStatement.Index,
+                        PrecedingTrivia = "",
+                    },
+                    DotToken = Token.Missing(identifierExpression.Index),
+                    OptionNameToken = identifierExpression.IdentifierToken,
+                    Index = identifierExpression.Index,
+                    PrecedingTokens = [],
+                },
+                Index = identifierExpression.Index,
+                PrecedingTokens = [],
+            };
+        }
+        else
+        {
+            (context, boundCharacterExpression) = BindAndTypeExpression(lineStatement.CharacterExpression, context);
+
+            TypeSymbol targetType = lineRecord.Properties[0].Type;
+
+            if (boundCharacterExpression is TypedExpressionNode { SourceType: TypeSymbol sourceType } typedExpression)
+            {
+                if (!TypesAreCompatible(sourceType, targetType))
+                {
+                    ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, targetType, "character", lineStatement.CharacterExpression.Index));
+                }
+                else
+                {
+                    boundCharacterExpression = RecursivelySetTargetType(typedExpression, targetType);
+                }
+            }
+        }
+
+        return (context, boundCharacterExpression);
     }
 
     private (BindingContext, StatementNode) BindSwitchStatement(SwitchStatementNode switchStatement, Settings settings, BindingContext context)
@@ -650,7 +867,7 @@ public sealed partial class Binder
             return (context, null, null, null);
         }
 
-        (context, List<ArgumentNode> boundArguments) = BindArgumentList(methodCallStatement, context, methodSymbol.Parameters, "parameter");
+        (context, IReadOnlyList<ArgumentNode> boundArguments) = BindArgumentList(methodCallStatement, context, methodSymbol.Parameters, "parameter");
 
         if (!boundArguments.All(a => a is BoundArgumentNode))
         {

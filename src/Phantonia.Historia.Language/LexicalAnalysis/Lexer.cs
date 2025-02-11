@@ -163,6 +163,24 @@ public sealed class Lexer
                         Index = currentIndex++,
                         PrecedingTrivia = triviaBuffer.ClearToString(),
                     };
+                case '[':
+                    _ = inputReader.Read();
+                    return new Token
+                    {
+                        Kind = TokenKind.OpenSquareBracket,
+                        Text = "[",
+                        Index = currentIndex++,
+                        PrecedingTrivia = triviaBuffer.ClearToString(),
+                    };
+                case ']':
+                    _ = inputReader.Read();
+                    return new Token
+                    {
+                        Kind = TokenKind.ClosedSquareBracket,
+                        Text = "]",
+                        Index = currentIndex++,
+                        PrecedingTrivia = triviaBuffer.ClearToString(),
+                    };
                 case ';':
                     _ = inputReader.Read();
                     return new Token
@@ -567,6 +585,7 @@ public sealed class Lexer
             "scene" => TokenKind.SceneKeyword,
             "chapter" => TokenKind.ChapterKeyword,
             "setting" => TokenKind.SettingKeyword,
+            "line" => TokenKind.LineKeyword,
             "record" => TokenKind.RecordKeyword,
             "union" => TokenKind.UnionKeyword,
             "enum" => TokenKind.EnumKeyword,

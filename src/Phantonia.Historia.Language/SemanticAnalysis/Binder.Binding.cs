@@ -145,7 +145,7 @@ public sealed partial class Binder
         return (context, symbol);
     }
 
-    private (BindingContext, List<ArgumentNode>) BindArgumentList(IArgumentContainerNode argumentContainer, BindingContext context, IReadOnlyList<PropertySymbol> properties, string parameterOrProperty)
+    private (BindingContext, IReadOnlyList<ArgumentNode>) BindArgumentList(IArgumentContainerNode argumentContainer, BindingContext context, IReadOnlyList<PropertySymbol> properties, string parameterOrProperty)
     {
         List<ArgumentNode> boundArguments = [.. argumentContainer.Arguments];
 

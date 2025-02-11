@@ -151,7 +151,7 @@ public sealed partial class Parser
                     };
                 }
             case TokenKind.OpenParenthesis:
-                (Token openParenthesis, ImmutableArray<ArgumentNode> arguments, Token closedParenthesis) = ParseArgumentList(ref index, []);
+                (Token openParenthesis, ImmutableArray<ArgumentNode> arguments, Token closedParenthesis) = ParseArgumentList(ref index, TokenKind.OpenParenthesis, TokenKind.ClosedParenthesis, []);
 
                 return new RecordCreationExpressionNode
                 {
@@ -188,13 +188,13 @@ public sealed partial class Parser
         }
     }
 
-    private (Token openParenthesis, ImmutableArray<ArgumentNode>, Token closedParenthesis) ParseArgumentList(ref int index, ImmutableList<Token> precedingTokens)
+    private (Token openBracket, ImmutableArray<ArgumentNode>, Token closedBracket) ParseArgumentList(ref int index, TokenKind openBracketKind, TokenKind closedBracketKind, ImmutableList<Token> precedingTokens)
     {
-        Token openParenthesis = Expect(TokenKind.OpenParenthesis, ref index);
+        Token openBracket = Expect(openBracketKind, ref index);
 
         ImmutableArray<ArgumentNode>.Builder arguments = ImmutableArray.CreateBuilder<ArgumentNode>();
 
-        while (tokens[index].Kind is not TokenKind.ClosedParenthesis)
+        while (tokens[index].Kind != closedBracketKind)
         {
             long argumentIndex = tokens[index].Index;
 
@@ -254,11 +254,11 @@ public sealed partial class Parser
             index++;
         }
 
-        // in case of no trailing comma, just expect a closed parenthesis
+        // in case of no trailing comma, just expect a closed bracket
         // else this is redundant and just does index++
-        Token closedParenthesis = Expect(TokenKind.ClosedParenthesis, ref index);
+        Token closedBracket = Expect(closedBracketKind, ref index);
 
-        return (openParenthesis, arguments.ToImmutable(), closedParenthesis);
+        return (openBracket, arguments.ToImmutable(), closedBracket);
     }
 
     private NotExpressionNode ParseNotExpression(ref int index, ImmutableList<Token> precedingTokens)
