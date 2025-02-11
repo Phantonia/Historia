@@ -126,7 +126,7 @@ public sealed partial class Binder
             return (context, incompleteTypedExpression);
         }
 
-        (context, List<ArgumentNode> boundArguments) = BindArgumentList(recordCreation, context, recordSymbol.Properties, "property");
+        (context, IReadOnlyList<ArgumentNode> boundArguments) = BindArgumentList(recordCreation, context, recordSymbol.Properties, "property");
 
         if (boundArguments.All(a => a is BoundArgumentNode))
         {

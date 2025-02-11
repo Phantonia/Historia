@@ -8,6 +8,10 @@ namespace Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 
 public sealed record RecordSymbolDeclarationNode() : TypeSymbolDeclarationNode
 {
+    public required Token? LineKeywordToken { get; init; }
+
+    public bool IsLineRecord => LineKeywordToken is not null;
+
     public required Token RecordKeywordToken { get; init; }
 
     public required Token OpenParenthesisToken { get; init; }
@@ -22,6 +26,7 @@ public sealed record RecordSymbolDeclarationNode() : TypeSymbolDeclarationNode
 
     protected override void ReconstructCore(TextWriter writer)
     {
+        LineKeywordToken?.Reconstruct(writer);
         RecordKeywordToken.Reconstruct(writer);
         NameToken.Reconstruct(writer);
         OpenParenthesisToken.Reconstruct(writer);

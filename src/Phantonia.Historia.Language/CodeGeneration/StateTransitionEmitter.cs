@@ -56,7 +56,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
 
             switch (flowGraph.Vertices[index].AssociatedStatement)
             {
-                case OutputStatementNode or NoOpStatementNode:
+                case OutputStatementNode or BoundLineStatementNode or NoOpStatementNode:
                     GenerateBasicTransition(index, edges);
                     break;
                 case FlowBranchingStatementNode { Original: SwitchStatementNode switchStatement, OutgoingEdges: ImmutableList<FlowEdge> outgoingEdges }:

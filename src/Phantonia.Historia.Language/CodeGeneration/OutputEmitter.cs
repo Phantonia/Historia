@@ -1,4 +1,5 @@
 ﻿using Phantonia.Historia.Language.FlowAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using System.CodeDom.Compiler;
@@ -39,22 +40,14 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
 
             switch (vertex.AssociatedStatement)
             {
-                case OutputStatementNode outputStatement:
+                case IOutputStatementNode outputStatement:
                     outputExpression = outputStatement.OutputExpression;
                     break;
-                case FlowBranchingStatementNode { Original: SwitchStatementNode switchStatement }:
-                    outputExpression = switchStatement.OutputExpression;
-                    break;
-                case FlowBranchingStatementNode { Original: LoopSwitchStatementNode loopSwitchStatement }:
-                    outputExpression = loopSwitchStatement.OutputExpression;
+                case FlowBranchingStatementNode { Original: IOutputStatementNode outputStatement }:
+                    outputExpression = outputStatement.OutputExpression;
                     break;
                 default:
                     continue;
-            }
-
-            if (vertex.AssociatedStatement is not (OutputStatementNode or FlowBranchingStatementNode { Original: SwitchStatementNode or LoopSwitchStatementNode }))
-            {
-                continue;
             }
 
             writer.Write("case ");

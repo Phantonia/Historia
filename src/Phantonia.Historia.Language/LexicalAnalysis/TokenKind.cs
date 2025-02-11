@@ -13,6 +13,8 @@ public enum TokenKind
     Semicolon, // ;
     OpenParenthesis, // (
     ClosedParenthesis, // )
+    OpenSquareBracket, // [
+    ClosedSquareBracket, // ]
     Colon, // :
     Comma, // ,
     Equals, // =
@@ -25,6 +27,7 @@ public enum TokenKind
     SceneKeyword,
     ChapterKeyword,
     SettingKeyword,
+    LineKeyword,
     RecordKeyword,
     UnionKeyword,
     EnumKeyword,
