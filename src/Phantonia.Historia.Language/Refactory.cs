@@ -1,7 +1,10 @@
 ﻿using Phantonia.Historia.Language.LexicalAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.IO;
 
 namespace Phantonia.Historia.Language;
@@ -30,6 +33,17 @@ public static class Refactory
             Length = unit.Length,
             PrecedingTokens = [],
         };
+
+        Binder binder = new(story);
+        BindingResult result = binder.Bind();
+
+        if (errors.Count > 0)
+        {
+            throw new InvalidOperationException("Invalid code");
+        }
+
+        Debug.Assert(result.IsValid);
+        story = result.BoundStory;
 
         foreach (IRefactoring refactoring in refactorings)
         {
