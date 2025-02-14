@@ -2107,4 +2107,29 @@ public sealed class BinderTests
 
         Assert.IsTrue(expectedErrors.SetEquals(errors));
     }
+
+    [TestMethod]
+    public void TestStringSettings()
+    {
+        string code =
+            """
+            setting StoryName: "Story"; // okay
+            setting Namespace: ("Namespace"); // not okay
+
+            scene main { }
+            """;
+
+        Binder binder = PrepareBinder(code);
+
+        List<Error> errors = [];
+        binder.ErrorFound += errors.Add;
+
+        _ = binder.Bind();
+
+        Assert.AreEqual(1, errors.Count);
+
+        Error expectedError = Errors.SettingRequiresStringLiteral("Namespace", code.IndexOf("(\"Namespace\")"));
+
+        Assert.AreEqual(expectedError, errors[0]);
+    }
 }

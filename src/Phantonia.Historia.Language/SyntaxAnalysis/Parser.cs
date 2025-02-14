@@ -36,6 +36,7 @@ public sealed partial class Parser(ImmutableArray<Token> tokens, string path)
         {
             Path = path,
             TopLevelNodes = topLevelBuilder.ToImmutable(),
+            EndOfFileToken = tokens[^1],
             Index = tokens.Length > 0 ? tokens[0].Index : 0,
             Length = tokens[^1].Index,
             PrecedingTokens = [],
