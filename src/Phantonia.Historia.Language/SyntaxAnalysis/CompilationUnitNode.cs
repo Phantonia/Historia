@@ -1,4 +1,5 @@
-﻿using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
+﻿using Phantonia.Historia.Language.LexicalAnalysis;
+using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
@@ -15,6 +16,8 @@ public sealed record CompilationUnitNode : SyntaxNode
 
     public bool IsModified { get; init; } = false;
 
+    public required Token EndOfFileToken { get; init; }
+
     public override IEnumerable<SyntaxNode> Children => TopLevelNodes;
 
     protected override void ReconstructCore(TextWriter writer)
@@ -23,6 +26,8 @@ public sealed record CompilationUnitNode : SyntaxNode
         {
             node.Reconstruct(writer);
         }
+
+        EndOfFileToken.Reconstruct(writer);
     }
 
     protected internal override string GetDebuggerDisplay() => $"compilation unit @{Path} w/ {TopLevelNodes.Length} top level nodes";

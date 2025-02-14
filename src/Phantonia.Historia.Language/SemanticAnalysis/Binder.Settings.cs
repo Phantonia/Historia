@@ -143,7 +143,13 @@ public sealed partial class Binder
             return previousSettings;
         }
 
-        string className = ((StringLiteralExpressionNode)expressionNode).StringLiteral.Trim();
+        if (expressionNode is not StringLiteralExpressionNode literalExpression)
+        {
+            ErrorFound?.Invoke(Errors.SettingRequiresStringLiteral("StoryName", expressionNode.Index));
+            return previousSettings;
+        }
+
+        string className = literalExpression.StringLiteral.Trim();
 
         Regex identifierRegex = IdentifierRegex();
 
@@ -167,7 +173,13 @@ public sealed partial class Binder
             return previousSettings;
         }
 
-        string namespaceString = ((StringLiteralExpressionNode)expressionNode).StringLiteral;
+        if (expressionNode is not StringLiteralExpressionNode literalExpression)
+        {
+            ErrorFound?.Invoke(Errors.SettingRequiresStringLiteral("Namespace", expressionNode.Index));
+            return previousSettings;
+        }
+
+        string namespaceString = literalExpression.StringLiteral;
         string[] components = namespaceString.Split('.', StringSplitOptions.TrimEntries);
 
         Regex identifierRegex = IdentifierRegex();
