@@ -87,6 +87,15 @@ public static class Errors
         };
     }
 
+    public static Error SettingRequiresStringLiteral(string settingName, long index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Setting {settingName} requires a string literal. Note that parenthesized string literals are also not allowed",
+            Index = index,
+        };
+    }
+
     public static Error UnexpectedEndOfFile(Token endOfFileToken)
     {
         Debug.Assert(endOfFileToken.Kind is TokenKind.EndOfFile);
