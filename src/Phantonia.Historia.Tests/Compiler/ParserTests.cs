@@ -1338,4 +1338,20 @@ public sealed class ParserTests
 
         Assert.IsTrue(errorCount > 0);
     }
+
+    [TestMethod]
+    public void TestReconstructWithTriviaAtTheEnd()
+    {
+        string code =
+            """
+            scene main
+            {
+                output 0;
+            } // ends in a comment
+            """;
+
+        Parser parser = PrepareParser(code);
+        CompilationUnitNode unit = parser.Parse();
+        NodeAssert.ReconstructWorks(code, unit);
+    }
 }
