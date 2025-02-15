@@ -1,0 +1,90 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Historia",
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#comments"
+		},
+		{
+			"include": "#support"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.other.hstr",
+				"match": "\\b(scene|chapter|setting|record|union|enum|outcome|spectrum|public|default|interface|reference|action|choice)\\b"
+			}, {
+				"name": "keyword.control.hstr",
+				"match": "\\b(output|switch|option|final|loop|branchon|other|strengthen|weaken|by|call|run|choose|if|else)\\b"
+			}, {
+				"name": "keyword.operator.hstr",
+				"match": "\\b(is|and|or|not)\\b"
+			}]
+		},
+		"strings": {
+			"patterns": [
+				{
+					"name": "string.quoted.triple_single.hstr",
+					"begin": "'''",
+					"end": "'''",
+					"patterns": [
+						{
+							"name": "constant.character.escape.hstr",
+							"match": "\\\\."
+						}
+					]
+				},
+				{
+					"name": "string.quoted.triple_double.hstr",
+					"begin": "\"\"\"",
+					"end": "\"\"\"",
+					"patterns": [
+						{
+							"name": "constant.character.escape.hstr",
+							"match": "\\\\."
+						}
+					]
+				},
+				{
+					"name": "string.quoted.double.hstr",
+					"begin": "\"",
+					"end": "\"",
+					"patterns": [
+						{
+							"name": "constant.character.escape.hstr",
+							"match": "\\\\."
+						}
+					]
+				},
+				{
+					"name": "string.quoted.single.hstr",
+					"begin": "'",
+					"end": "'",
+					"patterns": [
+						{
+							"name": "constant.character.escape.hstr",
+							"match": "\\\\."
+						}
+					]
+				}
+			]
+		},
+		"comments": {
+			"name": "comment.line.double-slash.hstr",
+			"begin": "//",
+			"end": "(\n|\r)"
+		},
+		"support": {
+			"name": "support.function.hstr",
+			"match": "[a-zA-Z_][a-zA-Z0-9_]*"
+		}
+	},
+	"scopeName": "source.hstr"
+}
