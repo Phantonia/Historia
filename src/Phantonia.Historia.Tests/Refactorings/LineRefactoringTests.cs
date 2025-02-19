@@ -37,6 +37,24 @@ public sealed class LineRefactoringTests
                         output TaggedLine("Danielle", 5, 'uwu');
                     }
                 }
+
+                loop switch 1
+                {
+                    option "def"
+                    {
+                        output Line(Character.Alice, "eeee");
+                    }
+
+                    loop option "ghi"
+                    {
+                        output Line(Character.Bob, """o"uouo"u""");
+                    }
+
+                    final option "jkl"
+                    {
+                        output TaggedLine("Charlie", 91, "");
+                    }
+                }
             }
             """";
 
@@ -65,6 +83,24 @@ public sealed class LineRefactoringTests
                     option "xyz"
                     {
                         "Danielle" [5]: 'uwu';
+                    }
+                }
+
+                loop switch 1
+                {
+                    option "def"
+                    {
+                        Alice: "eeee";
+                    }
+
+                    loop option "ghi"
+                    {
+                        Bob: """o"uouo"u""";
+                    }
+
+                    final option "jkl"
+                    {
+                        "Charlie" [91]: "";
                     }
                 }
             }

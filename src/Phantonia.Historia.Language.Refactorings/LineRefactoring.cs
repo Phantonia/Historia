@@ -68,6 +68,11 @@ public sealed class LineRefactoring : IRefactoring
                 {
                     Options = switchStatement.Options.Select(o => o with { Body = RefactorBody(o.Body) }).ToImmutableArray(),
                 };
+            case LoopSwitchStatementNode loopSwitchStatement:
+                return loopSwitchStatement with
+                {
+                    Options = loopSwitchStatement.Options.Select(o => o with { Body = RefactorBody(o.Body) }).ToImmutableArray(),
+                };
             case BoundBranchOnStatementNode branchonStatement:
                 return branchonStatement with
                 {
