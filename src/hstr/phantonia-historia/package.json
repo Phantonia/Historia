@@ -1,0 +1,25 @@
+{
+  "name": "phantonia-historia",
+  "displayName": "Phantonia.Historia",
+  "description": "",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.97.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "hstr",
+      "aliases": ["Historia", "hstr"],
+      "extensions": [".hstr"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "hstr",
+      "scopeName": "source.hstr",
+      "path": "./syntaxes/hstr.tmLanguage.json"
+    }]
+  }
+}
