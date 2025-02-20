@@ -91,6 +91,8 @@ public sealed partial class Binder
                     ErrorFound?.Invoke(Errors.SymbolHasNoValue(identifier, index));
                     return (context, expression);
                 }
+            case MissingExpressionNode:
+                return (context, expression);
             default:
                 Debug.Assert(false);
                 return default;

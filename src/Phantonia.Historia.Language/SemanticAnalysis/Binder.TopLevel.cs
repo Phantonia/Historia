@@ -8,20 +8,19 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
-using System.Net.Mime;
 
 namespace Phantonia.Historia.Language.SemanticAnalysis;
 
 public sealed partial class Binder
 {
-    private (BindingContext, TopLevelNode) BindTopLevelNode(TopLevelNode declaration, Settings settings, BindingContext context)
+    private (BindingContext, TopLevelNode) BindTopLevelNode(TopLevelNode topLevelNode, Settings settings, BindingContext context)
     {
-        if (declaration is BoundSymbolDeclarationNode { Original: SymbolDeclarationNode innerDeclaration })
+        if (topLevelNode is BoundSymbolDeclarationNode { Original: SymbolDeclarationNode innerDeclaration })
         {
             return BindTopLevelNode(innerDeclaration, settings, context);
         }
 
-        switch (declaration)
+        switch (topLevelNode)
         {
             case SubroutineSymbolDeclarationNode sceneDeclaration:
                 return BindSceneDeclaration(sceneDeclaration, settings, context);
@@ -41,6 +40,8 @@ public sealed partial class Binder
                     Index = symbolDeclaration.Index,
                     PrecedingTokens = [],
                 });
+            case MissingTopLevelNode:
+                return (context, topLevelNode);
             default:
                 Debug.Assert(false);
                 return default;
