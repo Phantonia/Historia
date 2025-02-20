@@ -16,15 +16,15 @@ public sealed class DependencyGraphTests
     {
         Dictionary<long, Symbol> symbols = new()
         {
-            [17] = new PseudoRecordTypeSymbol { Name = "Abc", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 17, },
-            [26] = new PseudoRecordTypeSymbol { Name = "Def", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 26, },
-            [43] = new PseudoRecordTypeSymbol { Name = "Ghi", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 43, },
-            [55] = new PseudoRecordTypeSymbol { Name = "Jkl", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 55, },
-            [70] = new PseudoRecordTypeSymbol { Name = "Mno", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 70, },
-            [89] = new PseudoRecordTypeSymbol { Name = "Pqr", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 89, },
-            [105] = new PseudoRecordTypeSymbol { Name = "Stu", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 105, },
-            [117] = new PseudoRecordTypeSymbol { Name = "Vw", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 117, }, // no ad
-            [123] = new PseudoRecordTypeSymbol { Name = "Xyz", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 123, },
+            [17] = new PseudoRecordTypeSymbol { Name = "Abc", Properties = [], IsLineRecord = false, Index = 17, },
+            [26] = new PseudoRecordTypeSymbol { Name = "Def", Properties = [], IsLineRecord = false, Index = 26, },
+            [43] = new PseudoRecordTypeSymbol { Name = "Ghi", Properties = [], IsLineRecord = false, Index = 43, },
+            [55] = new PseudoRecordTypeSymbol { Name = "Jkl", Properties = [], IsLineRecord = false, Index = 55, },
+            [70] = new PseudoRecordTypeSymbol { Name = "Mno", Properties = [], IsLineRecord = false, Index = 70, },
+            [89] = new PseudoRecordTypeSymbol { Name = "Pqr", Properties = [], IsLineRecord = false, Index = 89, },
+            [105] = new PseudoRecordTypeSymbol { Name = "Stu", Properties = [], IsLineRecord = false, Index = 105, },
+            [117] = new PseudoRecordTypeSymbol { Name = "Vw", Properties = [], IsLineRecord = false, Index = 117, }, // no ad
+            [123] = new PseudoRecordTypeSymbol { Name = "Xyz", Properties = [], IsLineRecord = false, Index = 123, },
         };
 
         Dictionary<long, IReadOnlySet<long>> dependencies = new()
@@ -69,15 +69,15 @@ public sealed class DependencyGraphTests
     {
         Dictionary<long, Symbol> symbols = new()
         {
-            [17] = new PseudoRecordTypeSymbol { Name = "Abc", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 17, },
-            [26] = new PseudoRecordTypeSymbol { Name = "Def", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 26, },
-            [43] = new PseudoRecordTypeSymbol { Name = "Ghi", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 43, },
-            [55] = new PseudoRecordTypeSymbol { Name = "Jkl", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 55, },
-            [70] = new PseudoRecordTypeSymbol { Name = "Mno", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 70, },
-            [89] = new PseudoRecordTypeSymbol { Name = "Pqr", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 89, },
-            [105] = new PseudoRecordTypeSymbol { Name = "Stu", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 105, },
-            [117] = new PseudoRecordTypeSymbol { Name = "Vw", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 117, }, // no ad
-            [123] = new PseudoRecordTypeSymbol { Name = "Xyz", Properties = ImmutableArray<PseudoPropertySymbol>.Empty, Index = 123, },
+            [17] = new PseudoRecordTypeSymbol { Name = "Abc", Properties = [], IsLineRecord = false, Index = 17, },
+            [26] = new PseudoRecordTypeSymbol { Name = "Def", Properties = [], IsLineRecord = false, Index = 26, },
+            [43] = new PseudoRecordTypeSymbol { Name = "Ghi", Properties = [], IsLineRecord = false, Index = 43, },
+            [55] = new PseudoRecordTypeSymbol { Name = "Jkl", Properties = [], IsLineRecord = false, Index = 55, },
+            [70] = new PseudoRecordTypeSymbol { Name = "Mno", Properties = [], IsLineRecord = false, Index = 70, },
+            [89] = new PseudoRecordTypeSymbol { Name = "Pqr", Properties = [], IsLineRecord = false, Index = 89, },
+            [105] = new PseudoRecordTypeSymbol { Name = "Stu", Properties = [], IsLineRecord = false, Index = 105, },
+            [117] = new PseudoRecordTypeSymbol { Name = "Vw", Properties = [], IsLineRecord = false, Index = 117, }, // no ad
+            [123] = new PseudoRecordTypeSymbol { Name = "Xyz", Properties = [], IsLineRecord = false, Index = 123, },
         };
 
         Dictionary<long, IReadOnlySet<long>> dependencies = new()

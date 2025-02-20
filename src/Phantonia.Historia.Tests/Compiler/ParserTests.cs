@@ -1018,7 +1018,7 @@ public sealed class ParserTests
 
             interface ICharacter
             (
-                action Say(line: String),
+                action Say(text: String),
                 choice Choose(prompt: String),
             );
 
@@ -1060,7 +1060,7 @@ public sealed class ParserTests
         Assert.AreEqual(InterfaceMethodKind.Action, intface.Methods[0].Kind);
         Assert.AreEqual("Say", intface.Methods[0].Name);
         Assert.AreEqual(1, intface.Methods[0].Parameters.Length);
-        Assert.AreEqual("line", intface.Methods[0].Parameters[0].Name);
+        Assert.AreEqual("text", intface.Methods[0].Parameters[0].Name);
 
         Assert.AreEqual(InterfaceMethodKind.Choice, intface.Methods[1].Kind);
         Assert.AreEqual("Choose", intface.Methods[1].Name);

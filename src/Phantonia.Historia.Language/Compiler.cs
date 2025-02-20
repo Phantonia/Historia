@@ -13,7 +13,7 @@ namespace Phantonia.Historia.Language;
 
 public static class Compiler
 {
-    public static (CompilationResult, string) CompileString(string code)
+    public static (CompilationResult result, string csharpCode) CompileString(string code)
     {
         List<Error> errors = [];
         using StringReader reader = new(code);
@@ -27,6 +27,8 @@ public static class Compiler
         parser.ErrorFound += errors.Add;
         CompilationUnitNode unit = parser.Parse();
         parser.ErrorFound -= errors.Add;
+
+        Debug.Assert(unit.Reconstruct() == code);
 
         StoryNode story = new()
         {

@@ -177,6 +177,7 @@ public sealed partial class Binder
         {
             Name = pseudoRecord.Name,
             Properties = trueProperties.MoveToImmutable(),
+            IsLineRecord = pseudoRecord.IsLineRecord,
             Index = pseudoRecord.Index,
         };
     }

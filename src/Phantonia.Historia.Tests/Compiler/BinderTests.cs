@@ -555,6 +555,7 @@ public sealed class BinderTests
         RecordTypeSymbol lineType = new()
         {
             Name = "Line",
+            IsLineRecord = false, // don't @ me
             Index = code.IndexOf("record Line"),
             Properties = [],
         };
@@ -1763,7 +1764,7 @@ public sealed class BinderTests
 
             interface ICharacter
             (
-                action Say(line: String),
+                action Say(text: String),
                 choice Choose(prompt: String),
             );
 

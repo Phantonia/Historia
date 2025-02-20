@@ -99,6 +99,11 @@ public sealed partial class Binder
             });
         }
 
+        if (recordDeclaration.IsLineRecord && recordDeclaration.Properties.Length < 2)
+        {
+            ErrorFound?.Invoke(Errors.LineRecordWithTooLittleProperties(recordSymbol.Name, recordDeclaration.Properties.Length, recordDeclaration.Index));
+        }
+
         BoundSymbolDeclarationNode boundRecordDeclaration = new()
         {
             NameToken = recordDeclaration.NameToken,

@@ -3,7 +3,6 @@ using Phantonia.Historia.Language;
 using Phantonia.Historia.Language.FlowAnalysis;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 
