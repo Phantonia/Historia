@@ -1,7 +1,6 @@
 ﻿using Phantonia.Historia.Language.LexicalAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
-using Phantonia.Historia.Language.SyntaxAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
@@ -274,13 +273,7 @@ public sealed partial class Binder
                 Original = new BoundEnumOptionExpressionNode
                 {
                     EnumSymbol = characterEnum,
-                    EnumNameToken = new Token
-                    {
-                        Kind = TokenKind.Identifier,
-                        Text = characterEnum.Name,
-                        Index = lineStatement.Index,
-                        PrecedingTrivia = "",
-                    },
+                    EnumNameToken = Token.Missing(lineStatement.Index),
                     DotToken = Token.Missing(identifierExpression.Index),
                     OptionNameToken = identifierExpression.IdentifierToken,
                     Index = identifierExpression.Index,
