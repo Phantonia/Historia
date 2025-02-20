@@ -12,81 +12,85 @@ public sealed partial class Parser
 {
     private TopLevelNode ParseTopLevelNode(ref int index, ImmutableList<Token> precedingTokens)
     {
-        switch (tokens[index].Kind)
+        while (true)
         {
-            case TokenKind.SceneKeyword or TokenKind.ChapterKeyword:
-                return ParseSubroutineSymbolDeclaration(ref index, precedingTokens);
-            case TokenKind.RecordKeyword:
-                return ParseRecordSymbolDeclaration(ref index, lineKeyword: null, precedingTokens);
-            case TokenKind.LineKeyword:
-                {
-                    Token lineKeyword = tokens[index++];
-                    return ParseRecordSymbolDeclaration(ref index, lineKeyword, precedingTokens);
-                }
-            case TokenKind.UnionKeyword:
-                return ParseUnionSymbolDeclaration(ref index, precedingTokens);
-            case TokenKind.EnumKeyword:
-                return ParseEnumSymbolDeclaration(ref index, precedingTokens);
-            case TokenKind.SettingKeyword:
-                return ParseSettingDirective(ref index, precedingTokens);
-            case TokenKind.PublicKeyword:
-                return ParsePublicTopLevelNode(ref index, precedingTokens);
-            case TokenKind.OutcomeKeyword:
-                {
-                    OutcomeDeclarationInfo outcomeDeclaration = ParseOutcomeDeclaration(ref index);
-
-                    return new OutcomeSymbolDeclarationNode
+            switch (tokens[index].Kind)
+            {
+                case TokenKind.SceneKeyword or TokenKind.ChapterKeyword:
+                    return ParseSubroutineSymbolDeclaration(ref index, precedingTokens);
+                case TokenKind.RecordKeyword:
+                    return ParseRecordSymbolDeclaration(ref index, lineKeyword: null, precedingTokens);
+                case TokenKind.LineKeyword:
                     {
-                        PublicKeywordToken = null,
-                        OutcomeKeywordToken = outcomeDeclaration.OutcomeKeyword,
-                        NameToken = outcomeDeclaration.Name,
-                        OpenParenthesisToken = outcomeDeclaration.OpenParenthesis,
-                        OptionNameTokens = outcomeDeclaration.Options,
-                        CommaTokens = outcomeDeclaration.Commas,
-                        ClosedParenthesisToken = outcomeDeclaration.ClosedParenthesis,
-                        DefaultKeywordToken = outcomeDeclaration.DefaultKeyword,
-                        DefaultOptionToken = outcomeDeclaration.DefaultOption,
-                        SemicolonToken = outcomeDeclaration.Semicolon,
-                        Index = outcomeDeclaration.Index,
+                        Token lineKeyword = tokens[index++];
+                        return ParseRecordSymbolDeclaration(ref index, lineKeyword, precedingTokens);
+                    }
+                case TokenKind.UnionKeyword:
+                    return ParseUnionSymbolDeclaration(ref index, precedingTokens);
+                case TokenKind.EnumKeyword:
+                    return ParseEnumSymbolDeclaration(ref index, precedingTokens);
+                case TokenKind.SettingKeyword:
+                    return ParseSettingDirective(ref index, precedingTokens);
+                case TokenKind.PublicKeyword:
+                    return ParsePublicTopLevelNode(ref index, precedingTokens);
+                case TokenKind.OutcomeKeyword:
+                    {
+                        OutcomeDeclarationInfo outcomeDeclaration = ParseOutcomeDeclaration(ref index);
+
+                        return new OutcomeSymbolDeclarationNode
+                        {
+                            PublicKeywordToken = null,
+                            OutcomeKeywordToken = outcomeDeclaration.OutcomeKeyword,
+                            NameToken = outcomeDeclaration.Name,
+                            OpenParenthesisToken = outcomeDeclaration.OpenParenthesis,
+                            OptionNameTokens = outcomeDeclaration.Options,
+                            CommaTokens = outcomeDeclaration.Commas,
+                            ClosedParenthesisToken = outcomeDeclaration.ClosedParenthesis,
+                            DefaultKeywordToken = outcomeDeclaration.DefaultKeyword,
+                            DefaultOptionToken = outcomeDeclaration.DefaultOption,
+                            SemicolonToken = outcomeDeclaration.Semicolon,
+                            Index = outcomeDeclaration.Index,
+                            PrecedingTokens = precedingTokens,
+                        };
+                    }
+                case TokenKind.SpectrumKeyword:
+                    {
+                        SpectrumDeclarationInfo spectrumDeclaration = ParseSpectrumDeclaration(ref index);
+
+                        return new SpectrumSymbolDeclarationNode
+                        {
+                            PublicKeywordToken = null,
+                            SpectrumKeywordToken = spectrumDeclaration.SpectrumKeyword,
+                            NameToken = spectrumDeclaration.Name,
+                            OpenParenthesisToken = spectrumDeclaration.OpenParenthesis,
+                            Options = spectrumDeclaration.Options,
+                            ClosedParenthesisToken = spectrumDeclaration.ClosedParenthesis,
+                            DefaultKeywordToken = spectrumDeclaration.DefaultKeyword,
+                            DefaultOptionToken = spectrumDeclaration.DefaultOption,
+                            SemicolonToken = spectrumDeclaration.Semicolon,
+                            Index = spectrumDeclaration.Index,
+                            PrecedingTokens = precedingTokens,
+                        };
+                    }
+                case TokenKind.InterfaceKeyword:
+                    return ParseInterfaceDeclaration(ref index, precedingTokens);
+                case TokenKind.ReferenceKeyword:
+                    return ParseReferenceDeclaration(ref index, precedingTokens);
+                case TokenKind.EndOfFile:
+                    return new MissingTopLevelNode
+                    {
+                        Index = tokens[index++].Index,
                         PrecedingTokens = precedingTokens,
                     };
-                }
-            case TokenKind.SpectrumKeyword:
-                {
-                    SpectrumDeclarationInfo spectrumDeclaration = ParseSpectrumDeclaration(ref index);
-
-                    return new SpectrumSymbolDeclarationNode
+                default:
                     {
-                        PublicKeywordToken = null,
-                        SpectrumKeywordToken = spectrumDeclaration.SpectrumKeyword,
-                        NameToken = spectrumDeclaration.Name,
-                        OpenParenthesisToken = spectrumDeclaration.OpenParenthesis,
-                        Options = spectrumDeclaration.Options,
-                        ClosedParenthesisToken = spectrumDeclaration.ClosedParenthesis,
-                        DefaultKeywordToken = spectrumDeclaration.DefaultKeyword,
-                        DefaultOptionToken = spectrumDeclaration.DefaultOption,
-                        SemicolonToken = spectrumDeclaration.Semicolon,
-                        Index = spectrumDeclaration.Index,
-                        PrecedingTokens = precedingTokens,
-                    };
-                }
-            case TokenKind.InterfaceKeyword:
-                return ParseInterfaceDeclaration(ref index, precedingTokens);
-            case TokenKind.ReferenceKeyword:
-                return ParseReferenceDeclaration(ref index, precedingTokens);
-            case TokenKind.EndOfFile:
-                return new MissingTopLevelNode
-                {
-                    Index = tokens[index++].Index,
-                    PrecedingTokens = precedingTokens,
-                };
-            default:
-                {
-                    Token unexpectedToken = tokens[index];
-                    ErrorFound?.Invoke(Errors.UnexpectedToken(unexpectedToken));
-                    index++;
-                    return ParseTopLevelNode(ref index, precedingTokens.Add(unexpectedToken));
-                }
+                        Token unexpectedToken = tokens[index];
+                        ErrorFound?.Invoke(Errors.UnexpectedToken(unexpectedToken));
+                        index++;
+                        precedingTokens = precedingTokens.Add(unexpectedToken);
+                        continue;
+                    }
+            }
         }
     }
 
