@@ -417,7 +417,8 @@ public static class GeneralEmission
                 writer.Write(')');
                 return;
             case BoundEnumOptionExpressionNode enumOptionExpression:
-                writer.Write(enumOptionExpression.EnumName);
+                writer.Write('@');
+                writer.Write(enumOptionExpression.EnumSymbol.Name);
                 writer.Write('.');
                 writer.Write(enumOptionExpression.OptionName);
                 return;
