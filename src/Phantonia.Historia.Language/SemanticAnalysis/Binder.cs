@@ -2,7 +2,6 @@
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
-using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using Phantonia.Historia.Language.SyntaxAnalysis.Types;
 using System;
@@ -126,7 +125,7 @@ public sealed partial class Binder(StoryNode story)
                 return CreateReferenceSymbolFromDeclaration(referenceDeclaration);
             case InterfaceSymbolDeclarationNode interfaceDeclaration:
                 return CreateInterfaceSymbolFromDeclaration(interfaceDeclaration);
-            case SettingDirectiveNode:
+            case SettingDirectiveNode or MissingTopLevelNode:
                 return null;
             default:
                 Debug.Assert(false);
