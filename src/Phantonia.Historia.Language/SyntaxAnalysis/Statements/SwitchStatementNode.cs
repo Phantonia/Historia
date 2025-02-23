@@ -15,6 +15,8 @@ public sealed record SwitchStatementNode() : StatementNode, IOptionsStatementNod
 
     public required Token OpenBraceToken { get; init; }
 
+    public required StatementBodyNode Body { get; init; }
+
     public required ImmutableArray<OptionNode> Options { get; init; }
 
     public required Token ClosedBraceToken { get; init; }

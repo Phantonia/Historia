@@ -1,7 +1,6 @@
 ﻿using Phantonia.Historia.Language.LexicalAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
-using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 
@@ -188,15 +187,34 @@ public sealed partial class Parser
 
         Token openBrace = Expect(TokenKind.OpenBrace, ref index);
 
+        ImmutableArray<StatementNode>.Builder statementBuilder = ImmutableArray.CreateBuilder<StatementNode>();
+
+        while (tokens[index].Kind is not (TokenKind.ClosedBrace or TokenKind.EndOfFile or TokenKind.OptionKeyword))
+        {
+            StatementNode nextStatement = ParseStatement(ref index, []);
+
+            statementBuilder.Add(nextStatement);
+        }
+
         ImmutableArray<OptionNode> optionNodes = ParseOptions(ref index, []);
 
         Token closedBrace = Expect(TokenKind.ClosedBrace, ref index);
+
+        StatementBodyNode body = new()
+        {
+            OpenBraceToken = null,
+            Statements = statementBuilder.ToImmutable(),
+            ClosedBraceToken = null,
+            Index = statementBuilder.Count > 0 ? statementBuilder[0].Index : optionNodes.Length > 0 ? optionNodes[0].Index : closedBrace.Index,
+            PrecedingTokens = [],
+        };
 
         return new SwitchStatementNode
         {
             SwitchKeywordToken = switchKeyword,
             OutputExpression = expression,
             OpenBraceToken = openBrace,
+            Body = body,
             Options = optionNodes,
             ClosedBraceToken = closedBrace,
             Index = nodeIndex,
