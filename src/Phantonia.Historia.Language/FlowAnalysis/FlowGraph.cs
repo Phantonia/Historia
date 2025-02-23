@@ -83,6 +83,24 @@ public sealed record FlowGraph
         }
     }
 
+    public FlowGraph AddEdge(long startPoint, FlowEdge edge)
+    {
+        if (!OutgoingEdges.TryGetValue(startPoint, out ImmutableList<FlowEdge>? edgeList))
+        {
+            throw new ArgumentException($"Vertex {startPoint} does not exist");
+        }
+
+        if (edgeList.Any(e => e.ToVertex == edge.ToVertex))
+        {
+            throw new ArgumentException($"Edge {startPoint} to {edge.ToVertex} already exists");
+        }
+
+        return this with
+        {
+            OutgoingEdges = OutgoingEdges.SetItem(startPoint, edgeList.Add(edge)),
+        };
+    }
+
     public FlowGraph SetVertex(long index, FlowVertex newVertex)
     {
         Debug.Assert(Vertices.ContainsKey(index));

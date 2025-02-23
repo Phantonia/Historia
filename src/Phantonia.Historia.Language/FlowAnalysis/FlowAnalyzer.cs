@@ -148,10 +148,21 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             Kind = FlowVertexKind.Visible,
         });
 
+        FlowGraph bodyFlowGraph = GenerateBodyFlowGraph(switchStatement.Body);
+        flowGraph = flowGraph.Append(bodyFlowGraph);
+
         foreach (OptionNode option in switchStatement.Options)
         {
             FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body);
             flowGraph = flowGraph.AppendToVertex(switchStatement.Index, nestedFlowGraph);
+
+            foreach (FlowVertex vertex in bodyFlowGraph.Vertices.Values)
+            {
+                foreach (FlowEdge nestedStartEdge in nestedFlowGraph.StartEdges)
+                {
+                    flowGraph = flowGraph.AddEdge(vertex.Index, nestedStartEdge);
+                }
+            }
         }
 
         FlowBranchingStatementNode flowBranchingStatement = new()

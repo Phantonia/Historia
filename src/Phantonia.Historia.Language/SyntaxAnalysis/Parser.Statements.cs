@@ -1,6 +1,7 @@
 ﻿using Phantonia.Historia.Language.LexicalAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 
@@ -194,6 +195,37 @@ public sealed partial class Parser
             StatementNode nextStatement = ParseStatement(ref index, []);
 
             statementBuilder.Add(nextStatement);
+        }
+
+        void RecursivelyEnsureNoSwitchesOrCalls(IEnumerable<StatementNode> statements)
+        {
+            foreach (StatementNode statement in statements)
+            {
+                switch (statement)
+                {
+                    case SwitchStatementNode:
+                    case LoopSwitchStatementNode:
+                    case CallStatementNode:
+                        ErrorFound?.Invoke(Errors.SwitchBodyContainsSwitchOrCall(nodeIndex));
+                        break;
+                    case IfStatementNode ifStatement:
+                        RecursivelyEnsureNoSwitchesOrCalls(ifStatement.ThenBlock.Statements);
+                        RecursivelyEnsureNoSwitchesOrCalls(ifStatement.ElseBlock?.Statements ?? []);
+                        break;
+                    case BranchOnStatementNode branchonStatement:
+                        foreach (BranchOnOptionNode option in branchonStatement.Options)
+                        {
+                            RecursivelyEnsureNoSwitchesOrCalls(option.Body.Statements);
+                        }
+                        break;
+                    case ChooseStatementNode chooseStatement:
+                        foreach (OptionNode option in chooseStatement.Options)
+                        {
+                            RecursivelyEnsureNoSwitchesOrCalls(option.Body.Statements);
+                        }
+                        break;
+                }
+            }
         }
 
         ImmutableArray<OptionNode> optionNodes = ParseOptions(ref index, []);
