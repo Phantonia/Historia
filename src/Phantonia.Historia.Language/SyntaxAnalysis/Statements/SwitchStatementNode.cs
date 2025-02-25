@@ -29,6 +29,8 @@ public sealed record SwitchStatementNode() : StatementNode, IOptionsStatementNod
         OutputExpression.Reconstruct(writer);
         OpenBraceToken.Reconstruct(writer);
 
+        Body.Reconstruct(writer);
+
         foreach (OptionNode option in Options)
         {
             option.Reconstruct(writer);

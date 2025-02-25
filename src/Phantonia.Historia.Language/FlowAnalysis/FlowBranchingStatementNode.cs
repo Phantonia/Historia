@@ -8,13 +8,15 @@ namespace Phantonia.Historia.Language.FlowAnalysis;
 
 public sealed record FlowBranchingStatementNode() : StatementNode
 {
-    public required IBranchingStatementNode Original { get; init; }
+    public required StatementNode Original { get; init; }
+
+    public required FlowEdge? NonOptionEdge { get; init; }
 
     public required ImmutableList<FlowEdge> OutgoingEdges { get; init; }
 
-    public override IEnumerable<SyntaxNode> Children => [(SyntaxNode)Original];
+    public override IEnumerable<SyntaxNode> Children => [Original];
 
     protected override void ReconstructCore(TextWriter writer) => Original.Reconstruct(writer);
 
-    protected internal override string GetDebuggerDisplay() => $"flow branching: {((SyntaxNode)Original).GetDebuggerDisplay()}";
+    protected internal override string GetDebuggerDisplay() => $"flow branching: {Original.GetDebuggerDisplay()}";
 }

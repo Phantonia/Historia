@@ -1,5 +1,4 @@
-﻿using Phantonia.Historia.Language.FlowAnalysis;
-using Phantonia.Historia.Language.SemanticAnalysis;
+﻿using Phantonia.Historia.Language.SemanticAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using System.CodeDom.Compiler;
 using System.Linq;
@@ -130,7 +129,7 @@ public sealed class SnapshotEmitter(Settings settings, SymbolTable symbolTable, 
         GeneralEmission.GenerateType(settings.OutputType, writer);
         writer.Write(" output, ");
         GeneralEmission.GenerateType(settings.OptionType, writer);
-        writer.WriteLine("[] options, int optionsCount)");
+        writer.WriteLine("[] options, int optionsCount, bool canContinueWithoutOption)");
         writer.BeginBlock();
 
         writer.WriteLine("this.fields = fields;");
@@ -146,6 +145,8 @@ public sealed class SnapshotEmitter(Settings settings, SymbolTable symbolTable, 
         writer.Write(Constants.EndState);
         writer.WriteLine(';');
 
+        writer.WriteLine("CanContinueWithoutOption = canContinueWithoutOption;");
+
         writer.EndBlock(); // constructor
     }
 
@@ -158,7 +159,7 @@ public sealed class SnapshotEmitter(Settings settings, SymbolTable symbolTable, 
 
         writer.WriteManyLines(
             """
-            if (FinishedStory || Options.Count != 0)
+            if (!CanContinueWithoutOption)
             {
                 return null;
             }
@@ -166,7 +167,7 @@ public sealed class SnapshotEmitter(Settings settings, SymbolTable symbolTable, 
 
         writer.WriteLine();
 
-        GenerateTransition("0");
+        GenerateTransition("-1");
 
         writer.EndBlock(); // TryContinue method
 
@@ -195,7 +196,7 @@ public sealed class SnapshotEmitter(Settings settings, SymbolTable symbolTable, 
         writer.WriteLine("Fields fieldsCopy = fields;");
         writer.Write("Heart.StateTransition(ref fieldsCopy, ");
         writer.Write(option);
-        writer.WriteLine(");");
+        writer.WriteLine(", out bool canContinueWithoutOption);");
         GeneralEmission.GenerateType(settings.OutputType, writer);
         writer.WriteLine(" output = Heart.GetOutput(ref fieldsCopy);");
         GeneralEmission.GenerateType(settings.OptionType, writer);
@@ -207,7 +208,7 @@ public sealed class SnapshotEmitter(Settings settings, SymbolTable symbolTable, 
 
         writer.Write("return new ");
         GenerateClassName();
-        writer.WriteLine("(fieldsCopy, output, optionsCopy, optionsCountCopy);");
+        writer.WriteLine("(fieldsCopy, output, optionsCopy, optionsCountCopy, canContinueWithoutOption);");
     }
 
     private void GenerateReferenceMutators()

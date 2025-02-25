@@ -8,6 +8,8 @@ public interface IStorySnapshot
 
     bool FinishedStory { get; }
 
+    bool CanContinueWithoutOption { get; }
+
     object? Output { get; }
 
     IReadOnlyList<object?> Options { get; }

@@ -138,12 +138,13 @@ public sealed class StateMachineEmitter(StoryNode boundStory, Settings settings,
            $$"""
             public bool TryContinue()
             {
-                if (FinishedStory || Options.Count != 0)
+                if (!CanContinueWithoutOption)
                 {
                     return false;
                 }
 
-                Heart.StateTransition(ref fields, 0);
+                Heart.StateTransition(ref fields, -1, out bool canContinueWithoutOption);
+                CanContinueWithoutOption = canContinueWithoutOption;
                 Output = Heart.GetOutput(ref fields);
                 Heart.GetOptions(ref fields, options, ref optionsCount);
             
@@ -167,7 +168,8 @@ public sealed class StateMachineEmitter(StoryNode boundStory, Settings settings,
                     return false;
                 }
 
-                Heart.StateTransition(ref fields, option);
+                Heart.StateTransition(ref fields, option, out bool canContinueWithoutOption);
+                CanContinueWithoutOption = canContinueWithoutOption;
                 Output = Heart.GetOutput(ref fields);
                 Heart.GetOptions(ref fields, options, ref optionsCount);
 
@@ -199,7 +201,7 @@ public sealed class StateMachineEmitter(StoryNode boundStory, Settings settings,
         writer.WriteLine("global::System.Array.Copy(options, optionsCopy, options.Length);");
         writer.Write("return new ");
         writer.Write(settings.StoryName);
-        writer.WriteLine("Snapshot(fields, Output, optionsCopy, optionsCount);");
+        writer.WriteLine("Snapshot(fields, Output, optionsCopy, optionsCount, CanContinueWithoutOption);");
         writer.EndBlock(); // CreateSnapshot method
 
         writer.WriteLine();

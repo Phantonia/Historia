@@ -118,4 +118,67 @@ public sealed class IntegrationTests
         Assert.IsTrue(result.Errors.Contains(errors[1]));
         Assert.IsTrue(result.Errors.Contains(errors[2]));
     }
+
+    [TestMethod]
+    public void TestDynamicSwitches()
+    {
+        string code =
+            """
+            scene main
+            {
+                outcome X(A, B);
+
+                switch 1
+                {
+                    output 2;
+                    X = A;
+                    output 3;
+
+                    option 4
+                    {
+                        output 5;
+                    }
+
+                    option 6
+                    {
+                        output 7;
+                    }
+                }
+            }
+            """;
+
+        (CompilationResult result, string csharpCode) = Language.Compiler.CompileString(code);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(csharpCode, "HistoriaStoryStateMachine");
+
+        _ = stateMachine.TryContinue();
+        Assert.AreEqual(1, stateMachine.Output);
+        Assert.AreEqual(2, stateMachine.Options.Count);
+        Assert.IsTrue(stateMachine.CanContinueWithoutOption);
+        Assert.IsTrue(stateMachine.TryContinue());
+        Assert.AreEqual(2, stateMachine.Output);
+        Assert.IsTrue(stateMachine.CanContinueWithoutOption);
+        Assert.IsTrue(stateMachine.TryContinue());
+        Assert.AreEqual(3, stateMachine.Output);
+        Assert.IsFalse(stateMachine.CanContinueWithoutOption);
+        Assert.IsTrue(stateMachine.TryContinueWithOption(1));
+        Assert.AreEqual(7, stateMachine.Output);
+        Assert.IsFalse(stateMachine.CanContinueWithoutOption);
+
+        // new attempt
+        stateMachine = (IStoryStateMachine<int, int>)Activator.CreateInstance(stateMachine.GetType())!;
+        _ = stateMachine.TryContinue();
+        Assert.AreEqual(1, stateMachine.Output);
+        Assert.AreEqual(2, stateMachine.Options.Count);
+        Assert.IsTrue(stateMachine.CanContinueWithoutOption);
+        Assert.IsTrue(stateMachine.TryContinue());
+        Assert.AreEqual(2, stateMachine.Output);
+        Assert.IsTrue(stateMachine.CanContinueWithoutOption);
+        Assert.IsTrue(stateMachine.TryContinueWithOption(0));
+        Assert.AreEqual(5, stateMachine.Output);
+        Assert.IsFalse(stateMachine.CanContinueWithoutOption);
+    }
 }

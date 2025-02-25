@@ -15,7 +15,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
 {
     public void GenerateStateTransitionMethod()
     {
-        writer.WriteLine("public static void StateTransition(ref Fields fields, int option)");
+        writer.WriteLine("public static void StateTransition(ref Fields fields, int option, out bool canContinueWithoutOption)");
         writer.BeginBlock();
 
         writer.WriteLine("while (true)");
@@ -59,14 +59,22 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
                 case OutputStatementNode or BoundLineStatementNode or NoOpStatementNode:
                     GenerateBasicTransition(index, edges);
                     break;
-                case FlowBranchingStatementNode { Original: SwitchStatementNode switchStatement, OutgoingEdges: ImmutableList<FlowEdge> outgoingEdges }:
-                    GenerateSwitchTransition(switchStatement, outgoingEdges);
-                    break;
                 case FlowBranchingStatementNode { Original: LoopSwitchStatementNode loopSwitchStatement, OutgoingEdges: ImmutableList<FlowEdge> outgoingEdges }:
                     GenerateLoopSwitchTransition(loopSwitchStatement, outgoingEdges);
                     break;
                 case FlowBranchingStatementNode { Original: BoundBranchOnStatementNode branchOnStatement, OutgoingEdges: ImmutableList<FlowEdge> outgoingEdges }:
                     GenerateBranchOnTransition(branchOnStatement, outgoingEdges);
+                    break;
+                case FlowBranchingStatementNode { Original: StatementNode switchStatement, NonOptionEdge: null, OutgoingEdges: ImmutableList<FlowEdge> outgoingEdges }:
+                    GenerateNonDynamicSwitchTransition(switchStatement, outgoingEdges);
+                    break;
+                case FlowBranchingStatementNode
+                {
+                    Original: StatementNode statement and not LoopSwitchStatementNode,
+                    NonOptionEdge: FlowEdge nonOptionEdge,
+                    OutgoingEdges: ImmutableList<FlowEdge> outgoingEdges
+                } when flowGraph.Vertices[index].IsVisible:
+                    GenerateDynamicSwitchTransition(statement, nonOptionEdge, outgoingEdges);
                     break;
                 case BoundOutcomeAssignmentStatementNode outcomeAssignment:
                     GenerateOutcomeAssignmentTransition(outcomeAssignment, edges);
@@ -109,18 +117,19 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
 
         long startVertex = flowGraph.StartEdges.Single(e => e.IsStory).ToVertex;
 
-        writer.Write("fields.state = ");
-        writer.Write(startVertex);
-        writer.WriteLine(';');
+        GenerateTransitionTo(startVertex);
+        //writer.Write("fields.state = ");
+        //writer.Write(startVertex);
+        //writer.WriteLine(';');
 
-        if (startVertex == Constants.EndState || flowGraph.Vertices[startVertex].IsVisible)
-        {
-            writer.WriteLine("return;");
-        }
-        else
-        {
-            writer.WriteLine("continue;");
-        }
+        //if (startVertex == Constants.EndState || flowGraph.Vertices[startVertex].IsVisible)
+        //{
+        //    writer.WriteLine("return;");
+        //}
+        //else
+        //{
+        //    writer.WriteLine("continue;");
+        //}
     }
 
     private void GenerateBasicTransition(long index, ImmutableList<FlowEdge> edges)
@@ -129,14 +138,48 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
         GenerateTransitionTo(edges.First(e => e.IsStory).ToVertex);
     }
 
-    private void GenerateSwitchTransition(SwitchStatementNode switchStatement, ImmutableList<FlowEdge> edges)
+    private void GenerateNonDynamicSwitchTransition(StatementNode statement, ImmutableList<FlowEdge> edges)
     {
-        Debug.Assert(switchStatement.Options.Length == edges.Count);
+        Debug.Assert(statement is not SwitchStatementNode { Options.Length: var length } || length == edges.Count);
 
         writer.WriteLine("switch (option)");
         writer.BeginBlock();
 
-        for (int i = 0; i < switchStatement.Options.Length; i++)
+        for (int i = 0; i < edges.Count; i++)
+        {
+            // we know that for each option its index equals that of the associated next vertex
+            // we also know that the order that the options appear in the switch statement node is exactly how each one will be indexed
+            // plus we know that the outgoing edges are in exactly the right order
+
+            writer.Write("case ");
+            writer.Write(i);
+            writer.WriteLine(':');
+
+            writer.Indent++;
+
+            GenerateTransitionTo(edges[i].ToVertex);
+
+            writer.Indent--;
+        }
+
+        writer.EndBlock(); // switch
+        writer.WriteLine();
+        writer.WriteLine("break;"); // C# is so weird - you cannot fall from a case label so they require you to slap a 'break' at the end instead of just not doing that smh
+    }
+
+    private void GenerateDynamicSwitchTransition(StatementNode statement, FlowEdge nonOptionEdge, ImmutableList<FlowEdge> edges)
+    {
+        Debug.Assert(statement is not SwitchStatementNode { Options.Length: var length } || length == edges.Count);
+
+        writer.WriteLine("switch (option)");
+        writer.BeginBlock();
+
+        writer.WriteLine("case -1:");
+        writer.Indent++;
+        GenerateTransitionTo(nonOptionEdge.ToVertex);
+        writer.Indent--;
+
+        for (int i = 0; i < edges.Count; i++)
         {
             // we know that for each option its index equals that of the associated next vertex
             // we also know that the order that the options appear in the switch statement node is exactly how each one will be indexed
@@ -570,8 +613,22 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
         {
             writer.WriteLine($"fields.state = {toVertex};");
 
-            if (toVertex == Constants.EndState || flowGraph.Vertices[toVertex].IsVisible)
+            if (toVertex == Constants.EndState)
             {
+                writer.WriteLine("canContinueWithoutOption = false;");
+                writer.WriteLine("return;");
+            }
+            else if (flowGraph.Vertices[toVertex].IsVisible)
+            {
+                if (flowGraph.Vertices[toVertex].AssociatedStatement is OutputStatementNode or LineStatementNode or FlowBranchingStatementNode { NonOptionEdge: not null })
+                {
+                    writer.WriteLine("canContinueWithoutOption = true;");
+                }
+                else
+                {
+                    writer.WriteLine("canContinueWithoutOption = false;");
+                }
+
                 writer.WriteLine("return;");
             }
             else

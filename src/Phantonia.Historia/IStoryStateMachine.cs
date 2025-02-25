@@ -8,6 +8,8 @@ public interface IStoryStateMachine
 
     bool FinishedStory { get; }
 
+    bool CanContinueWithoutOption { get; }
+
     object? Output { get; }
 
     IReadOnlyList<object?> Options { get; }
