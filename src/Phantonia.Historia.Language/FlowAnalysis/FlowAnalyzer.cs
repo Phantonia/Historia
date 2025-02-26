@@ -2,6 +2,7 @@
 using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis;
+using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using System;
@@ -170,6 +171,8 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             }
         }
 
+        ImmutableArray<ExpressionNode> optionExpressions = switchStatement.Options.Select(o => o.Expression).ToImmutableArray();
+
         foreach (FlowVertex vertex in bodyFlowGraph.Vertices.Values)
         {
             if (!vertex.IsVisible || !vertex.IsStory)
@@ -179,22 +182,19 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
 
             FlowEdge? nonOptionEdge = bodyFlowGraph.OutgoingEdges[vertex.Index].Single();
 
+            ImmutableList<FlowEdge> outgoingEdges = flowGraph.OutgoingEdges[vertex.Index];
+            outgoingEdges = outgoingEdges.Remove((FlowEdge)nonOptionEdge);
+
             if (((FlowEdge)nonOptionEdge).ToVertex is FlowGraph.FinalVertex)
             {
                 nonOptionEdge = null;
             }
 
-            ImmutableList<FlowEdge> outgoingEdges = flowGraph.OutgoingEdges[vertex.Index];
-
-            if (nonOptionEdge is not null)
-            {
-                outgoingEdges = outgoingEdges.Remove((FlowEdge)nonOptionEdge);
-            }
-
-            FlowBranchingStatementNode flowBranchingStatement = new()
+            DynamicSwitchFlowBranchingStatementNode flowBranchingStatement = new()
             {
                 Original = vertex.AssociatedStatement,
-                NonOptionEdge = nonOptionEdge, // should be correct
+                OptionExpressions = optionExpressions,
+                NonOptionEdge = nonOptionEdge,
                 OutgoingEdges = outgoingEdges,
                 Index = vertex.Index,
                 PrecedingTokens = [],
@@ -209,24 +209,36 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
         {
             FlowEdge? nonOptionEdge = !bodyFlowGraph.Vertices.IsEmpty ? bodyFlowGraph.StartEdges.Single(e => e.IsStory) : null;
             ImmutableList<FlowEdge> outgoingEdges = flowGraph.OutgoingEdges[switchStatement.Index];
+            FlowBranchingStatementNode flowBranchingStatement;
 
             if (nonOptionEdge is not null)
             {
                 outgoingEdges = outgoingEdges.Remove((FlowEdge)nonOptionEdge);
-            }
 
-            FlowBranchingStatementNode switchFlowBranchingStatement = new()
+                flowBranchingStatement = new DynamicSwitchFlowBranchingStatementNode
+                {
+                    Original = switchStatement,
+                    OptionExpressions = optionExpressions,
+                    NonOptionEdge = (FlowEdge)nonOptionEdge,
+                    OutgoingEdges = outgoingEdges,
+                    Index = switchStatement.Index,
+                    PrecedingTokens = [],
+                };
+            }
+            else
             {
-                Original = switchStatement,
-                NonOptionEdge = nonOptionEdge,
-                OutgoingEdges = outgoingEdges,
-                Index = switchStatement.Index,
-                PrecedingTokens = [],
-            };
+                flowBranchingStatement = new FlowBranchingStatementNode
+                {
+                    Original = switchStatement,
+                    OutgoingEdges = outgoingEdges,
+                    Index = switchStatement.Index,
+                    PrecedingTokens = [],
+                };
+            }
 
             flowGraph = flowGraph.SetVertex(switchStatement.Index, flowGraph.Vertices[switchStatement.Index] with
             {
-                AssociatedStatement = switchFlowBranchingStatement,
+                AssociatedStatement = flowBranchingStatement,
             });
         }
 
@@ -343,7 +355,6 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
         FlowBranchingStatementNode flowBranchingStatement = new()
         {
             Original = loopSwitchStatement,
-            NonOptionEdge = null,
             OutgoingEdges = flowGraph.OutgoingEdges[loopSwitchStatement.Index],
             Index = loopSwitchStatement.Index,
             PrecedingTokens = [],
@@ -423,7 +434,6 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
         FlowBranchingStatementNode flowBranchingStatement = new()
         {
             Original = branchOnStatement,
-            NonOptionEdge = null,
             OutgoingEdges = flowGraph.OutgoingEdges[branchOnStatement.Index],
             Index = branchOnStatement.Index,
             PrecedingTokens = [],
@@ -456,7 +466,6 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
         FlowBranchingStatementNode flowBranchingStatement = new()
         {
             Original = chooseStatement,
-            NonOptionEdge = null,
             OutgoingEdges = flowGraph.OutgoingEdges[chooseStatement.Index],
             Index = chooseStatement.Index,
             PrecedingTokens = [],
@@ -500,7 +509,6 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
         FlowBranchingStatementNode flowBranchingStatement = new()
         {
             Original = ifStatement,
-            NonOptionEdge = null,
             OutgoingEdges = flowGraph.OutgoingEdges[ifStatement.Index],
             Index = ifStatement.Index,
             PrecedingTokens = [],

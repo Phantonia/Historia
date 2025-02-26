@@ -1,8 +1,9 @@
 ﻿using Phantonia.Historia.Language.FlowAnalysis;
-using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using System.CodeDom.Compiler;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
@@ -92,7 +93,7 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
 
             foreach ((long index, FlowVertex vertex) in flowGraph.Vertices)
             {
-                if (vertex.AssociatedStatement is FlowBranchingStatementNode { Original: SwitchStatementNode switchStatement })
+                void GenerateOptions(IEnumerable<ExpressionNode> optionExpressions)
                 {
                     writer.Write("case ");
                     writer.Write(index);
@@ -101,23 +102,32 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
                     writer.Indent++;
 
                     writer.WriteLine("global::System.Array.Clear(options);");
-
-                    for (int i = 0; i < switchStatement.Options.Length; i++)
+                    
+                    foreach ((ExpressionNode optionExpression, int i) in optionExpressions.Select((o, i) => (o, i)))
                     {
                         writer.Write("options[");
                         writer.Write(i);
                         writer.Write("] = ");
-                        GeneralEmission.GenerateExpression(switchStatement.Options[i].Expression, writer);
+                        GeneralEmission.GenerateExpression(optionExpression, writer);
                         writer.WriteLine(';');
                     }
 
                     writer.Write("optionsCount = ");
-                    writer.Write(switchStatement.Options.Length);
+                    writer.Write(optionExpressions.Count());
                     writer.WriteLine(';');
 
                     writer.WriteLine("return;");
 
                     writer.Indent--;
+                }
+
+                if (vertex.AssociatedStatement is FlowBranchingStatementNode { Original: SwitchStatementNode switchStatement })
+                {
+                    GenerateOptions(switchStatement.Options.Select(o => o.Expression));
+                }
+                else if (vertex.AssociatedStatement is DynamicSwitchFlowBranchingStatementNode { OptionExpressions: ImmutableArray<ExpressionNode> optionExpressions })
+                {
+                    GenerateOptions(optionExpressions);
                 }
                 else if (vertex.AssociatedStatement is FlowBranchingStatementNode { Original: LoopSwitchStatementNode loopSwitchStatement })
                 {

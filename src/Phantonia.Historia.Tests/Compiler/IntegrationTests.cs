@@ -2,6 +2,7 @@
 using Phantonia.Historia.Language;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace Phantonia.Historia.Tests.Compiler;
 
@@ -166,6 +167,8 @@ public sealed class IntegrationTests
         Assert.IsFalse(stateMachine.CanContinueWithoutOption);
         Assert.IsTrue(stateMachine.TryContinueWithOption(1));
         Assert.AreEqual(7, stateMachine.Output);
+        Assert.IsTrue(stateMachine.CanContinueWithoutOption);
+        Assert.IsTrue(stateMachine.TryContinue());
         Assert.IsFalse(stateMachine.CanContinueWithoutOption);
 
         // new attempt
@@ -179,6 +182,91 @@ public sealed class IntegrationTests
         Assert.IsTrue(stateMachine.CanContinueWithoutOption);
         Assert.IsTrue(stateMachine.TryContinueWithOption(0));
         Assert.AreEqual(5, stateMachine.Output);
+        Assert.IsTrue(stateMachine.CanContinueWithoutOption);
+        Assert.IsTrue(stateMachine.TryContinue());
         Assert.IsFalse(stateMachine.CanContinueWithoutOption);
+    }
+
+    [TestMethod]
+    public void TestDynamicSwitchesInSnapshots()
+    {
+        string code =
+            """
+            scene main
+            {
+                outcome X(A, B);
+
+                switch 1
+                {
+                    output 2;
+                    X = A;
+                    output 3;
+
+                    option 4
+                    {
+                        output 5;
+                    }
+
+                    option 6
+                    {
+                        output 7;
+                    }
+                }
+            }
+            """;
+
+        (CompilationResult result, string csharpCode) = Language.Compiler.CompileString(code);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(csharpCode, "HistoriaStoryStateMachine");
+        IStorySnapshot<int, int>? snapshot = stateMachine.CreateSnapshot();
+
+        snapshot = snapshot.TryContinue();
+        Assert.IsNotNull(snapshot);
+        Assert.AreEqual(1, snapshot.Output);
+        Assert.AreEqual(2, snapshot.Options.Count);
+        Assert.IsTrue(snapshot.CanContinueWithoutOption);
+
+        snapshot = snapshot.TryContinue();
+        Assert.IsNotNull(snapshot);
+        Assert.AreEqual(2, snapshot.Output);
+        Assert.IsTrue(snapshot.CanContinueWithoutOption);
+
+        snapshot = snapshot.TryContinue();
+        Assert.IsNotNull(snapshot);
+        Assert.AreEqual(3, snapshot.Output);
+        Assert.IsFalse(snapshot.CanContinueWithoutOption);
+
+        snapshot = snapshot.TryContinueWithOption(1);
+        Assert.IsNotNull(snapshot);
+        Assert.AreEqual(7, snapshot.Output);
+        Assert.IsTrue(snapshot.CanContinueWithoutOption);
+
+        snapshot = snapshot.TryContinue();
+        Assert.IsNotNull(snapshot);
+        Assert.IsFalse(snapshot.CanContinueWithoutOption);
+
+        // new attempt
+        snapshot = stateMachine.CreateSnapshot().TryContinue();
+        Assert.IsNotNull(snapshot);
+        Assert.AreEqual(1, snapshot.Output);
+        Assert.AreEqual(2, snapshot.Options.Count);
+        Assert.IsTrue(snapshot.CanContinueWithoutOption);
+
+        snapshot = snapshot.TryContinue();
+        Assert.IsNotNull(snapshot);
+        Assert.AreEqual(2, snapshot.Output);
+        Assert.IsTrue(snapshot.CanContinueWithoutOption);
+
+        snapshot = snapshot.TryContinueWithOption(0);
+        Assert.IsNotNull(snapshot);
+        Assert.AreEqual(5, snapshot.Output);
+        Assert.IsTrue(snapshot.CanContinueWithoutOption);
+
+        snapshot = snapshot.TryContinue();
+        Assert.IsNotNull(snapshot);
+        Assert.IsFalse(snapshot.CanContinueWithoutOption);
     }
 }

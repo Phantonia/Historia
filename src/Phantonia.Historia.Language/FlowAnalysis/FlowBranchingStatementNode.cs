@@ -6,11 +6,9 @@ using System.IO;
 
 namespace Phantonia.Historia.Language.FlowAnalysis;
 
-public sealed record FlowBranchingStatementNode() : StatementNode
+public record FlowBranchingStatementNode() : StatementNode
 {
     public required StatementNode Original { get; init; }
-
-    public required FlowEdge? NonOptionEdge { get; init; }
 
     public required ImmutableList<FlowEdge> OutgoingEdges { get; init; }
 

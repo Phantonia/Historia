@@ -312,7 +312,8 @@ public sealed class StateMachineEmitter(StoryNode boundStory, Settings settings,
 
         writer.WriteLine("if (chapter.NeedsStateTransition)");
         writer.BeginBlock();
-        writer.WriteLine("Heart.StateTransition(ref fields, 0);");
+        writer.WriteLine("Heart.StateTransition(ref fields, 0, out bool canContinueWithoutOption);");
+        writer.WriteLine("CanContinueWithoutOption = canContinueWithoutOption;");
         writer.EndBlock(); // if
         writer.WriteLine();
 

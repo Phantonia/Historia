@@ -233,7 +233,7 @@ public sealed class SnapshotEmitter(Settings settings, SymbolTable symbolTable, 
 
             writer.Write("return new ");
             GenerateClassName();
-            writer.WriteLine("(fieldsCopy, Output, options, optionsCount);");
+            writer.WriteLine("(fieldsCopy, Output, options, optionsCount, CanContinueWithoutOption);");
 
             writer.EndBlock();
 
