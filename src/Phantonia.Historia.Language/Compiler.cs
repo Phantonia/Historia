@@ -42,7 +42,7 @@ public static class Compiler
 
         LineIndexing lineIndexing = new(ImmutableDictionary<string, ImmutableArray<long>>.Empty.Add("", [.. lineIndices]));
 
-        CompilationResult result = PrecedeWithStory(story, writer, errors, lineIndexing);
+        CompilationResult result = ProceedWithStory(story, writer, errors, lineIndexing);
         return (result, writer.ToString());
     }
 
@@ -88,10 +88,10 @@ public static class Compiler
 
         using StreamWriter outputWriter = new(outputPath);
 
-        return PrecedeWithStory(story, outputWriter, errors, lineIndexing);
+        return ProceedWithStory(story, outputWriter, errors, lineIndexing);
     }
 
-    private static CompilationResult PrecedeWithStory(StoryNode story, TextWriter outputWriter, List<Error> errors, LineIndexing lineIndexing)
+    private static CompilationResult ProceedWithStory(StoryNode story, TextWriter outputWriter, List<Error> errors, LineIndexing lineIndexing)
     {
         Binder binder = new(story);
         binder.ErrorFound += errors.Add;
