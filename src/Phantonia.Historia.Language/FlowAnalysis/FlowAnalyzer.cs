@@ -177,6 +177,11 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
         {
             if (!vertex.IsVisible || !vertex.IsStory)
             {
+                if (bodyFlowGraph.OutgoingEdges[vertex.Index].Any(e => e.ToVertex is FlowGraph.FinalVertex))
+                {
+                    ErrorFound?.Invoke(Errors.SwitchBodyEndsInInvisibleStatement(vertex.Index));
+                }
+
                 continue;
             }
 

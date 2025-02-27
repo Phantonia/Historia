@@ -30,7 +30,7 @@ public sealed partial class Parser
         {
             NoOpStatementNode noopStatement = new()
             {
-                Index = nodeIndex + 1,
+                Index = closedBrace.Index,
                 PrecedingTokens = [],
             };
             statementBuilder.Add(noopStatement);
@@ -206,7 +206,7 @@ public sealed partial class Parser
                     case SwitchStatementNode:
                     case LoopSwitchStatementNode:
                     case CallStatementNode:
-                        ErrorFound?.Invoke(Errors.SwitchBodyContainsSwitchOrCall(nodeIndex));
+                        ErrorFound?.Invoke(Errors.SwitchBodyContainsSwitchOrCall(statement.Index));
                         break;
                     case IfStatementNode ifStatement:
                         RecursivelyEnsureNoSwitchesOrCalls(ifStatement.ThenBlock.Statements);
@@ -227,6 +227,8 @@ public sealed partial class Parser
                 }
             }
         }
+
+        RecursivelyEnsureNoSwitchesOrCalls(statementBuilder);
 
         ImmutableArray<OptionNode> optionNodes = ParseOptions(ref index, []);
 
@@ -587,7 +589,7 @@ public sealed partial class Parser
         {
             NoOpStatementNode noopStatement = new()
             {
-                Index = nodeIndex + 2,
+                Index = ((Token)thenBlock.ClosedBraceToken!).Index + 1,
                 PrecedingTokens = [],
             };
 
