@@ -294,6 +294,24 @@ public static class Errors
         };
     }
 
+    public static Error SwitchBodyContainsSwitchOrCall(long index)
+    {
+        return new Error
+        {
+            ErrorMessage = "A switch cannot contain another switch, a loop switch or a call",
+            Index = index,
+        };
+    }
+
+    public static Error SwitchBodyEndsInInvisibleStatement(long index)
+    {
+        return new Error
+        {
+            ErrorMessage = "A switch cannot end in an invisble statement",
+            Index = index,
+        };
+    }
+
     public static Error DuplicatedOptionInOutcomeDeclaration(string optionName, long index)
     {
         return new Error

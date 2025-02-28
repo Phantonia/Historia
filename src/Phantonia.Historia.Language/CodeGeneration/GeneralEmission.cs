@@ -85,6 +85,17 @@ public static class GeneralEmission
 
         writer.WriteLine();
 
+        writer.Write("public bool CanContinueWithoutOption { get; ");
+
+        if (!readOnly)
+        {
+            writer.Write("private set; ");
+        }
+
+        writer.WriteLine("} = true;");
+
+        writer.WriteLine();
+
         writer.Write("public global::Phantonia.Historia.ReadOnlyList<");
         GenerateType(settings.OptionType, writer);
         writer.WriteLine("> Options");

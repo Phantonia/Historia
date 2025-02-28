@@ -2,6 +2,9 @@
 using Phantonia.Historia.Language;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
 
 namespace Phantonia.Historia.Tests.Compiler;
 
@@ -117,5 +120,291 @@ public sealed class IntegrationTests
         Assert.IsTrue(result.Errors.Contains(errors[0]));
         Assert.IsTrue(result.Errors.Contains(errors[1]));
         Assert.IsTrue(result.Errors.Contains(errors[2]));
+    }
+
+    [TestMethod]
+    public void TestDynamicSwitches()
+    {
+        string code =
+            """
+            scene main
+            {
+                outcome X(A, B);
+
+                switch 1
+                {
+                    output 2;
+                    X = A;
+                    output 3;
+
+                    option 4
+                    {
+                        output 5;
+                    }
+
+                    option 6
+                    {
+                        output 7;
+                    }
+                }
+            }
+            """;
+
+        (CompilationResult result, string csharpCode) = Language.Compiler.CompileString(code);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(csharpCode, "HistoriaStoryStateMachine");
+
+        _ = stateMachine.TryContinue();
+        Assert.AreEqual(1, stateMachine.Output);
+        Assert.AreEqual(2, stateMachine.Options.Count);
+        Assert.IsTrue(stateMachine.CanContinueWithoutOption);
+        Assert.IsTrue(stateMachine.TryContinue());
+        Assert.AreEqual(2, stateMachine.Output);
+        Assert.IsTrue(stateMachine.CanContinueWithoutOption);
+        Assert.IsTrue(stateMachine.TryContinue());
+        Assert.AreEqual(3, stateMachine.Output);
+        Assert.IsFalse(stateMachine.CanContinueWithoutOption);
+        Assert.IsTrue(stateMachine.TryContinueWithOption(1));
+        Assert.AreEqual(7, stateMachine.Output);
+        Assert.IsTrue(stateMachine.CanContinueWithoutOption);
+        Assert.IsTrue(stateMachine.TryContinue());
+        Assert.IsFalse(stateMachine.CanContinueWithoutOption);
+
+        // new attempt
+        stateMachine = (IStoryStateMachine<int, int>)Activator.CreateInstance(stateMachine.GetType())!;
+        _ = stateMachine.TryContinue();
+        Assert.AreEqual(1, stateMachine.Output);
+        Assert.AreEqual(2, stateMachine.Options.Count);
+        Assert.IsTrue(stateMachine.CanContinueWithoutOption);
+        Assert.IsTrue(stateMachine.TryContinue());
+        Assert.AreEqual(2, stateMachine.Output);
+        Assert.IsTrue(stateMachine.CanContinueWithoutOption);
+        Assert.IsTrue(stateMachine.TryContinueWithOption(0));
+        Assert.AreEqual(5, stateMachine.Output);
+        Assert.IsTrue(stateMachine.CanContinueWithoutOption);
+        Assert.IsTrue(stateMachine.TryContinue());
+        Assert.IsFalse(stateMachine.CanContinueWithoutOption);
+    }
+
+    [TestMethod]
+    public void TestDynamicSwitchesInSnapshots()
+    {
+        string code =
+            """
+            scene main
+            {
+                outcome X(A, B);
+
+                switch 1
+                {
+                    output 2;
+                    X = A;
+                    output 3;
+
+                    option 4
+                    {
+                        output 5;
+                    }
+
+                    option 6
+                    {
+                        output 7;
+                    }
+                }
+            }
+            """;
+
+        (CompilationResult result, string csharpCode) = Language.Compiler.CompileString(code);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(csharpCode, "HistoriaStoryStateMachine");
+        IStorySnapshot<int, int>? snapshot = stateMachine.CreateSnapshot();
+
+        snapshot = snapshot.TryContinue();
+        Assert.IsNotNull(snapshot);
+        Assert.AreEqual(1, snapshot.Output);
+        Assert.AreEqual(2, snapshot.Options.Count);
+        Assert.IsTrue(snapshot.CanContinueWithoutOption);
+
+        snapshot = snapshot.TryContinue();
+        Assert.IsNotNull(snapshot);
+        Assert.AreEqual(2, snapshot.Output);
+        Assert.IsTrue(snapshot.CanContinueWithoutOption);
+
+        snapshot = snapshot.TryContinue();
+        Assert.IsNotNull(snapshot);
+        Assert.AreEqual(3, snapshot.Output);
+        Assert.IsFalse(snapshot.CanContinueWithoutOption);
+
+        snapshot = snapshot.TryContinueWithOption(1);
+        Assert.IsNotNull(snapshot);
+        Assert.AreEqual(7, snapshot.Output);
+        Assert.IsTrue(snapshot.CanContinueWithoutOption);
+
+        snapshot = snapshot.TryContinue();
+        Assert.IsNotNull(snapshot);
+        Assert.IsFalse(snapshot.CanContinueWithoutOption);
+
+        // new attempt
+        snapshot = stateMachine.CreateSnapshot().TryContinue();
+        Assert.IsNotNull(snapshot);
+        Assert.AreEqual(1, snapshot.Output);
+        Assert.AreEqual(2, snapshot.Options.Count);
+        Assert.IsTrue(snapshot.CanContinueWithoutOption);
+
+        snapshot = snapshot.TryContinue();
+        Assert.IsNotNull(snapshot);
+        Assert.AreEqual(2, snapshot.Output);
+        Assert.IsTrue(snapshot.CanContinueWithoutOption);
+
+        snapshot = snapshot.TryContinueWithOption(0);
+        Assert.IsNotNull(snapshot);
+        Assert.AreEqual(5, snapshot.Output);
+        Assert.IsTrue(snapshot.CanContinueWithoutOption);
+
+        snapshot = snapshot.TryContinue();
+        Assert.IsNotNull(snapshot);
+        Assert.IsFalse(snapshot.CanContinueWithoutOption);
+    }
+
+    [TestMethod]
+    public void TestSwitchContainingNestedStatements()
+    {
+        string code =
+            """
+            scene main
+            {
+                outcome X(A, B) default A;
+
+                switch 1
+                {
+                    if X is A
+                    {
+                        output 2;
+                    }
+                    else
+                    {
+                        output 3;
+                    }
+
+                    option 4 { }
+                }
+            }
+            """;
+        
+        (CompilationResult result, string csharpCode) = Language.Compiler.CompileString(code);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(csharpCode, "HistoriaStoryStateMachine");
+
+        _ = stateMachine.TryContinue();
+        _ = stateMachine.TryContinue();
+        Assert.AreEqual(2, stateMachine.Output);
+        _ = stateMachine.TryContinueWithOption(0);
+        Assert.IsTrue(stateMachine.FinishedStory);
+    }
+
+    [TestMethod]
+    public void TestSwitchContainingSwitchError()
+    {
+        string code =
+            """
+            scene main
+            {
+                switch 1
+                {
+                    switch 2
+                    {
+                        option 3
+                        {
+
+                        }
+                    }
+
+                    option 4
+                    {
+
+                    }
+                }
+            }
+            """;
+
+        (CompilationResult result, _) = Language.Compiler.CompileString(code);
+
+        Assert.IsFalse(result.IsValid);
+        Assert.AreEqual(1, result.Errors.Length);
+
+        Error expectedError = Errors.SwitchBodyContainsSwitchOrCall(code.IndexOf("switch 2"));
+        Assert.AreEqual(expectedError, result.Errors[0]);
+    }
+
+    [TestMethod]
+    public void TestSwitchBodyEndingInInvisibleStatement()
+    {
+        string code =
+            """
+            interface I(action A());
+            reference R: I;
+
+            scene main
+            {
+                outcome X(A, B) default B;
+
+                switch 1
+                {
+                    X = A; // error
+                    
+                    option 2 { }
+                }
+
+                switch 3
+                {
+                    if X is A
+                    {
+                        run R.A(); // error
+                    }
+                    else { } // #1 error
+
+                    option 4 { }
+                }
+
+                switch 5
+                {
+                    if X is A
+                    {
+                        output 6; // all good
+                    } // #2 error: else block would be invisible
+
+                    option 8 { }
+                }
+            }
+            """;
+
+        (CompilationResult result, _) = Language.Compiler.CompileString(code);
+
+        Assert.IsFalse(result.IsValid);
+        Assert.AreEqual(4, result.Errors.Length);
+
+        Error[] errors = result.Errors.OrderBy(e => e.Index).ToArray();
+
+        Error[] expectedErrors =
+        [
+            Errors.SwitchBodyEndsInInvisibleStatement(code.IndexOf("X = A")),
+            Errors.SwitchBodyEndsInInvisibleStatement(code.IndexOf("run")),
+            Errors.SwitchBodyEndsInInvisibleStatement(code.IndexOf("} // #1")),
+            Errors.SwitchBodyEndsInInvisibleStatement(code.IndexOf(" // #2")),
+        ];
+
+        foreach ((Error expected, Error actual) in expectedErrors.Zip(errors))
+        {
+            Assert.AreEqual(expected, actual);
+        }
     }
 }

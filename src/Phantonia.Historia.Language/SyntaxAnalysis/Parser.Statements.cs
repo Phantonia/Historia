@@ -1,7 +1,7 @@
 ﻿using Phantonia.Historia.Language.LexicalAnalysis;
 using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
-using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 
@@ -30,7 +30,7 @@ public sealed partial class Parser
         {
             NoOpStatementNode noopStatement = new()
             {
-                Index = nodeIndex + 1,
+                Index = closedBrace.Index,
                 PrecedingTokens = [],
             };
             statementBuilder.Add(noopStatement);
@@ -188,15 +188,67 @@ public sealed partial class Parser
 
         Token openBrace = Expect(TokenKind.OpenBrace, ref index);
 
+        ImmutableArray<StatementNode>.Builder statementBuilder = ImmutableArray.CreateBuilder<StatementNode>();
+
+        while (tokens[index].Kind is not (TokenKind.ClosedBrace or TokenKind.EndOfFile or TokenKind.OptionKeyword))
+        {
+            StatementNode nextStatement = ParseStatement(ref index, []);
+
+            statementBuilder.Add(nextStatement);
+        }
+
+        void RecursivelyEnsureNoSwitchesOrCalls(IEnumerable<StatementNode> statements)
+        {
+            foreach (StatementNode statement in statements)
+            {
+                switch (statement)
+                {
+                    case SwitchStatementNode:
+                    case LoopSwitchStatementNode:
+                    case CallStatementNode:
+                        ErrorFound?.Invoke(Errors.SwitchBodyContainsSwitchOrCall(statement.Index));
+                        break;
+                    case IfStatementNode ifStatement:
+                        RecursivelyEnsureNoSwitchesOrCalls(ifStatement.ThenBlock.Statements);
+                        RecursivelyEnsureNoSwitchesOrCalls(ifStatement.ElseBlock?.Statements ?? []);
+                        break;
+                    case BranchOnStatementNode branchonStatement:
+                        foreach (BranchOnOptionNode option in branchonStatement.Options)
+                        {
+                            RecursivelyEnsureNoSwitchesOrCalls(option.Body.Statements);
+                        }
+                        break;
+                    case ChooseStatementNode chooseStatement:
+                        foreach (OptionNode option in chooseStatement.Options)
+                        {
+                            RecursivelyEnsureNoSwitchesOrCalls(option.Body.Statements);
+                        }
+                        break;
+                }
+            }
+        }
+
+        RecursivelyEnsureNoSwitchesOrCalls(statementBuilder);
+
         ImmutableArray<OptionNode> optionNodes = ParseOptions(ref index, []);
 
         Token closedBrace = Expect(TokenKind.ClosedBrace, ref index);
+
+        StatementBodyNode body = new()
+        {
+            OpenBraceToken = null,
+            Statements = statementBuilder.ToImmutable(),
+            ClosedBraceToken = null,
+            Index = statementBuilder.Count > 0 ? statementBuilder[0].Index : optionNodes.Length > 0 ? optionNodes[0].Index : closedBrace.Index,
+            PrecedingTokens = [],
+        };
 
         return new SwitchStatementNode
         {
             SwitchKeywordToken = switchKeyword,
             OutputExpression = expression,
             OpenBraceToken = openBrace,
+            Body = body,
             Options = optionNodes,
             ClosedBraceToken = closedBrace,
             Index = nodeIndex,
@@ -537,7 +589,7 @@ public sealed partial class Parser
         {
             NoOpStatementNode noopStatement = new()
             {
-                Index = nodeIndex + 2,
+                Index = ((Token)thenBlock.ClosedBraceToken!).Index + 1,
                 PrecedingTokens = [],
             };
 

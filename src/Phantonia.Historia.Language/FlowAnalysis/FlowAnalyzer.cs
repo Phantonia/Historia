@@ -2,6 +2,7 @@
 using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis;
+using Phantonia.Historia.Language.SyntaxAnalysis.Expressions;
 using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using System;
@@ -148,24 +149,103 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             Kind = FlowVertexKind.Visible,
         });
 
+        FlowGraph bodyFlowGraph = GenerateBodyFlowGraph(switchStatement.Body);
+        flowGraph = flowGraph.Append(bodyFlowGraph);
+
         foreach (OptionNode option in switchStatement.Options)
         {
             FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body);
             flowGraph = flowGraph.AppendToVertex(switchStatement.Index, nestedFlowGraph);
+
+            foreach (FlowVertex vertex in bodyFlowGraph.Vertices.Values)
+            {
+                if (!vertex.IsVisible || !vertex.IsStory)
+                {
+                    continue;
+                }
+
+                foreach (FlowEdge nestedStartEdge in nestedFlowGraph.StartEdges)
+                {
+                    flowGraph = flowGraph.AddEdge(vertex.Index, nestedStartEdge);
+                }
+            }
         }
 
-        FlowBranchingStatementNode flowBranchingStatement = new()
-        {
-            Original = switchStatement,
-            OutgoingEdges = flowGraph.OutgoingEdges[switchStatement.Index],
-            Index = switchStatement.Index,
-            PrecedingTokens = [],
-        };
+        ImmutableArray<ExpressionNode> optionExpressions = switchStatement.Options.Select(o => o.Expression).ToImmutableArray();
 
-        flowGraph = flowGraph.SetVertex(switchStatement.Index, flowGraph.Vertices[switchStatement.Index] with
+        foreach (FlowVertex vertex in bodyFlowGraph.Vertices.Values)
         {
-            AssociatedStatement = flowBranchingStatement,
-        });
+            if (!vertex.IsVisible || !vertex.IsStory)
+            {
+                if (bodyFlowGraph.OutgoingEdges[vertex.Index].Any(e => e.ToVertex is FlowGraph.FinalVertex))
+                {
+                    ErrorFound?.Invoke(Errors.SwitchBodyEndsInInvisibleStatement(vertex.Index));
+                }
+
+                continue;
+            }
+
+            FlowEdge? nonOptionEdge = bodyFlowGraph.OutgoingEdges[vertex.Index].Single();
+
+            ImmutableList<FlowEdge> outgoingEdges = flowGraph.OutgoingEdges[vertex.Index];
+            outgoingEdges = outgoingEdges.Remove((FlowEdge)nonOptionEdge);
+
+            if (((FlowEdge)nonOptionEdge).ToVertex is FlowGraph.FinalVertex)
+            {
+                nonOptionEdge = null;
+            }
+
+            DynamicSwitchFlowBranchingStatementNode flowBranchingStatement = new()
+            {
+                Original = vertex.AssociatedStatement,
+                OptionExpressions = optionExpressions,
+                NonOptionEdge = nonOptionEdge,
+                OutgoingEdges = outgoingEdges,
+                Index = vertex.Index,
+                PrecedingTokens = [],
+            };
+
+            flowGraph = flowGraph.SetVertex(vertex.Index, flowGraph.Vertices[vertex.Index] with
+            {
+                AssociatedStatement = flowBranchingStatement,
+            });
+        }
+
+        {
+            FlowEdge? nonOptionEdge = !bodyFlowGraph.Vertices.IsEmpty ? bodyFlowGraph.StartEdges.Single(e => e.IsStory) : null;
+            ImmutableList<FlowEdge> outgoingEdges = flowGraph.OutgoingEdges[switchStatement.Index];
+            FlowBranchingStatementNode flowBranchingStatement;
+
+            if (nonOptionEdge is not null)
+            {
+                outgoingEdges = outgoingEdges.Remove((FlowEdge)nonOptionEdge);
+
+                flowBranchingStatement = new DynamicSwitchFlowBranchingStatementNode
+                {
+                    Original = switchStatement,
+                    OptionExpressions = optionExpressions,
+                    NonOptionEdge = (FlowEdge)nonOptionEdge,
+                    OutgoingEdges = outgoingEdges,
+                    Index = switchStatement.Index,
+                    PrecedingTokens = [],
+                };
+            }
+            else
+            {
+                flowBranchingStatement = new FlowBranchingStatementNode
+                {
+                    Original = switchStatement,
+                    OutgoingEdges = outgoingEdges,
+                    Index = switchStatement.Index,
+                    PrecedingTokens = [],
+                };
+            }
+
+            flowGraph = flowGraph.SetVertex(switchStatement.Index, flowGraph.Vertices[switchStatement.Index] with
+            {
+                AssociatedStatement = flowBranchingStatement,
+            });
+        }
 
         return flowGraph;
     }

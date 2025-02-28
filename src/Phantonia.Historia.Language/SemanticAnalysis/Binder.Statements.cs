@@ -6,6 +6,7 @@ using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 
@@ -323,6 +324,8 @@ public sealed partial class Binder
             }
         }
 
+        (context, StatementBodyNode boundBody) = BindStatementBody(switchStatement.Body, settings, context);
+
         List<OptionNode> boundOptions = [.. switchStatement.Options];
 
         for (int i = 0; i < boundOptions.Count; i++)
@@ -355,6 +358,7 @@ public sealed partial class Binder
         boundStatement = switchStatement with
         {
             OutputExpression = outputExpression,
+            Body = boundBody,
             Options = [.. boundOptions],
         };
 
