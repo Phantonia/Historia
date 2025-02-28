@@ -61,11 +61,7 @@ public sealed partial class FlowAnalyzer
         mainFlowGraph = RedirectEdgesToCallVertexToSubroutineStart(mainFlowGraph, callVertex, subroutineFlowGraph);
         mainFlowGraph = RedirectFinalEdgesFromSubroutineToNextVertex(mainFlowGraph, subroutineFlowGraph, nextVertex);
 
-        mainFlowGraph = mainFlowGraph with
-        {
-            Vertices = mainFlowGraph.Vertices.Remove(callVertex),
-            OutgoingEdges = mainFlowGraph.OutgoingEdges.Remove(callVertex),
-        };
+        mainFlowGraph = mainFlowGraph.RemoveVertex(callVertex);
 
         return mainFlowGraph;
     }
@@ -84,11 +80,7 @@ public sealed partial class FlowAnalyzer
     {
         foreach (long vertex in subroutineFlowGraph.Vertices.Keys)
         {
-            mainFlowGraph = mainFlowGraph with
-            {
-                Vertices = mainFlowGraph.Vertices.Add(vertex, subroutineFlowGraph.Vertices[vertex]),
-                OutgoingEdges = mainFlowGraph.OutgoingEdges.Add(vertex, subroutineFlowGraph.OutgoingEdges[vertex]),
-            };
+            mainFlowGraph = mainFlowGraph.AddVertex(subroutineFlowGraph.Vertices[vertex], subroutineFlowGraph.OutgoingEdges[vertex]);
         }
 
         return mainFlowGraph;

@@ -285,16 +285,8 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
                 // redirect final edges as weak edges back up
                 foreach (long vertex in nestedFlowGraph.OutgoingEdges.Where(p => p.Value.Contains(FlowGraph.FinalEdge)).Select(p => p.Key))
                 {
-                    flowGraph = flowGraph with
-                    {
-                        OutgoingEdges =
-                            flowGraph.OutgoingEdges.SetItem(
-                                vertex,
-                                flowGraph.OutgoingEdges[vertex].Replace(
-                                    FlowGraph.FinalEdge,
-                                    FlowEdge.CreateWeakTo(loopSwitchStatement.Index))), // important: weak edge
-                    };
-
+                    flowGraph = flowGraph.ReplaceEdge(vertex, FlowGraph.FinalVertex, FlowEdge.CreateWeakTo(loopSwitchStatement.Index)); // important: weak edge
+                    
                     nonFinalEndVertices.Add(vertex);
                 }
             }
@@ -314,38 +306,20 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
                 // add purely semantic edge from all end vertices of non final options to all start vertices of final options
                 foreach (long finalStartVertex in finalStartVertices)
                 {
-                    flowGraph = flowGraph with
-                    {
-                        OutgoingEdges = flowGraph.OutgoingEdges.SetItem(
-                            nonFinalEndVertex,
-                            flowGraph.OutgoingEdges[nonFinalEndVertex].Add(
-                                FlowEdge.CreatePurelySemanticTo(finalStartVertex))),
-                    };
+                    flowGraph = flowGraph.AddEdge(nonFinalEndVertex, FlowEdge.CreatePurelySemanticTo(finalStartVertex));
                 }
             }
             else
             {
                 // add purely semantic edges from all end vertices of non final options into nothingness
-                flowGraph = flowGraph with
-                {
-                    OutgoingEdges = flowGraph.OutgoingEdges.SetItem(
-                            nonFinalEndVertex,
-                            flowGraph.OutgoingEdges[nonFinalEndVertex].Add(
-                                FlowEdge.CreatePurelySemanticTo(FlowGraph.FinalVertex))),
-                };
+                flowGraph = flowGraph.AddEdge(nonFinalEndVertex, FlowEdge.CreatePurelySemanticTo(FlowGraph.FinalVertex));
             }
         }
 
         // loop switches without final options automatically continue after all normal options have been selected
         if (!hasFinalOption)
         {
-            flowGraph = flowGraph with
-            {
-                OutgoingEdges = flowGraph.OutgoingEdges.SetItem(
-                    loopSwitchStatement.Index,
-                    flowGraph.OutgoingEdges[loopSwitchStatement.Index].Add(
-                        FlowGraph.FinalEdge)),
-            };
+            flowGraph = flowGraph.AddEdge(loopSwitchStatement.Index, FlowGraph.FinalEdge);
         }
 
         Debug.Assert(flowGraph.IsConformable);
@@ -407,10 +381,15 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
         }
 
         ImmutableDictionary<long, ImmutableList<FlowEdge>> edges
-            = flowGraph.OutgoingEdges.Select(p => KeyValuePair.Create(CalculateNewIndex(p.Key, uniqueId), p.Value.Select(e => SemantifyEdge(e)).ToImmutableList()))
-                                     .ToImmutableDictionary();
+            = flowGraph.OutgoingEdges
+                       .Select(p => KeyValuePair.Create(CalculateNewIndex(p.Key, uniqueId), p.Value.Select(e => SemantifyEdge(e)).ToImmutableList()))
+                       .ToImmutableDictionary();
 
-        IEnumerable<FlowEdge> newStartEdges = flowGraph.StartEdges.Select(e => e with { ToVertex = e.ToVertex != FlowGraph.FinalVertex ? CalculateNewIndex(e.ToVertex, uniqueId) : FlowGraph.FinalVertex });
+        IEnumerable<FlowEdge> newStartEdges = flowGraph.StartEdges.Select(
+            e => e with
+            {
+                ToVertex = e.ToVertex != FlowGraph.FinalVertex ? CalculateNewIndex(e.ToVertex, uniqueId) : FlowGraph.FinalVertex,
+            });
         
         return flowGraph with
         {
@@ -505,10 +484,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
         else
         {
             // we need to draw an edge from the if statement vertex into nothingness
-            flowGraph = flowGraph with
-            {
-                OutgoingEdges = flowGraph.OutgoingEdges.SetItem(ifStatement.Index, flowGraph.OutgoingEdges[ifStatement.Index].Add(FlowEdge.CreateStrongTo(FlowGraph.FinalVertex))),
-            };
+            flowGraph = flowGraph.AddEdge(ifStatement.Index, FlowEdge.CreateStrongTo(FlowGraph.FinalVertex));
         }
 
         FlowBranchingStatementNode flowBranchingStatement = new()

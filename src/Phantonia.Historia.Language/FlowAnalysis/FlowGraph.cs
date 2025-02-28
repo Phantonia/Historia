@@ -20,14 +20,14 @@ public sealed record FlowGraph
 
     public static FlowGraph Empty { get; } = new();
 
-    public static FlowGraph CreateSimpleFlowGraph(FlowVertex vertex) => Empty with
+    public static FlowGraph CreateSimpleFlowGraph(FlowVertex vertex) => new()
     {
         StartEdges = [FlowEdge.CreateStrongTo(vertex.Index)],
         OutgoingEdges = Empty.OutgoingEdges.Add(vertex.Index, [FinalEdge]),
         Vertices = Empty.Vertices.Add(vertex.Index, vertex),
     };
 
-    public static FlowGraph CreateSimpleSemanticFlowGraph(FlowVertex vertex) => Empty with
+    public static FlowGraph CreateSimpleSemanticFlowGraph(FlowVertex vertex) => new()
     {
         StartEdges = [FlowEdge.CreatePurelySemanticTo(vertex.Index)],
         OutgoingEdges = Empty.OutgoingEdges.Add(vertex.Index, [FlowEdge.CreatePurelySemanticTo(FinalVertex)]),
@@ -123,6 +123,25 @@ public sealed record FlowGraph
         };
     }
 
+    public FlowGraph RemoveVertex(long vertex)
+    {
+        MutEdges tempEdges = OutgoingEdges.ToDictionary(p => p.Key, p => p.Value.ToList());
+
+        foreach (long v in OutgoingEdges.Keys)
+        {
+            tempEdges[v].RemoveAll(e => e.ToVertex == vertex);
+        }
+
+        tempEdges.Remove(vertex);
+
+        return this with
+        {
+            StartEdges = StartEdges.RemoveAll(e => e.ToVertex == vertex),
+            OutgoingEdges = tempEdges.ToImmutableDictionary(kvp => kvp.Key, kvp => kvp.Value.ToImmutableList()),
+            Vertices = Vertices.Remove(vertex)
+        };
+    }
+
     public FlowGraph RemoveEdge(long startingPoint, long endPoint)
     {
         if (!OutgoingEdges.TryGetValue(startingPoint, out ImmutableList<FlowEdge>? edgeList))
@@ -148,6 +167,11 @@ public sealed record FlowGraph
             throw new ArgumentException($"Vertex {index} does not exist");
         }
 
+        newVertex = newVertex with
+        {
+            Index = index,
+        };
+
         return this with
         {
             Vertices = Vertices.SetItem(index, newVertex),
@@ -169,6 +193,33 @@ public sealed record FlowGraph
         };
     }
 
+    public FlowGraph ReplaceEdge(long startingPoint, long originalEndPoint, FlowEdge newEdge)
+    {
+        if (!Vertices.ContainsKey(startingPoint))
+        {
+            throw new ArgumentException($"Vertex {startingPoint} does not exist");
+        }
+
+        if (!Vertices.ContainsKey(originalEndPoint) && originalEndPoint is not FinalVertex)
+        {
+            throw new ArgumentException($"Vertex {originalEndPoint} does not exist");
+        }
+
+        if (OutgoingEdges[startingPoint].All(e => e.ToVertex != originalEndPoint))
+        {
+            throw new ArgumentException($"Edge {startingPoint} to {originalEndPoint} does not exist");
+        }
+
+        if (OutgoingEdges[startingPoint].Any(e => e.ToVertex == newEdge.ToVertex))
+        {
+            throw new ArgumentException($"Edge {startingPoint} to {newEdge.ToVertex} already exists");
+        }
+
+        FlowEdge originalEdge = OutgoingEdges[startingPoint].Single(e => e.ToVertex == originalEndPoint);
+
+        return SetEdges(startingPoint, OutgoingEdges[startingPoint].Replace(originalEdge, newEdge));
+    }
+
     public FlowGraph Append(FlowGraph graph)
     {
         // this method generates a huge amount of waste - can we optimize this?
@@ -182,7 +233,7 @@ public sealed record FlowGraph
 
             for (int i = 0; i < edges.Count; i++)
             {
-                if (edges[i].ToVertex == FinalVertex)
+                if (edges[i].ToVertex is FinalVertex)
                 {
                     outgoingKind = edges[i].Kind;
                     edges.RemoveAt(i);
@@ -190,7 +241,7 @@ public sealed record FlowGraph
                 }
             }
 
-            Debug.Assert(edges.All(e => e.ToVertex != FinalVertex));
+            Debug.Assert(edges.All(e => e.ToVertex is not FinalVertex));
 
             if (outgoingKind == FlowEdgeKind.None)
             {
@@ -210,7 +261,6 @@ public sealed record FlowGraph
                     _ => outgoingKind,
                 };
 
-                // we keep the old start edge kind - i think that's correct?
                 edges.Add(startEdge with { Kind = newKind });
             }
         }
@@ -219,7 +269,7 @@ public sealed record FlowGraph
         {
             if (tempEdges.ContainsKey(currentVertex))
             {
-                throw new InvalidOperationException("Duplicated vertex key");
+                throw new InvalidOperationException($"Vertex {currentVertex} exists in both the current as well as the appended flow graph");
             }
 
             tempEdges[currentVertex] = [.. edges];
@@ -248,7 +298,7 @@ public sealed record FlowGraph
 
         if (!Vertices.ContainsKey(vertex))
         {
-            throw new ArgumentException($"{nameof(vertex)} is not a vertex of this graph.");
+            throw new ArgumentException($"Vertex {vertex} is not a vertex of this graph.");
         }
 
         MutEdges tempEdges = OutgoingEdges.ToDictionary(p => p.Key, p => p.Value.ToList());
@@ -259,14 +309,14 @@ public sealed record FlowGraph
         {
             if (tempEdges.ContainsKey(currentVertex))
             {
-                throw new InvalidOperationException("Duplicated vertex key");
+                throw new InvalidOperationException($"Vertex {currentVertex} exists in both the current as well as the appended flow graph");
             }
 
             tempEdges[currentVertex] = [.. edges];
             tempVertices[currentVertex] = graph.Vertices[currentVertex];
         }
 
-        tempEdges[vertex].RemoveAll(e => e.ToVertex == FinalVertex);
+        tempEdges[vertex].RemoveAll(e => e.ToVertex is FinalVertex);
 
         foreach (FlowEdge edge in graph.StartEdges)
         {
@@ -278,9 +328,9 @@ public sealed record FlowGraph
 
         List<FlowEdge> newStartEdges = [.. StartEdges];
 
-        if (newStartEdges.Any(e => e.ToVertex == FinalVertex))
+        if (newStartEdges.Any(e => e.ToVertex is FinalVertex))
         {
-            newStartEdges.RemoveAll(e => e.ToVertex == FinalVertex);
+            newStartEdges.RemoveAll(e => e.ToVertex is FinalVertex);
             newStartEdges.AddRange(graph.StartEdges);
         }
 
@@ -292,7 +342,7 @@ public sealed record FlowGraph
         };
     }
 
-    public FlowGraph Replace(int replacedVertex, FlowGraph graph)
+    public FlowGraph Replace(long replacedVertex, FlowGraph graph)
     {
         // this method generates a huge amount of waste - can we optimize this?
 
