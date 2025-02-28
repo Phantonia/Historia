@@ -23,26 +23,9 @@ public sealed partial class FlowAnalyzer
     {
         ImmutableDictionary<OutcomeSymbol, OutcomeData>.Builder outcomes = ImmutableDictionary.CreateBuilder<OutcomeSymbol, OutcomeData>();
 
-        foreach (Symbol symbol in symbolTable.AllSymbols)
+        foreach (OutcomeSymbol symbol in symbolTable.AllSymbols.OfType<OutcomeSymbol>())
         {
-            switch (symbol)
-            {
-                case OutcomeSymbol outcomeSymbol:
-                    if (outcomeSymbol.AlwaysAssigned)
-                    {
-                        outcomes.Add(outcomeSymbol, new OutcomeData
-                        {
-                            IsDefinitelyAssigned = true,
-                            IsPossiblyAssigned = true,
-                        });
-                    }
-                    else
-                    {
-                        outcomes.Add(outcomeSymbol, new OutcomeData());
-                    }
-
-                    break;
-            }
+            outcomes.Add(symbol, new OutcomeData());
         }
 
         return new VertexData
@@ -179,7 +162,7 @@ public sealed partial class FlowAnalyzer
 
         void ErrorOnLocked(long index)
         {
-            if (locked)
+            if (locked) // TODO: do we need '&& flowGraph.Vertices[vertex].IsStory' here too?
             {
                 if (outcome is SpectrumSymbol)
                 {

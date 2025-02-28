@@ -6,8 +6,6 @@ public record OutcomeSymbol() : Symbol
 {
     public required ImmutableArray<string> OptionNames { get; init; }
 
-    public required bool AlwaysAssigned { get; init; }
-
     public required bool IsPublic { get; init; }
 
     public string? DefaultOption { get; init; }

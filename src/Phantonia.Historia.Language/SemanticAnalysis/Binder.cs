@@ -208,7 +208,6 @@ public sealed partial class Binder(StoryNode story)
             Name = outcomeDeclaration.Name,
             OptionNames = [.. optionNames],
             DefaultOption = outcomeDeclaration.DefaultOption,
-            AlwaysAssigned = false,
             IsPublic = outcomeDeclaration.IsPublic,
             Index = outcomeDeclaration.Index,
         };
@@ -342,7 +341,6 @@ public sealed partial class Binder(StoryNode story)
             Intervals = intervalBuilder.ToImmutable(),
             OptionNames = spectrumDeclaration.Options.Select(o => o.Name).ToImmutableArray(),
             DefaultOption = spectrumDeclaration.DefaultOption,
-            AlwaysAssigned = false,
             IsPublic = spectrumDeclaration.IsPublic,
             Index = spectrumDeclaration.Index,
         };

@@ -1317,7 +1317,6 @@ public sealed class BinderTests
                 Name: "Engaged",
                 OptionNames: ["Yes", "No"],
                 DefaultOption: null,
-                AlwaysAssigned: false,
             },
             Original: OutcomeSymbolDeclarationNode
             {

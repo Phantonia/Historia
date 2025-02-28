@@ -1,5 +1,4 @@
-﻿using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -57,11 +56,13 @@ public sealed record FlowGraph
         return StartEdges.Single(e => e.IsStory).ToVertex;
     }
 
-    public FlowGraph AddVertex(FlowVertex vertex, params FlowEdge[] edges)
+    public FlowGraph AddVertex(FlowVertex vertex, params FlowEdge[] edges) => AddVertex(vertex, (IEnumerable<FlowEdge>)edges);
+
+    public FlowGraph AddVertex(FlowVertex vertex, IEnumerable<FlowEdge> edges)
     {
         if (Vertices.ContainsKey(vertex.Index))
         {
-            throw new ArgumentException("Cannot add a vertex that is already there");
+            throw new ArgumentException($"Vertex {vertex.Index} already exists");
         }
 
         if (StartEdges is [{ ToVertex: FinalVertex }])
@@ -83,31 +84,88 @@ public sealed record FlowGraph
         }
     }
 
-    public FlowGraph AddEdge(long startPoint, FlowEdge edge)
+    public FlowGraph AddEdge(long startingPoint, FlowEdge edge)
     {
-        if (!OutgoingEdges.TryGetValue(startPoint, out ImmutableList<FlowEdge>? edgeList))
+        if (!OutgoingEdges.TryGetValue(startingPoint, out ImmutableList<FlowEdge>? edgeList))
         {
-            throw new ArgumentException($"Vertex {startPoint} does not exist");
+            throw new ArgumentException($"Vertex {startingPoint} does not exist");
         }
 
         if (edgeList.Any(e => e.ToVertex == edge.ToVertex))
         {
-            throw new ArgumentException($"Edge {startPoint} to {edge.ToVertex} already exists");
+            throw new ArgumentException($"Edge {startingPoint} to {edge.ToVertex} already exists");
         }
 
         return this with
         {
-            OutgoingEdges = OutgoingEdges.SetItem(startPoint, edgeList.Add(edge)),
+            OutgoingEdges = OutgoingEdges.SetItem(startingPoint, edgeList.Add(edge)),
+        };
+    }
+
+    public FlowGraph AddEdges(long startingPoint, IEnumerable<FlowEdge> edges)
+    {
+        if (!OutgoingEdges.TryGetValue(startingPoint, out ImmutableList<FlowEdge>? edgeList))
+        {
+            throw new ArgumentException($"Vertex {startingPoint} does not exist");
+        }
+
+        foreach (FlowEdge edge in edges)
+        {
+            if (edgeList.Any(e => e.ToVertex == edge.ToVertex))
+            {
+                throw new ArgumentException($"Edge {startingPoint} to {edge.ToVertex} already exists");
+            }
+        }
+
+        return this with
+        {
+            OutgoingEdges = OutgoingEdges.SetItem(startingPoint, edgeList.AddRange(edges)),
+        };
+    }
+
+    public FlowGraph RemoveEdge(long startingPoint, long endPoint)
+    {
+        if (!OutgoingEdges.TryGetValue(startingPoint, out ImmutableList<FlowEdge>? edgeList))
+        {
+            throw new ArgumentException($"Vertex {startingPoint} does not exist");
+        }
+
+        if (edgeList.All(e => e.ToVertex != endPoint))
+        {
+            throw new ArgumentException($"Edge {startingPoint} to {endPoint} does not exist");
+        }
+
+        return this with
+        {
+            OutgoingEdges = OutgoingEdges.SetItem(startingPoint, edgeList.RemoveAll(e => e.ToVertex == endPoint)),
         };
     }
 
     public FlowGraph SetVertex(long index, FlowVertex newVertex)
     {
-        Debug.Assert(Vertices.ContainsKey(index));
+        if (!Vertices.ContainsKey(index))
+        {
+            throw new ArgumentException($"Vertex {index} does not exist");
+        }
 
         return this with
         {
             Vertices = Vertices.SetItem(index, newVertex),
+        };
+    }
+
+    public FlowGraph SetEdges(long vertex, IEnumerable<FlowEdge> edges)
+    {
+        if (!Vertices.ContainsKey(vertex))
+        {
+            throw new ArgumentException($"Vertex {vertex} does not exist");
+        }
+
+        Debug.Assert(OutgoingEdges.ContainsKey(vertex));
+
+        return this with
+        {
+            OutgoingEdges = OutgoingEdges.SetItem(vertex, [.. edges]),
         };
     }
 
@@ -308,7 +366,7 @@ public sealed record FlowGraph
         }
 
         List<FlowEdge> newStartEdges = [.. StartEdges];
-        
+
         if (newStartEdges.Any(e => e.ToVertex == replacedVertex))
         {
             newStartEdges.RemoveAll(e => e.ToVertex == replacedVertex);
