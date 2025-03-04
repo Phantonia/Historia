@@ -312,6 +312,15 @@ public static class Errors
         };
     }
 
+    public static Error ContinueOutsideOfSwitchOption(long index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Continue statements have to live inside of switches",
+            Index = index,
+        };
+    }
+
     public static Error DuplicatedOptionInOutcomeDeclaration(string optionName, long index)
     {
         return new Error

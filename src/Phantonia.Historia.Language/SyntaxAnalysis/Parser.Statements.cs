@@ -106,6 +106,19 @@ public sealed partial class Parser
                 return ParseChooseStatement(ref index, precedingTokens);
             case TokenKind.IfKeyword:
                 return ParseIfStatement(ref index, precedingTokens);
+            case TokenKind.ContinueKeyword:
+                {
+                    Token continueKeyword = tokens[index++];
+                    Token semicolon = Expect(TokenKind.Semicolon, ref index);
+
+                    return new ContinueStatementNode
+                    {
+                        ContinueKeywordToken = continueKeyword,
+                        SemicolonToken = semicolon,
+                        Index = continueKeyword.Index,
+                        PrecedingTokens = precedingTokens,
+                    };
+                }
             case TokenKind.EndOfFile:
                 ErrorFound?.Invoke(Errors.UnexpectedEndOfFile(tokens[index]));
                 return new MissingStatementNode
@@ -196,39 +209,6 @@ public sealed partial class Parser
 
             statementBuilder.Add(nextStatement);
         }
-
-        void RecursivelyEnsureNoSwitchesOrCalls(IEnumerable<StatementNode> statements)
-        {
-            foreach (StatementNode statement in statements)
-            {
-                switch (statement)
-                {
-                    case SwitchStatementNode:
-                    case LoopSwitchStatementNode:
-                    case CallStatementNode:
-                        ErrorFound?.Invoke(Errors.SwitchBodyContainsSwitchOrCall(statement.Index));
-                        break;
-                    case IfStatementNode ifStatement:
-                        RecursivelyEnsureNoSwitchesOrCalls(ifStatement.ThenBlock.Statements);
-                        RecursivelyEnsureNoSwitchesOrCalls(ifStatement.ElseBlock?.Statements ?? []);
-                        break;
-                    case BranchOnStatementNode branchonStatement:
-                        foreach (BranchOnOptionNode option in branchonStatement.Options)
-                        {
-                            RecursivelyEnsureNoSwitchesOrCalls(option.Body.Statements);
-                        }
-                        break;
-                    case ChooseStatementNode chooseStatement:
-                        foreach (OptionNode option in chooseStatement.Options)
-                        {
-                            RecursivelyEnsureNoSwitchesOrCalls(option.Body.Statements);
-                        }
-                        break;
-                }
-            }
-        }
-
-        RecursivelyEnsureNoSwitchesOrCalls(statementBuilder);
 
         ImmutableArray<OptionNode> optionNodes = ParseOptions(ref index, []);
 

@@ -38,6 +38,11 @@ public static class Compiler
             PrecedingTokens = [],
         };
 
+        GlobalSyntaxAnalyzer globalSyntaxAnalyser = new(story);
+        globalSyntaxAnalyser.ErrorFound += errors.Add;
+        story = globalSyntaxAnalyser.Analyse();
+        globalSyntaxAnalyser.ErrorFound -= errors.Add;
+
         using StringWriter writer = new();
 
         LineIndexing lineIndexing = new(ImmutableDictionary<string, ImmutableArray<long>>.Empty.Add("", [.. lineIndices]));

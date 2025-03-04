@@ -36,6 +36,7 @@ public enum TokenKind
     OptionKeyword,
     FinalKeyword,
     LoopKeyword,
+    ContinueKeyword,
     BranchOnKeyword,
     OtherKeyword,
     PublicKeyword,
