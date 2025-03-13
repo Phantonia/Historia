@@ -10,5 +10,7 @@ public readonly record struct CompilationResult
 
     public required LineIndexing LineIndexing { get; init; }
 
+    public required ulong Fingerprint { get; init; }
+
     public bool IsValid => Errors.Length == 0;
 }

@@ -104,6 +104,7 @@ public static class Compiler
             {
                 Errors = [.. errors.OrderBy(e => e.Index)],
                 LineIndexing = lineIndexing,
+                Fingerprint = 0,
             };
         }
 
@@ -112,6 +113,9 @@ public static class Compiler
         Debug.Assert(boundStory is not null);
         Debug.Assert(settings is not null);
         Debug.Assert(symbolTable is not null);
+
+        FingerprintCalculator calculator = new(boundStory, symbolTable);
+        ulong fingerprint = calculator.GetStoryFingerprint();
 
         FlowAnalyzer flowAnalyzer = new(boundStory, symbolTable);
         flowAnalyzer.ErrorFound += errors.Add;
@@ -124,6 +128,7 @@ public static class Compiler
             {
                 Errors = [.. errors.OrderBy(e => e.Index)],
                 LineIndexing = lineIndexing,
+                Fingerprint = 0,
             };
         }
 
@@ -142,6 +147,7 @@ public static class Compiler
         return new CompilationResult
         {
             LineIndexing = lineIndexing,
+            Fingerprint = fingerprint,
         };
     }
 }

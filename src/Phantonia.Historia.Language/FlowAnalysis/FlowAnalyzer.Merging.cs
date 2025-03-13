@@ -209,8 +209,8 @@ public sealed partial class FlowAnalyzer
                 continue;
             }
 
-            Debug.Assert(mainFlowGraph.OutgoingEdges[vertex.Index].Count == 1); // assert vertex is infact linear
-            nextVertices[vertex.Index] = mainFlowGraph.OutgoingEdges[vertex.Index][0].ToVertex;
+            Debug.Assert(mainFlowGraph.OutgoingEdges[vertex.Index].Count(e => e.IsStory) == 1); // assert vertex is infact linear
+            nextVertices[vertex.Index] = mainFlowGraph.OutgoingEdges[vertex.Index].Single(e => e.IsStory).ToVertex;
 
             FlowVertex trackerVertex = vertex with
             {
