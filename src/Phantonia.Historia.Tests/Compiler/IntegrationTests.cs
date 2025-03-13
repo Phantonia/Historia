@@ -407,4 +407,39 @@ public sealed class IntegrationTests
             Assert.AreEqual(expected, actual);
         }
     }
+
+    [TestMethod]
+    public void RegressionTestCallAndLoopSwitch()
+    {
+        string code =
+            """
+            chapter main
+            {
+                call A;
+
+                loop switch 0
+                {
+                    option 1
+                    {
+                        call A;
+                    }
+
+                    option 2
+                    {
+
+                    }
+                }
+            }
+
+            scene A
+            {
+
+            }
+            """;
+
+        (CompilationResult result, _) = Language.Compiler.CompileString(code);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+    }
 }
