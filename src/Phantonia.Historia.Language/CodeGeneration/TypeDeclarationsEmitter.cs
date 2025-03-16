@@ -712,6 +712,8 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, Settings setti
 
     private void GenerateOutcomeEnum(OutcomeSymbol outcomeSymbol)
     {
+        GeneralEmission.GenerateGeneratedCodeAttribute(writer);
+
         writer.Write("public enum ");
 
         if (outcomeSymbol is SpectrumSymbol)
