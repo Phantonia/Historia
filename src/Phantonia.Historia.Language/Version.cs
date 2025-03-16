@@ -2,5 +2,5 @@
 
 public static class Version
 {
-    public const string CompilerVersion = "0";
+    public const string CompilerVersion = "0.0";
 }
