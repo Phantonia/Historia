@@ -48,6 +48,8 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, Settings setti
 
     private void GenerateRecordDeclaration(RecordTypeSymbol record)
     {
+        GeneralEmission.GenerateGeneratedCodeAttribute(writer);
+
         writer.Write("public readonly struct @");
         writer.Write(record.Name);
         writer.Write(" : global::System.IEquatable<@");
@@ -227,6 +229,8 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, Settings setti
 
     private void GenerateUnionDeclaration(UnionTypeSymbol union)
     {
+        GeneralEmission.GenerateGeneratedCodeAttribute(writer);
+
         writer.Write("public readonly struct @");
         writer.Write(union.Name);
         writer.Write(" : global::System.IEquatable<@");
@@ -244,8 +248,9 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, Settings setti
         writer.BeginBlock();
 
         GenerateUnionConstructors(union);
-        GenerateUnionProperties(union);
+        GenerateUnionFieldsAndProperties(union);
         GenerateUnionAsObjectMethod(union);
+        GenerateUnionIsAndAsMethods(union);
         GenerateUnionRunMethod(union);
         GenerateUnionEvaluateMethod(union);
         GenerateUnionEquality(union);
@@ -260,19 +265,17 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, Settings setti
     {
         foreach (TypeSymbol subtype in union.Subtypes)
         {
-            writer.Write($"internal @{union.Name}(");
+            writer.Write($"public @{union.Name}(");
             GeneralEmission.GenerateType(subtype, writer);
             writer.WriteLine(" value)");
 
             writer.BeginBlock();
 
-            writer.Write("this.");
             GenerateUnionSubtypeName(subtype);
             writer.WriteLine(" = value;");
 
             foreach (TypeSymbol otherSubtype in union.Subtypes.Except([subtype]))
             {
-                writer.Write("this.");
                 GenerateUnionSubtypeName(otherSubtype);
                 writer.Write(" = default(");
                 GeneralEmission.GenerateType(otherSubtype, writer);
@@ -290,15 +293,15 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, Settings setti
         }
     }
 
-    private void GenerateUnionProperties(UnionTypeSymbol union)
+    private void GenerateUnionFieldsAndProperties(UnionTypeSymbol union)
     {
         foreach (TypeSymbol subtype in union.Subtypes)
         {
-            writer.Write("public ");
+            writer.Write("private readonly ");
             GeneralEmission.GenerateType(subtype, writer);
             writer.Write(' ');
-            GenerateUnionSubtypeName(subtype); // the property gets the same name as the type
-            writer.WriteLine(" { get; }");
+            GenerateUnionSubtypeName(subtype); // the field gets the same name as the type
+            writer.WriteLine(';');
             writer.WriteLine();
         }
 
@@ -334,6 +337,85 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, Settings setti
         writer.WriteLine("throw new global::System.InvalidOperationException(\"Invalid discriminator\");");
         writer.EndBlock(); // AsObject method
         writer.WriteLine();
+    }
+
+    private void GenerateUnionIsAndAsMethods(UnionTypeSymbol union)
+    {
+        foreach (TypeSymbol subtype in union.Subtypes)
+        {
+            writer.Write("public bool Is");
+            GenerateUnionSubtypeName(subtype, includeAt: false);
+            writer.Write("(out ");
+            GeneralEmission.GenerateType(subtype, writer);
+            writer.WriteLine(" value)");
+
+            writer.BeginBlock();
+
+            writer.Write("value = ");
+            GenerateUnionSubtypeName(subtype);
+            writer.WriteLine(';');
+
+            writer.Write("return Discriminator == ");
+            writer.Write(union.Name);
+            writer.Write("Discriminator.");
+            GenerateUnionSubtypeName(subtype);
+            writer.WriteLine(';');
+
+            writer.EndBlock(); // method
+
+            writer.WriteLine();
+
+            writer.Write("public bool Is");
+            GenerateUnionSubtypeName(subtype, includeAt: false);
+            writer.WriteLine("()");
+
+            writer.BeginBlock();
+
+            GeneralEmission.GenerateType(subtype, writer);
+            writer.WriteLine(" value;");
+            writer.Write("return Is");
+            GenerateUnionSubtypeName(subtype, includeAt: false);
+            writer.WriteLine("(out value);");
+
+            writer.EndBlock(); // method
+
+            writer.WriteLine();
+
+            writer.Write("public ");
+            GeneralEmission.GenerateType(subtype, writer);
+            writer.Write(" As");
+            GenerateUnionSubtypeName(subtype, includeAt: false);
+            writer.WriteLine("()");
+
+            writer.BeginBlock();
+
+            GeneralEmission.GenerateType(subtype, writer);
+            writer.WriteLine(" value;");
+
+            writer.WriteLine();
+
+            writer.Write("if (Is");
+            GenerateUnionSubtypeName(subtype, includeAt: false);
+            writer.WriteLine("(out value))");
+
+            writer.BeginBlock();
+
+            writer.WriteLine("return value;");
+
+            writer.EndBlock(); // if
+
+            writer.WriteLine("else");
+
+            writer.BeginBlock();
+
+            writer.WriteLine("""throw new global::System.InvalidOperationException("The instance is not of the requested type.");""");
+
+            writer.EndBlock(); // else
+
+            writer.EndBlock(); // method
+
+            writer.WriteLine();
+        }
     }
 
     private void GenerateUnionRunMethod(UnionTypeSymbol union)
@@ -613,6 +695,8 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, Settings setti
 
     private void GenerateEnumDeclaration(PseudoEnumTypeSymbol enumSymbol)
     {
+        GeneralEmission.GenerateGeneratedCodeAttribute(writer);
+
         writer.Write("public enum @");
         writer.WriteLine(enumSymbol.Name);
         writer.BeginBlock();
@@ -672,6 +756,8 @@ public sealed class TypeDeclarationsEmitter(StoryNode boundStory, Settings setti
 
     private void GenerateInterfaceDeclaration(InterfaceSymbol interfaceSymbol)
     {
+        GeneralEmission.GenerateGeneratedCodeAttribute(writer);
+
         writer.Write("public interface I");
         writer.WriteLine(interfaceSymbol.Name);
 

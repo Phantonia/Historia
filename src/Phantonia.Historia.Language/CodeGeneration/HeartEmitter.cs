@@ -10,6 +10,8 @@ public sealed class HeartEmitter(FlowGraph flowGraph, StoryNode boundStory, Sett
 {
     public void GenerateHeartClass()
     {
+        GeneralEmission.GenerateGeneratedCodeAttribute(writer);
+
         writer.WriteLine("internal static class Heart");
         writer.BeginBlock();
 

@@ -86,7 +86,7 @@ public static class Compiler
 
         LineIndexing lineIndexing = new(pathLines.ToImmutableDictionary());
 
-        using StreamWriter outputWriter = new(outputPath);
+        using StreamWriter outputWriter = new(outputPath, new FileStreamOptions { Mode = FileMode.OpenOrCreate });
 
         return ProceedWithStory(story, outputWriter, errors, lineIndexing);
     }

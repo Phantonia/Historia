@@ -27,6 +27,8 @@ public sealed class ChapterEmitter(
             return;
         }
 
+        GeneralEmission.GenerateGeneratedCodeAttribute(writer);
+
         writer.Write("public struct ");
         writer.Write(settings.StoryName);
         writer.WriteLine("Chapter");

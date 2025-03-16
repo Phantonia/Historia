@@ -15,6 +15,8 @@ public sealed class FieldsEmitter(StoryNode boundStory, SymbolTable symbolTable,
     {
         int initialIndent = writer.Indent;
 
+        GeneralEmission.GenerateGeneratedCodeAttribute(writer);
+
         writer.WriteLine("internal struct Fields");
 
         writer.BeginBlock();

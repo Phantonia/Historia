@@ -17,6 +17,8 @@ public static class GeneralEmission
 {
     public static void GenerateClassHeader(string stateMachineOrSnapshot, Settings settings, IndentedTextWriter writer)
     {
+        GenerateGeneratedCodeAttribute(writer);
+
         writer.Write("public sealed class ");
         writer.Write(settings.StoryName);
         writer.Write(stateMachineOrSnapshot);
@@ -624,5 +626,12 @@ public static class GeneralEmission
                          })
                          .Append(0) // if sequence is empty, at least have one number
                          .Max();
+    }
+
+    public static void GenerateGeneratedCodeAttribute(IndentedTextWriter writer)
+    {
+        writer.Write("""[global::System.CodeDom.Compiler.GeneratedCode("Historia", """);
+        writer.Write(SymbolDisplay.FormatLiteral(Version.CompilerVersion, quote: true));
+        writer.WriteLine(")]");
     }
 }
