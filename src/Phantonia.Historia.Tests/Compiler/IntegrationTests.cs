@@ -422,4 +422,31 @@ public sealed class IntegrationTests
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
     }
+
+    [TestMethod]
+    public void TestUncalledScene()
+    {
+        string code =
+            """
+            scene main
+            {
+                //call A;
+            }
+
+            scene A
+            {
+                call B;
+            }
+
+            scene B
+            {
+                output 0;
+            }
+            """;
+
+        (CompilationResult result, _) = Language.Compiler.CompileString(code);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+    }
 }
