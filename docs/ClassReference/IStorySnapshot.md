@@ -1,0 +1,1 @@
+# Interfaces `Phantonia.Historia.IStorySnapshot` and `Phantonia.Historia.IStorySnapshot<TOutput, TOption>`

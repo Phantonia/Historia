@@ -1,0 +1,1 @@
+# Interfaces `Phantonia.Historia.IStoryStateMachine` and `Phantonia.Historia.IStoryStateMachine<TOutput, TOption>`
