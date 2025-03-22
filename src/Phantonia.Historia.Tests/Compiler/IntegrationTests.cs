@@ -449,4 +449,54 @@ public sealed class IntegrationTests
         Assert.IsTrue(result.IsValid);
         Assert.AreEqual(0, result.Errors.Length);
     }
+
+    [TestMethod]
+    public void TestNegativeIntegers()
+    {
+        string code =
+            """
+            scene main
+            {
+                output -12;
+            }
+            """;
+
+        (CompilationResult result, string csharpCode) = Language.Compiler.CompileString(code);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(csharpCode, "HistoriaStoryStateMachine");
+
+        _ = stateMachine.TryContinue();
+        Assert.AreEqual(-12, stateMachine.Output);
+    }
+
+    [TestMethod]
+    public void TestBooleanLiterals()
+    {
+        string code =
+            """
+            setting OutputType: Boolean;
+
+            scene main
+            {
+                output true;
+                output false;
+            }
+            """;
+        
+        (CompilationResult result, string csharpCode) = Language.Compiler.CompileString(code);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        IStoryStateMachine<bool, int> stateMachine = DynamicCompiler.CompileToStory<bool, int>(csharpCode, "HistoriaStoryStateMachine");
+
+        _ = stateMachine.TryContinue();
+        Assert.AreEqual(true, stateMachine.Output);
+
+        _ = stateMachine.TryContinue();
+        Assert.AreEqual(false, stateMachine.Output);
+    }
 }

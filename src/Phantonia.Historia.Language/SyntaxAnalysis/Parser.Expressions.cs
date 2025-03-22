@@ -84,6 +84,13 @@ public sealed partial class Parser
                     Index = tokens[index++].Index,
                     PrecedingTokens = precedingTokens,
                 };
+            case TokenKind.TrueKeyword or TokenKind.FalseKeyword:
+                return new BooleanLiteralExpressionNode
+                {
+                    TrueOrFalseKeywordToken = tokens[index],
+                    Index = tokens[index++].Index,
+                    PrecedingTokens = precedingTokens,
+                };
             case TokenKind.Identifier:
                 return ParseIdentifierExpression(ref index, precedingTokens);
             case TokenKind.OpenParenthesis:
@@ -92,7 +99,7 @@ public sealed partial class Parser
                     index++;
 
                     ExpressionNode? expression = ParseExpression(ref index, []);
-                    
+
                     Token closedParenthesis = Expect(TokenKind.ClosedParenthesis, ref index);
 
                     return new ParenthesizedExpressionNode
@@ -106,6 +113,8 @@ public sealed partial class Parser
                 }
             case TokenKind.NotKeyword:
                 return ParseNotExpression(ref index, precedingTokens);
+            case TokenKind.Minus:
+                return ParseNegationExpression(ref index, precedingTokens);
             case TokenKind.EndOfFile:
                 ErrorFound?.Invoke(Errors.UnexpectedEndOfFile(tokens[index]));
                 return new MissingExpressionNode
@@ -273,6 +282,24 @@ public sealed partial class Parser
         return new NotExpressionNode
         {
             NotKeywordToken = notKeyword,
+            InnerExpression = innerExpression,
+            Index = nodeIndex,
+            PrecedingTokens = precedingTokens,
+        };
+    }
+
+    private IntegerNegationExpressionNode ParseNegationExpression(ref int index, ImmutableList<Token> precedingTokens)
+    {
+        Debug.Assert(tokens[index].Kind is TokenKind.Minus);
+        Token minus = tokens[index];
+        long nodeIndex = minus.Index;
+        index++;
+
+        ExpressionNode innerExpression = ParseSimpleExpression(ref index, []);
+
+        return new IntegerNegationExpressionNode
+        {
+            MinusToken = minus,
             InnerExpression = innerExpression,
             Index = nodeIndex,
             PrecedingTokens = precedingTokens,

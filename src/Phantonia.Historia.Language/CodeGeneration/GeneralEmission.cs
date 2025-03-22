@@ -346,6 +346,9 @@ public static class GeneralEmission
             case BuiltinTypeSymbol { Type: BuiltinType.String }:
                 writer.Write("string?");
                 return;
+            case BuiltinTypeSymbol { Type: BuiltinType.Boolean }:
+                writer.Write("bool");
+                return;
             default:
                 writer.Write('@');
                 writer.Write(type.Name);
@@ -409,13 +412,18 @@ public static class GeneralEmission
         switch (typedExpression.Original)
         {
             case ParenthesizedExpressionNode { InnerExpression: ExpressionNode innerExpression }:
+                writer.Write('(');
                 GenerateExpression(innerExpression, writer);
+                writer.Write(')');
                 return;
             case IntegerLiteralExpressionNode { Value: int intValue }:
                 writer.Write(intValue);
                 return;
             case StringLiteralExpressionNode { StringLiteral: string stringValue }:
                 writer.Write(SymbolDisplay.FormatLiteral(stringValue, quote: true));
+                return;
+            case BooleanLiteralExpressionNode { Value: bool boolValue }:
+                writer.Write(boolValue ? "true" : "false");
                 return;
             case BoundRecordCreationExpressionNode recordCreation:
                 writer.Write("new @");
@@ -445,6 +453,11 @@ public static class GeneralEmission
             case NotExpressionNode notExpression:
                 writer.Write("!(");
                 GenerateExpression(notExpression.InnerExpression, writer);
+                writer.Write(')');
+                return;
+            case IntegerNegationExpressionNode negationExpression:
+                writer.Write("-(");
+                GenerateExpression(negationExpression.InnerExpression, writer);
                 writer.Write(')');
                 return;
             case BoundIsExpressionNode isExpression:

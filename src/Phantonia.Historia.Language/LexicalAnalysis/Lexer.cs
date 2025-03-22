@@ -226,6 +226,15 @@ public sealed class Lexer
                         Index = currentIndex++,
                         PrecedingTrivia = triviaBuffer.ClearToString(),
                     };
+                case '-':
+                    _ = inputReader.Read();
+                    return new Token
+                    {
+                        Kind = TokenKind.Minus,
+                        Text = "-",
+                        Index = currentIndex++,
+                        PrecedingTrivia = triviaBuffer.ClearToString(),
+                    };
                 case '"' or '\'':
                     return LexStringLiteral();
                 case '<':
@@ -614,6 +623,8 @@ public sealed class Lexer
             "and" => TokenKind.AndKeyword,
             "or" => TokenKind.OrKeyword,
             "not" => TokenKind.NotKeyword,
+            "true" => TokenKind.TrueKeyword,
+            "false" => TokenKind.FalseKeyword,
             "if" => TokenKind.IfKeyword,
             "else" => TokenKind.ElseKeyword,
             _ => TokenKind.Identifier,
