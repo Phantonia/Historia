@@ -125,6 +125,35 @@ public sealed class DependencyGraph
         return newOrder;
     }
 
+    public IEnumerable<long> GetReachableSymbols(Symbol startingPoint)
+    {
+        List<long> reachableSymbols = [];
+        Dictionary<long, bool> marked = [];
+
+        foreach (long vertex in Symbols.Keys)
+        {
+            marked[vertex] = false;
+        }
+
+        DepthFirstSearch(startingPoint.Index);
+
+        void DepthFirstSearch(long vertex)
+        {
+            reachableSymbols.Add(vertex);
+            marked[vertex] = true;
+
+            foreach (long adjacentVertex in Dependencies[vertex])
+            {
+                if (!marked[adjacentVertex])
+                {
+                    DepthFirstSearch(adjacentVertex);
+                }
+            }
+        }
+
+        return reachableSymbols;
+    }
+
     private readonly record struct VertexData
     {
         public VertexData() { }
