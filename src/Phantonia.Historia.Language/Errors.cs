@@ -134,6 +134,15 @@ public static class Errors
         };
     }
 
+    public static Error ExpectedConstantExpression(long index)
+    {
+        return new Error
+        {
+            ErrorMessage = $"Expected a constant expression",
+            Index = index,
+        };
+    }
+
     public static Error RecordDoesNotExist(string recordName, long index)
     {
         return new Error

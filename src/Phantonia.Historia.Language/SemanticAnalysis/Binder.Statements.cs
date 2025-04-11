@@ -6,7 +6,6 @@ using Phantonia.Historia.Language.SyntaxAnalysis.Statements;
 using Phantonia.Historia.Language.SyntaxAnalysis.TopLevel;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 
@@ -81,6 +80,12 @@ public sealed partial class Binder
 
     private (BindingContext, StatementNode) BindOutputStatement(OutputStatementNode outputStatement, Settings settings, BindingContext context)
     {
+        bool previousRequiresConstantExpression = context.RequiresConstantExpression;
+        context = context with
+        {
+            RequiresConstantExpression = true,
+        };
+
         (context, ExpressionNode boundExpression) = BindAndTypeExpression(outputStatement.OutputExpression, context);
 
         if (boundExpression is TypedExpressionNode { SourceType: TypeSymbol sourceType } typedExpression)
@@ -100,6 +105,11 @@ public sealed partial class Binder
             OutputExpression = boundExpression,
         };
 
+        context = context with
+        {
+            RequiresConstantExpression = previousRequiresConstantExpression,
+        };
+
         return (context, boundStatement);
     }
 
@@ -111,6 +121,12 @@ public sealed partial class Binder
         {
             return (context, lineStatement);
         }
+
+        bool previousRequiresConstantExpression = context.RequiresConstantExpression;
+        context = context with
+        {
+            RequiresConstantExpression = true,
+        };
 
         (context, ExpressionNode boundCharacterExpression) = BindAndTypeCharacterExpression(lineStatement, lineRecord, context);
 
@@ -160,6 +176,11 @@ public sealed partial class Binder
             LineCreationExpression = lineCreationExpression,
             Index = lineStatement.Index,
             PrecedingTokens = [],
+        };
+
+        context = context with
+        {
+            RequiresConstantExpression = previousRequiresConstantExpression,
         };
 
         return (context, boundLineStatement);
@@ -308,6 +329,12 @@ public sealed partial class Binder
 
     private (BindingContext, StatementNode) BindSwitchStatement(SwitchStatementNode switchStatement, Settings settings, BindingContext context)
     {
+        bool previousRequiresConstantExpression = context.RequiresConstantExpression;
+        context = context with
+        {
+            RequiresConstantExpression = true,
+        };
+
         (context, ExpressionNode outputExpression) = BindAndTypeExpression(switchStatement.OutputExpression, context);
 
         {
@@ -324,12 +351,22 @@ public sealed partial class Binder
             }
         }
 
+        context = context with
+        {
+            RequiresConstantExpression = previousRequiresConstantExpression,
+        };
+
         (context, StatementBodyNode boundBody) = BindStatementBody(switchStatement.Body, settings, context);
 
         List<OptionNode> boundOptions = [.. switchStatement.Options];
 
         for (int i = 0; i < boundOptions.Count; i++)
         {
+            context = context with
+            {
+                RequiresConstantExpression = true,
+            };
+
             (context, ExpressionNode optionExpression) = BindAndTypeExpression(boundOptions[i].Expression, context);
 
             if (optionExpression is TypedExpressionNode { SourceType: TypeSymbol sourceType } typedExpression)
@@ -343,6 +380,11 @@ public sealed partial class Binder
                     optionExpression = RecursivelySetTargetType(typedExpression, settings.OptionType);
                 }
             }
+
+            context = context with
+            {
+                RequiresConstantExpression = previousRequiresConstantExpression,
+            };
 
             (context, StatementBodyNode optionBody) = BindStatementBody(boundOptions[i].Body, settings, context);
 
@@ -362,15 +404,22 @@ public sealed partial class Binder
             Options = [.. boundOptions],
         };
 
+        context = context with
+        {
+            RequiresConstantExpression = previousRequiresConstantExpression,
+        };
+
         return (context, boundStatement);
     }
 
     private (BindingContext, StatementNode) BindLoopSwitchStatement(LoopSwitchStatementNode loopSwitchStatement, Settings settings, BindingContext context)
     {
         bool previousIsInLoopSwitch = context.IsInLoopSwitch;
+        bool previousRequiresConstantExpression = context.RequiresConstantExpression;
         context = context with
         {
             IsInLoopSwitch = true,
+            RequiresConstantExpression = true,
         };
 
         (context, ExpressionNode outputExpression) = BindAndTypeExpression(loopSwitchStatement.OutputExpression, context);
@@ -393,6 +442,11 @@ public sealed partial class Binder
 
         for (int i = 0; i < boundOptions.Count; i++)
         {
+            context = context with
+            {
+                RequiresConstantExpression = true,
+            };
+
             (context, ExpressionNode optionExpression) = BindAndTypeExpression(boundOptions[i].Expression, context);
 
             if (optionExpression is TypedExpressionNode { SourceType: TypeSymbol sourceType } typedExpression)
@@ -406,6 +460,11 @@ public sealed partial class Binder
                     optionExpression = RecursivelySetTargetType(typedExpression, settings.OptionType);
                 }
             }
+
+            context = context with
+            {
+                RequiresConstantExpression = previousRequiresConstantExpression,
+            };
 
             (context, StatementBodyNode optionBody) = BindStatementBody(boundOptions[i].Body, settings, context);
 
@@ -439,6 +498,7 @@ public sealed partial class Binder
         context = context with
         {
             IsInLoopSwitch = previousIsInLoopSwitch,
+            RequiresConstantExpression = previousRequiresConstantExpression,
         };
 
         return (context, boundStatement);
@@ -787,7 +847,8 @@ public sealed partial class Binder
             if (!TypesAreCompatible(sourceType, booleanType))
             {
                 ErrorFound?.Invoke(Errors.IncompatibleType(sourceType, booleanType, "condition", boundCondition.Index));
-            };
+            }
+            ;
 
             boundCondition = RecursivelySetTargetType((TypedExpressionNode)boundCondition, booleanType);
         }

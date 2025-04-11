@@ -12,6 +12,8 @@ public sealed record ParenthesizedExpressionNode : ExpressionNode
 
     public required Token ClosedParenthesisToken { get; init; }
 
+    public override bool IsConstant => InnerExpression.IsConstant;
+
     public override IEnumerable<SyntaxNode> Children => [InnerExpression];
 
     protected override void ReconstructCore(TextWriter writer)

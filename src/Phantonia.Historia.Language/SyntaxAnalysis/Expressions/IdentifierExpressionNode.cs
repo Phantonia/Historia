@@ -12,6 +12,8 @@ public sealed record IdentifierExpressionNode() : ExpressionNode
 
     public override IEnumerable<SyntaxNode> Children => [];
 
+    public override bool IsConstant => false;
+
     protected override void ReconstructCore(TextWriter writer)
     {
         IdentifierToken.Reconstruct(writer);

@@ -15,6 +15,8 @@ public sealed record BoundRecordCreationExpressionNode() : ExpressionNode
 
     public required RecordTypeSymbol Record { get; init; }
 
+    public override bool IsConstant => Original.IsConstant;
+
     public override IEnumerable<SyntaxNode> Children => [Original, .. BoundArguments];
 
     protected override void ReconstructCore(TextWriter writer)

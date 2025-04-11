@@ -10,6 +10,8 @@ public sealed record NotExpressionNode() : ExpressionNode
 
     public required ExpressionNode InnerExpression { get; init; }
 
+    public override bool IsConstant => InnerExpression.IsConstant;
+
     public override IEnumerable<SyntaxNode> Children => [InnerExpression];
 
     protected override void ReconstructCore(TextWriter writer)

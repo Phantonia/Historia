@@ -499,4 +499,53 @@ public sealed class IntegrationTests
         _ = stateMachine.TryContinue();
         Assert.AreEqual(false, stateMachine.Output);
     }
+
+    [TestMethod]
+    public void TestNonConstantExpressions()
+    {
+        string code =
+            """
+            record R(X: Boolean);
+
+            setting OutputType: Boolean;
+            setting OptionType: R;
+
+            scene main
+            {
+                outcome X(A, B) default A;
+
+                output X is A; // error
+                output not X is B; // error
+                output (X is B); // error
+                output not (X is A); // error
+
+                switch true // ok
+                {
+                    option R(X is A) { } // error
+                    option R(false) { } // ok
+                }
+            }
+            """;
+
+        (CompilationResult result, _) = Language.Compiler.CompileString(code);
+
+        Assert.IsFalse(result.IsValid);
+        Assert.AreEqual(5, result.Errors.Length);
+
+        Error[] errors = result.Errors.OrderBy(e => e.Index).ToArray();
+
+        Error[] expectedErrors =
+        [
+            Errors.ExpectedConstantExpression(code.IndexOf("X is A")),
+            Errors.ExpectedConstantExpression(code.IndexOf("not X is B")),
+            Errors.ExpectedConstantExpression(code.IndexOf("(X is B)")),
+            Errors.ExpectedConstantExpression(code.IndexOf("not (X is A)")),
+            Errors.ExpectedConstantExpression(code.IndexOf("R(X is A)")),
+        ];
+
+        foreach ((Error expected, Error actual) in expectedErrors.Zip(errors))
+        {
+            Assert.AreEqual(expected, actual);
+        }
+    }
 }

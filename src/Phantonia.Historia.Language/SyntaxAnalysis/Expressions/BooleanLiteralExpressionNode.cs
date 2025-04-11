@@ -10,6 +10,8 @@ public sealed record BooleanLiteralExpressionNode : ExpressionNode
 
     public bool Value => TrueOrFalseKeywordToken.Kind is TokenKind.TrueKeyword;
 
+    public override bool IsConstant => true;
+
     public override IEnumerable<SyntaxNode> Children => [];
 
     protected override void ReconstructCore(TextWriter writer) => TrueOrFalseKeywordToken.Reconstruct(writer);

@@ -16,6 +16,8 @@ public sealed record IsExpressionNode() : ExpressionNode
 
     public string OptionName => OptionNameToken.Text;
 
+    public override bool IsConstant => false;
+
     public override IEnumerable<SyntaxNode> Children => [];
 
     protected override void ReconstructCore(TextWriter writer)
