@@ -14,6 +14,8 @@ public sealed record TypedExpressionNode() : ExpressionNode
 
     public TypeSymbol? TargetType { get; init; }
 
+    public override bool IsConstant => Original.IsConstant;
+
     public override IEnumerable<SyntaxNode> Children => [Original];
 
     protected override void ReconstructCore(TextWriter writer)

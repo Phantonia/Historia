@@ -3,15 +3,14 @@ using System.Collections.Generic;
 
 namespace Phantonia.Historia;
 
-public readonly struct ObjectReadOnlyList<T> : IReadOnlyList<object?>
+/// <summary>
+/// Represents a list of objects that can only be read from a generic <see cref="ReadOnlyList{T}"/>.
+/// </summary>
+/// <typeparam name="T">The element type.</typeparam>
+/// <param name="list">The backing list.</param>
+/// <remarks>This type is mainly used by generated code.</remarks>
+public readonly struct ObjectReadOnlyList<T>(ReadOnlyList<T> list) : IReadOnlyList<object?>
 {
-    public ObjectReadOnlyList(ReadOnlyList<T> list)
-    {
-        this.list = list;
-    }
-
-    private readonly ReadOnlyList<T> list;
-
     public object? this[int index] => list[index];
 
     public int Count => list.Count;

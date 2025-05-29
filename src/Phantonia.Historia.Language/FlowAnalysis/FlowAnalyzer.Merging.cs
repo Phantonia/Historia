@@ -204,7 +204,7 @@ public sealed partial class FlowAnalyzer
 
         foreach (FlowVertex vertex in mainFlowGraph.Vertices.Values)
         {
-            if (vertex.AssociatedStatement is not BoundCallStatementNode { Subroutine: SubroutineSymbol calledSubroutine } || calledSubroutine != subroutine)
+            if (!vertex.IsStory || vertex.AssociatedStatement is not BoundCallStatementNode { Subroutine: SubroutineSymbol calledSubroutine } || calledSubroutine != subroutine)
             {
                 continue;
             }

@@ -12,6 +12,8 @@ public sealed record BoundIsExpressionNode() : ExpressionNode
 
     public required OutcomeSymbol Outcome { get; init; }
 
+    public override bool IsConstant => Original.IsConstant;
+
     public override IEnumerable<SyntaxNode> Children => [Original];
     
     protected override void ReconstructCore(TextWriter writer)

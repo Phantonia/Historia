@@ -10,6 +10,8 @@ public sealed record StringLiteralExpressionNode() : ExpressionNode
 
     public string StringLiteral => LiteralToken.StringValue!;
 
+    public override bool IsConstant => true;
+
     public override IEnumerable<SyntaxNode> Children => [];
 
     protected override void ReconstructCore(TextWriter writer)

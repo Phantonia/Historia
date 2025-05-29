@@ -18,6 +18,8 @@ public sealed record RecordCreationExpressionNode() : ExpressionNode, IArgumentC
 
     public required Token ClosedParenthesisToken { get; init; }
 
+    public override bool IsConstant => Arguments.All(a => a.Expression.IsConstant);
+
     public override IEnumerable<SyntaxNode> Children => Arguments;
 
     protected override void ReconstructCore(TextWriter writer)

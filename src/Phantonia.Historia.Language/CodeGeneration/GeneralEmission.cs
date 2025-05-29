@@ -17,6 +17,8 @@ public static class GeneralEmission
 {
     public static void GenerateClassHeader(string stateMachineOrSnapshot, Settings settings, IndentedTextWriter writer)
     {
+        GenerateGeneratedCodeAttribute(writer);
+
         writer.Write("public sealed class ");
         writer.Write(settings.StoryName);
         writer.Write(stateMachineOrSnapshot);
@@ -344,6 +346,9 @@ public static class GeneralEmission
             case BuiltinTypeSymbol { Type: BuiltinType.String }:
                 writer.Write("string?");
                 return;
+            case BuiltinTypeSymbol { Type: BuiltinType.Boolean }:
+                writer.Write("bool");
+                return;
             default:
                 writer.Write('@');
                 writer.Write(type.Name);
@@ -407,13 +412,18 @@ public static class GeneralEmission
         switch (typedExpression.Original)
         {
             case ParenthesizedExpressionNode { InnerExpression: ExpressionNode innerExpression }:
+                writer.Write('(');
                 GenerateExpression(innerExpression, writer);
+                writer.Write(')');
                 return;
             case IntegerLiteralExpressionNode { Value: int intValue }:
                 writer.Write(intValue);
                 return;
             case StringLiteralExpressionNode { StringLiteral: string stringValue }:
                 writer.Write(SymbolDisplay.FormatLiteral(stringValue, quote: true));
+                return;
+            case BooleanLiteralExpressionNode { Value: bool boolValue }:
+                writer.Write(boolValue ? "true" : "false");
                 return;
             case BoundRecordCreationExpressionNode recordCreation:
                 writer.Write("new @");
@@ -436,13 +446,30 @@ public static class GeneralEmission
             case LogicExpressionNode logicExpression:
                 writer.Write('(');
                 GenerateExpression(logicExpression.LeftExpression, writer);
-                writer.Write(") && (");
+                writer.Write(") ");
+
+                switch (logicExpression.Operator)
+                {
+                    case LogicOperator.And:
+                        writer.Write("&&");
+                        break;
+                    case LogicOperator.Or:
+                        writer.Write("||");
+                        break;
+                }
+
+                writer.Write(" (");
                 GenerateExpression(logicExpression.RightExpression, writer);
                 writer.Write(')');
                 return;
             case NotExpressionNode notExpression:
                 writer.Write("!(");
                 GenerateExpression(notExpression.InnerExpression, writer);
+                writer.Write(')');
+                return;
+            case IntegerNegationExpressionNode negationExpression:
+                writer.Write("-(");
+                GenerateExpression(negationExpression.InnerExpression, writer);
                 writer.Write(')');
                 return;
             case BoundIsExpressionNode isExpression:
@@ -624,5 +651,12 @@ public static class GeneralEmission
                          })
                          .Append(0) // if sequence is empty, at least have one number
                          .Max();
+    }
+
+    public static void GenerateGeneratedCodeAttribute(IndentedTextWriter writer)
+    {
+        writer.Write("""[global::System.CodeDom.Compiler.GeneratedCode("Historia", """);
+        writer.Write(SymbolDisplay.FormatLiteral(Version.CompilerVersion, quote: true));
+        writer.WriteLine(")]");
     }
 }

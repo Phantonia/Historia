@@ -7,4 +7,6 @@ public readonly struct BindingContext
     public bool IsInLoopSwitch { get; init; }
 
     public bool IsInScene { get; init; }
+
+    public bool RequiresConstantExpression { get; init; }
 }

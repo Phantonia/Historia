@@ -14,6 +14,8 @@ public sealed class StoryGraphEmitter(FlowGraph flowGraph, Settings settings, In
 
     public void GenerateStoryGraphClass()
     {
+        GeneralEmission.GenerateGeneratedCodeAttribute(writer);
+
         writer.Write("public static class ");
         writer.Write(settings.StoryName);
         writer.WriteLine("Graph");

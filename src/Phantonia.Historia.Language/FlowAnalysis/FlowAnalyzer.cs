@@ -39,7 +39,9 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             }
         }
 
-        (IEnumerable<SubroutineSymbol>? topologicalOrder, IReadOnlyDictionary<SubroutineSymbol, int> referenceCounts) = PerformDependencyAnalysis(subroutineFlowGraphs);
+        SubroutineSymbol mainSubroutine = (SubroutineSymbol)symbolTable["main"];
+
+        (IEnumerable<SubroutineSymbol>? topologicalOrder, IReadOnlyDictionary<SubroutineSymbol, int> referenceCounts) = PerformDependencyAnalysis(subroutineFlowGraphs, mainSubroutine);
 
         if (topologicalOrder is null)
         {

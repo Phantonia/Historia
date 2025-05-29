@@ -8,7 +8,7 @@ namespace Phantonia.Historia.Language.FlowAnalysis;
 
 public sealed partial class FlowAnalyzer
 {
-    private (IEnumerable<SubroutineSymbol>? topologicalOrder, IReadOnlyDictionary<SubroutineSymbol, int> referenceCounts) PerformDependencyAnalysis(IReadOnlyDictionary<SubroutineSymbol, FlowGraph> subroutineFlowGraphs)
+    private (IEnumerable<SubroutineSymbol>? topologicalOrder, IReadOnlyDictionary<SubroutineSymbol, int> referenceCounts) PerformDependencyAnalysis(IReadOnlyDictionary<SubroutineSymbol, FlowGraph> subroutineFlowGraphs, SubroutineSymbol mainSubroutine)
     {
         Dictionary<long, IReadOnlySet<long>> dependencies = [];
         Dictionary<long, Symbol> symbols = [];
@@ -57,8 +57,9 @@ public sealed partial class FlowAnalyzer
 
         IEnumerable<SubroutineSymbol> topologicalOrder =
             dependencyGraph.TopologicalSort()
-                           .Select(i => (SubroutineSymbol)dependencyGraph.Symbols[i])
-                           .SkipWhile(s => s.Name != "main"); // when we have uncalled subroutines they might appear before "main" here. we can just ignore them
+                           .Intersect(dependencyGraph.GetReachableSymbols(mainSubroutine))
+                           .Select(i => (SubroutineSymbol)dependencyGraph.Symbols[i]);
+
 
         return (topologicalOrder, finalReferenceCounts);
     }

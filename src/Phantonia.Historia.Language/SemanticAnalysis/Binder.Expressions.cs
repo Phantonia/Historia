@@ -12,6 +12,21 @@ public sealed partial class Binder
 {
     private (BindingContext, ExpressionNode) BindAndTypeExpression(ExpressionNode expression, BindingContext context)
     {
+        bool previousRequiresConstantExpression = context.RequiresConstantExpression;
+
+        if (context.RequiresConstantExpression && !expression.IsConstant)
+        {
+            ErrorFound?.Invoke(Errors.ExpectedConstantExpression(expression.Index));
+
+            // we don't require nested expressions to be constant anymore
+            context = context with
+            {
+                RequiresConstantExpression = false,
+            };
+        }
+
+        ExpressionNode resultExpression;
+
         switch (expression)
         {
             case ParenthesizedExpressionNode parenthesizedExpression:
@@ -36,67 +51,79 @@ public sealed partial class Binder
                         PrecedingTokens = [],
                     };
 
-                    return (context, typedExpression);
+                    resultExpression = typedExpression;
+                    break;
                 }
             case IntegerLiteralExpressionNode:
-                {
-                    Debug.Assert(context.SymbolTable.IsDeclared("Int") && context.SymbolTable["Int"] is BuiltinTypeSymbol { Type: BuiltinType.Int });
-
-                    TypeSymbol intType = (TypeSymbol)context.SymbolTable["Int"];
-
-                    TypedExpressionNode typedExpression = new()
-                    {
-                        Original = expression,
-                        SourceType = intType,
-                        Index = expression.Index,
-                        PrecedingTokens = [],
-                    };
-
-                    return (context, typedExpression);
-                }
+                (context, resultExpression) = BindToType(expression, "Int", context);
+                break;
             case StringLiteralExpressionNode:
-                {
-                    Debug.Assert(context.SymbolTable.IsDeclared("String") && context.SymbolTable["String"] is BuiltinTypeSymbol { Type: BuiltinType.String });
-
-                    TypeSymbol stringType = (TypeSymbol)context.SymbolTable["String"];
-
-                    TypedExpressionNode typedExpression = new()
-                    {
-                        Original = expression,
-                        SourceType = stringType,
-                        Index = expression.Index,
-                        PrecedingTokens = [],
-                    };
-
-                    return (context, typedExpression);
-                }
+                (context, resultExpression) = BindToType(expression, "String", context);
+                break;
+            case BooleanLiteralExpressionNode:
+                (context, resultExpression) = BindToType(expression, "Boolean", context);
+                break;
             case RecordCreationExpressionNode recordCreationExpression:
-                return BindAndTypeRecordCreationExpression(recordCreationExpression, context);
+                (context, resultExpression) = BindAndTypeRecordCreationExpression(recordCreationExpression, context);
+                break;
             case EnumOptionExpressionNode enumOptionExpression:
-                return BindAndTypeEnumOptionExpression(enumOptionExpression, context);
+                (context, resultExpression) = BindAndTypeEnumOptionExpression(enumOptionExpression, context);
+                break;
             case IsExpressionNode isExpression:
-                return BindAndTypeIsExpression(isExpression, context);
+                (context, resultExpression) = BindAndTypeIsExpression(isExpression, context);
+                break;
             case LogicExpressionNode logicExpression:
-                return BindAndTypeLogicExpression(logicExpression, context);
+                (context, resultExpression) = BindAndTypeLogicExpression(logicExpression, context);
+                break;
             case NotExpressionNode notExpression:
-                return BindAndTypeNotExpression(notExpression, context);
+                (context, resultExpression) = BindAndTypeNotExpression(notExpression, context);
+                break;
+            case IntegerNegationExpressionNode negationExpression:
+                (context, resultExpression) = BindAndTypeNegationExpression(negationExpression, context);
+                break;
             case IdentifierExpressionNode { Identifier: string identifier, Index: long index }:
                 if (!context.SymbolTable.IsDeclared(identifier))
                 {
                     ErrorFound?.Invoke(Errors.SymbolDoesNotExistInScope(identifier, index));
-                    return (context, expression);
                 }
                 else // once we get variables or constants, there might actually be symbols to bind to here
                 {
                     ErrorFound?.Invoke(Errors.SymbolHasNoValue(identifier, index));
-                    return (context, expression);
                 }
+
+                resultExpression = expression;
+                break;
             case MissingExpressionNode:
-                return (context, expression);
+                resultExpression = expression;
+                break;
             default:
                 Debug.Assert(false);
                 return default;
         }
+
+        context = context with
+        {
+            RequiresConstantExpression = previousRequiresConstantExpression,
+        };
+
+        return (context, resultExpression);
+    }
+
+    private (BindingContext, ExpressionNode) BindToType(ExpressionNode expression, string typeName, BindingContext context)
+    {
+        Debug.Assert(context.SymbolTable.IsDeclared(typeName) && context.SymbolTable[typeName] is TypeSymbol);
+
+        TypeSymbol stringType = (TypeSymbol)context.SymbolTable[typeName];
+
+        TypedExpressionNode typedExpression = new()
+        {
+            Original = expression,
+            SourceType = stringType,
+            Index = expression.Index,
+            PrecedingTokens = [],
+        };
+
+        return (context, typedExpression);
     }
 
     private (BindingContext, ExpressionNode) BindAndTypeRecordCreationExpression(RecordCreationExpressionNode recordCreation, BindingContext context)
@@ -328,5 +355,38 @@ public sealed partial class Binder
         };
 
         return (context, typedNotExpression);
+    }
+
+    private (BindingContext, ExpressionNode) BindAndTypeNegationExpression(IntegerNegationExpressionNode negationExpression, BindingContext context)
+    {
+        (context, ExpressionNode boundInnerExpression) = BindAndTypeExpression(negationExpression.InnerExpression, context);
+
+        if (boundInnerExpression is not TypedExpressionNode { SourceType: TypeSymbol innerType })
+        {
+            return (context, negationExpression);
+        }
+
+        TypeSymbol intType = (TypeSymbol)context.SymbolTable["Int"];
+
+        if (!TypesAreCompatible(innerType, intType))
+        {
+            ErrorFound?.Invoke(Errors.IncompatibleType(innerType, intType, "operand", negationExpression.InnerExpression.Index));
+            return (context, negationExpression);
+        }
+
+        TypedExpressionNode typedInnerExpression = RecursivelySetTargetType((TypedExpressionNode)boundInnerExpression, intType);
+
+        TypedExpressionNode typedNegationExpression = new()
+        {
+            Original = negationExpression with
+            {
+                InnerExpression = typedInnerExpression,
+            },
+            SourceType = intType,
+            Index = negationExpression.Index,
+            PrecedingTokens = [],
+        };
+
+        return (context, typedNegationExpression);
     }
 }

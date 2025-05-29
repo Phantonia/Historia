@@ -14,6 +14,8 @@ public sealed record LogicExpressionNode() : ExpressionNode
 
     public required ExpressionNode RightExpression { get; init; }
 
+    public override bool IsConstant => LeftExpression.IsConstant && RightExpression.IsConstant;
+
     public override IEnumerable<SyntaxNode> Children => [LeftExpression, RightExpression];
 
     protected override void ReconstructCore(TextWriter writer)

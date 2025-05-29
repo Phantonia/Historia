@@ -2,9 +2,7 @@
 using Phantonia.Historia.Language;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
 
 namespace Phantonia.Historia.Tests.Compiler;
 
@@ -47,37 +45,19 @@ public sealed class IntegrationTests
 
         static void AssertIsLine(object outputValue, TestLines_Character character, string text)
         {
-            Type outputType = outputValue.GetType();
-            Assert.AreEqual("Output", outputType.FullName);
+            dynamic line = ((dynamic)outputValue).AsLine();
 
-            object? lineValue = outputType.GetProperty("Line")?.GetValue(outputValue);
-            Type? lineType = lineValue?.GetType();
-            Assert.AreEqual("Line", lineType?.FullName);
-
-            object? actualCharacter = lineType?.GetProperty("Character")?.GetValue(lineValue);
-            Assert.AreEqual(character, (TestLines_Character)(actualCharacter ?? 42));
-
-            object? actualText = lineType?.GetProperty("Text")?.GetValue(lineValue);
-            Assert.AreEqual(text, actualText);
+            Assert.AreEqual((int)character, (int)line.Character);
+            Assert.AreEqual(text, line.Text);
         }
 
         static void AssertIsEmotionalLine(object outputValue, string character, string emotion, string text)
         {
-            Type outputType = outputValue.GetType();
-            Assert.AreEqual("Output", outputType.FullName);
+            dynamic line = ((dynamic)outputValue).AsEmotionalLine();
 
-            object? lineValue = outputType.GetProperty("EmotionalLine")?.GetValue(outputValue);
-            Type? lineType = lineValue?.GetType();
-            Assert.AreEqual("EmotionalLine", lineType?.FullName);
-
-            object? actualCharacter = lineType?.GetProperty("Character")?.GetValue(lineValue);
-            Assert.AreEqual(character, actualCharacter);
-
-            object? actualEmotion = lineType?.GetProperty("Emotion")?.GetValue(lineValue);
-            Assert.AreEqual(emotion, actualEmotion);
-
-            object? actualText = lineType?.GetProperty("Text")?.GetValue(lineValue);
-            Assert.AreEqual(text, actualText);
+            Assert.AreEqual(character, line.Character);
+            Assert.AreEqual(emotion, line.Emotion);
+            Assert.AreEqual(text, line.Text);
         }
 
         _ = stateMachine.TryContinue();
@@ -296,7 +276,7 @@ public sealed class IntegrationTests
                 }
             }
             """;
-        
+
         (CompilationResult result, string csharpCode) = Language.Compiler.CompileString(code);
 
         Assert.IsTrue(result.IsValid);
@@ -406,5 +386,215 @@ public sealed class IntegrationTests
         {
             Assert.AreEqual(expected, actual);
         }
+    }
+
+    [TestMethod]
+    public void RegressionTestCallAndLoopSwitch()
+    {
+        string code =
+            """
+            chapter main
+            {
+                call A;
+
+                loop switch 0
+                {
+                    option 1
+                    {
+                        call A;
+                    }
+
+                    option 2
+                    {
+
+                    }
+                }
+            }
+
+            scene A
+            {
+
+            }
+            """;
+
+        (CompilationResult result, _) = Language.Compiler.CompileString(code);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+    }
+
+    [TestMethod]
+    public void TestUncalledScene()
+    {
+        string code =
+            """
+            scene main
+            {
+                //call A;
+            }
+
+            scene A
+            {
+                call B;
+            }
+
+            scene B
+            {
+                output 0;
+            }
+            """;
+
+        (CompilationResult result, _) = Language.Compiler.CompileString(code);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+    }
+
+    [TestMethod]
+    public void TestNegativeIntegers()
+    {
+        string code =
+            """
+            scene main
+            {
+                output -12;
+            }
+            """;
+
+        (CompilationResult result, string csharpCode) = Language.Compiler.CompileString(code);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(csharpCode, "HistoriaStoryStateMachine");
+
+        _ = stateMachine.TryContinue();
+        Assert.AreEqual(-12, stateMachine.Output);
+    }
+
+    [TestMethod]
+    public void TestBooleanLiterals()
+    {
+        string code =
+            """
+            setting OutputType: Boolean;
+
+            scene main
+            {
+                output true;
+                output false;
+            }
+            """;
+        
+        (CompilationResult result, string csharpCode) = Language.Compiler.CompileString(code);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        IStoryStateMachine<bool, int> stateMachine = DynamicCompiler.CompileToStory<bool, int>(csharpCode, "HistoriaStoryStateMachine");
+
+        _ = stateMachine.TryContinue();
+        Assert.AreEqual(true, stateMachine.Output);
+
+        _ = stateMachine.TryContinue();
+        Assert.AreEqual(false, stateMachine.Output);
+    }
+
+    [TestMethod]
+    public void TestNonConstantExpressions()
+    {
+        string code =
+            """
+            record R(X: Boolean);
+
+            setting OutputType: Boolean;
+            setting OptionType: R;
+
+            scene main
+            {
+                outcome X(A, B) default A;
+
+                output X is A; // error
+                output not X is B; // error
+                output (X is B); // error
+                output not (X is A); // error
+
+                switch true // ok
+                {
+                    option R(X is A) { } // error
+                    option R(false) { } // ok
+                }
+            }
+            """;
+
+        (CompilationResult result, _) = Language.Compiler.CompileString(code);
+
+        Assert.IsFalse(result.IsValid);
+        Assert.AreEqual(5, result.Errors.Length);
+
+        Error[] errors = result.Errors.OrderBy(e => e.Index).ToArray();
+
+        Error[] expectedErrors =
+        [
+            Errors.ExpectedConstantExpression(code.IndexOf("X is A")),
+            Errors.ExpectedConstantExpression(code.IndexOf("not X is B")),
+            Errors.ExpectedConstantExpression(code.IndexOf("(X is B)")),
+            Errors.ExpectedConstantExpression(code.IndexOf("not (X is A)")),
+            Errors.ExpectedConstantExpression(code.IndexOf("R(X is A)")),
+        ];
+
+        foreach ((Error expected, Error actual) in expectedErrors.Zip(errors))
+        {
+            Assert.AreEqual(expected, actual);
+        }
+    }
+
+    [TestMethod]
+    public void RegressionTestAndOr()
+    {
+        string code =
+            """
+            scene main
+            {
+                outcome X(A, B);
+                outcome Y(A, B);
+                outcome Z(A, B);
+
+                X = A;
+                Y = A;
+                Z = B;
+
+                if X is A and Y is A
+                {
+                    output 19;
+                }
+
+                if X is B or Z is B
+                {
+                    output 3;
+                }
+
+                if X is B and Z is B
+                {
+                    output 12;
+                }
+            }
+            """;
+
+        (CompilationResult result, string csharpCode) = Language.Compiler.CompileString(code);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(csharpCode, "HistoriaStoryStateMachine");
+
+        _ = stateMachine.TryContinue();
+        Assert.IsFalse(stateMachine.FinishedStory);
+        Assert.AreEqual(19, stateMachine.Output);
+        _ = stateMachine.TryContinue();
+        Assert.IsFalse(stateMachine.FinishedStory);
+        Assert.AreEqual(3, stateMachine.Output);
+        _ = stateMachine.TryContinue();
+        Assert.IsTrue(stateMachine.FinishedStory);
     }
 }

@@ -7,7 +7,7 @@ public enum TokenKind
     EndOfFile,
     Missing,
 
-    // punctuation
+    // punctuation and operators
     OpenBrace, // {
     ClosedBrace, // }
     Semicolon, // ;
@@ -22,6 +22,7 @@ public enum TokenKind
     LessThanOrEquals, // <=
     Slash, // /
     Dot, // .
+    Minus, // -
 
     // keywords
     SceneKeyword,
@@ -56,6 +57,8 @@ public enum TokenKind
     AndKeyword,
     OrKeyword,
     NotKeyword,
+    TrueKeyword,
+    FalseKeyword,
     IfKeyword,
     ElseKeyword,
 
