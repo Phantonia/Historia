@@ -446,7 +446,19 @@ public static class GeneralEmission
             case LogicExpressionNode logicExpression:
                 writer.Write('(');
                 GenerateExpression(logicExpression.LeftExpression, writer);
-                writer.Write(") && (");
+                writer.Write(") ");
+
+                switch (logicExpression.Operator)
+                {
+                    case LogicOperator.And:
+                        writer.Write("&&");
+                        break;
+                    case LogicOperator.Or:
+                        writer.Write("||");
+                        break;
+                }
+
+                writer.Write(" (");
                 GenerateExpression(logicExpression.RightExpression, writer);
                 writer.Write(')');
                 return;

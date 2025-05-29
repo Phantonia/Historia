@@ -548,4 +548,53 @@ public sealed class IntegrationTests
             Assert.AreEqual(expected, actual);
         }
     }
+
+    [TestMethod]
+    public void RegressionTestAndOr()
+    {
+        string code =
+            """
+            scene main
+            {
+                outcome X(A, B);
+                outcome Y(A, B);
+                outcome Z(A, B);
+
+                X = A;
+                Y = A;
+                Z = B;
+
+                if X is A and Y is A
+                {
+                    output 19;
+                }
+
+                if X is B or Z is B
+                {
+                    output 3;
+                }
+
+                if X is B and Z is B
+                {
+                    output 12;
+                }
+            }
+            """;
+
+        (CompilationResult result, string csharpCode) = Language.Compiler.CompileString(code);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(csharpCode, "HistoriaStoryStateMachine");
+
+        _ = stateMachine.TryContinue();
+        Assert.IsFalse(stateMachine.FinishedStory);
+        Assert.AreEqual(19, stateMachine.Output);
+        _ = stateMachine.TryContinue();
+        Assert.IsFalse(stateMachine.FinishedStory);
+        Assert.AreEqual(3, stateMachine.Output);
+        _ = stateMachine.TryContinue();
+        Assert.IsTrue(stateMachine.FinishedStory);
+    }
 }
