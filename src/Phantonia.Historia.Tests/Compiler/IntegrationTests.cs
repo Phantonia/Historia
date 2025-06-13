@@ -597,4 +597,58 @@ public sealed class IntegrationTests
         _ = stateMachine.TryContinue();
         Assert.IsTrue(stateMachine.FinishedStory);
     }
+
+    [TestMethod]
+    public void RegressionTestSnapshotsAndFinishedStory()
+    {
+        string code =
+            """
+            scene main
+            {
+                output 7;
+            }
+            """;
+
+        (CompilationResult result, string csharpCode) = Language.Compiler.CompileString(code);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.AreEqual(0, result.Errors.Length);
+
+        IStoryStateMachine<int, int> stateMachine = DynamicCompiler.CompileToStory<int, int>(csharpCode, "HistoriaStoryStateMachine");
+
+        IStorySnapshot<int, int> snapshotA = stateMachine.CreateSnapshot();
+        Assert.IsTrue(snapshotA.NotStartedStory);
+        Assert.IsTrue(snapshotA.CanContinueWithoutOption);
+        Assert.IsFalse(snapshotA.FinishedStory);
+
+        _ = stateMachine.TryContinue();
+
+        IStorySnapshot<int, int> snapshotB = stateMachine.CreateSnapshot();
+        Assert.IsFalse(snapshotB.NotStartedStory);
+        Assert.IsTrue(snapshotB.CanContinueWithoutOption);
+        Assert.IsFalse(snapshotB.FinishedStory);
+
+        _ = stateMachine.TryContinue();
+
+        IStorySnapshot<int, int> snapshotC = stateMachine.CreateSnapshot();
+        Assert.IsFalse(snapshotC.NotStartedStory);
+        Assert.IsFalse(snapshotC.CanContinueWithoutOption);
+        Assert.IsTrue(snapshotC.FinishedStory);
+
+        stateMachine.GetType().GetMethod("RestoreSnapshot")?.Invoke(stateMachine, [snapshotA]);
+        Assert.IsTrue(stateMachine.NotStartedStory);
+        Assert.IsTrue(stateMachine.CanContinueWithoutOption);
+        Assert.IsFalse(stateMachine.FinishedStory);
+
+        stateMachine.GetType().GetMethod("RestoreSnapshot")?.Invoke(stateMachine, [snapshotB]);
+        Assert.IsFalse(stateMachine.NotStartedStory);
+        Assert.IsTrue(stateMachine.CanContinueWithoutOption);
+        Assert.IsFalse(stateMachine.FinishedStory);
+
+        stateMachine.GetType().GetMethod("RestoreSnapshot")?.Invoke(stateMachine, [snapshotC]);
+        Assert.IsFalse(stateMachine.NotStartedStory);
+        Assert.IsFalse(stateMachine.CanContinueWithoutOption);
+        Assert.IsTrue(stateMachine.FinishedStory);
+
+    }
 }

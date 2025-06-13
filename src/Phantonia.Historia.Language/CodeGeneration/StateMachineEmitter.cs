@@ -211,9 +211,15 @@ public sealed class StateMachineEmitter(StoryNode boundStory, Settings settings,
         writer.Write(settings.StoryName);
         writer.WriteLine("Snapshot snapshot)");
         writer.BeginBlock();
+
         writer.WriteLine("fields = snapshot.fields;");
+        writer.WriteLine("NotStartedStory = snapshot.NotStartedStory;");
+        writer.WriteLine("CanContinueWithoutOption = snapshot.CanContinueWithoutOption;");
+        writer.WriteLine("FinishedStory = snapshot.FinishedStory;");
+
         writer.WriteLine("Output = Heart.GetOutput(ref fields);");
         writer.WriteLine("Heart.GetOptions(ref fields, options, ref optionsCount);");
+
         writer.EndBlock(); // RestoreSnapshot method
     }
 

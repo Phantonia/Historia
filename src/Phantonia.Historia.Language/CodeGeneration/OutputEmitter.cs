@@ -63,8 +63,11 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
         }
 
         writer.Write("case ");
-        writer.Write(FlowGraph.Sink);
+        writer.Write(FlowGraph.Source);
         writer.WriteLine(":");
+        writer.Write("case ");
+        writer.Write(FlowGraph.Sink);
+        writer.WriteLine(':');
         writer.Indent++;
 
         writer.WriteLine("return default;");
@@ -88,6 +91,8 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
 
         if (flowGraph.Vertices.Values.Any(v => v.IsStory && v.AssociatedStatement is FlowBranchingStatementNode { Original: SwitchStatementNode or LoopSwitchStatementNode }))
         {
+            writer.WriteLine("global::System.Array.Clear(options);");
+
             writer.WriteLine("switch (fields.state)");
             writer.BeginBlock();
 
@@ -101,8 +106,6 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
 
                     writer.Indent++;
 
-                    writer.WriteLine("global::System.Array.Clear(options);");
-                    
                     foreach ((ExpressionNode optionExpression, int i) in optionExpressions.Select((o, i) => (o, i)))
                     {
                         writer.Write("options[");
@@ -138,7 +141,6 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
 
                     writer.BeginBlock();
 
-                    writer.WriteLine("global::System.Array.Clear(options);");
                     writer.WriteLine("int i = 0;");
 
                     for (int i = 0; i < loopSwitchStatement.Options.Length; i++)
