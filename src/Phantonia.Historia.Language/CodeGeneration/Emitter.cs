@@ -15,7 +15,7 @@ public sealed class Emitter(
     Settings settings,
     FlowGraph flowGraph,
     SymbolTable symbolTable,
-    ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtChapters,
+    ImmutableDictionary<SubroutineSymbol, ChapterData> chapterData,
     TextWriter outputWriter)
 {
     private readonly IndentedTextWriter writer = new(outputWriter);
@@ -55,12 +55,13 @@ public sealed class Emitter(
 
         writer.WriteLine();
 
-        StoryGraphEmitter storyGraphEmitter = new(flowGraph, settings, writer);
-        storyGraphEmitter.GenerateStoryGraphClass();
+        // story graph will be deprecated anyway
+        //StoryGraphEmitter storyGraphEmitter = new(flowGraph, settings, writer);
+        //storyGraphEmitter.GenerateStoryGraphClass();
 
-        writer.WriteLine();
+        //writer.WriteLine();
 
-        ChapterEmitter chapterEmitter = new(boundStory, flowGraph, symbolTable, settings, definitelyAssignedOutcomesAtChapters, writer);
+        ChapterEmitter chapterEmitter = new(boundStory, flowGraph, symbolTable, settings, chapterData, writer);
         chapterEmitter.GenerateChapterType();
 
         if (settings.Namespace != "")

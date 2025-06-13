@@ -6,17 +6,17 @@
 /// <param name="toVertex">The end point of the edge.</param>
 /// <param name="fromVertex">The start point of the edge.</param>
 /// <param name="isWeak">Whether this edge points up and introduces a cycle.</param>
-public readonly struct StoryEdge(long toVertex, long fromVertex, bool isWeak)
+public readonly struct StoryEdge(uint toVertex, uint fromVertex, bool isWeak)
 {
     /// <summary>
     /// The end point of the edge.
     /// </summary>
-    public long ToVertex { get; } = toVertex;
+    public uint ToVertex { get; } = toVertex;
 
     /// <summary>
     /// The start point of the edge.
     /// </summary>
-    public long FromVertex { get; } = fromVertex;
+    public uint FromVertex { get; } = fromVertex;
 
     /// <summary>
     /// Whether this edge points up and introduces a cycle.

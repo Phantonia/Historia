@@ -12,14 +12,26 @@ namespace Phantonia.Historia.Language.FlowAnalysis;
 
 public sealed partial class FlowAnalyzer
 {
-    private (FlowGraph, SymbolTable) MergeFlowGraphs(IEnumerable<SubroutineSymbol> topologicalOrder, IReadOnlyDictionary<SubroutineSymbol, FlowGraph> subroutineFlowGraphs, IReadOnlyDictionary<SubroutineSymbol, int> referenceCounts)
+    private (FlowGraph resultGraph, SymbolTable symbolTable, ImmutableDictionary<SubroutineSymbol, uint> chapterEntryVertices) MergeFlowGraphs(
+        IEnumerable<SubroutineSymbol> topologicalOrder,
+        IReadOnlyDictionary<SubroutineSymbol, FlowGraph> subroutineFlowGraphs,
+        IReadOnlyDictionary<SubroutineSymbol, int> referenceCounts,
+        ref uint vertexIndex)
     {
         Debug.Assert(topologicalOrder.Any() && topologicalOrder.First().Name == "main");
 
         FlowGraph mainFlowGraph = subroutineFlowGraphs[topologicalOrder.First()];
+        Dictionary<SubroutineSymbol, uint> chapterEntryVertices = [];
 
         foreach (SubroutineSymbol subroutine in topologicalOrder.Skip(1))
         {
+            if (subroutine.Kind is SubroutineKind.Chapter)
+            {
+                FlowGraph chapterGraph = subroutineFlowGraphs[subroutine];
+                Debug.Assert(chapterGraph.IsConformable);
+                chapterEntryVertices[subroutine] = chapterGraph.GetStoryStartVertex();
+            }
+
             if (!referenceCounts.TryGetValue(subroutine, out int refCount) || refCount == 0)
             {
                 continue;
@@ -43,20 +55,20 @@ public sealed partial class FlowAnalyzer
 
                 symbolTable = symbolTable.Declare(tracker);
 
-                mainFlowGraph = EmbedMultiReferenceSubroutine(mainFlowGraph, subroutineFlowGraphs[subroutine], subroutine, tracker);
+                mainFlowGraph = EmbedMultiReferenceSubroutine(mainFlowGraph, subroutineFlowGraphs[subroutine], subroutine, tracker, ref vertexIndex);
             }
         }
 
         Debug.Assert(mainFlowGraph.Vertices.Values.All(v => !v.IsStory || v.AssociatedStatement is not BoundCallStatementNode));
 
-        return (mainFlowGraph, symbolTable);
+        return (mainFlowGraph, symbolTable, chapterEntryVertices.ToImmutableDictionary());
     }
 
     private static FlowGraph EmbedSingleReferenceSubroutine(FlowGraph mainFlowGraph, FlowGraph subroutineFlowGraph, SubroutineSymbol subroutine)
     {
         mainFlowGraph = AddSubroutineVertices(mainFlowGraph, subroutineFlowGraph);
 
-        (long callVertex, long nextVertex) = FindSingleCallSite(mainFlowGraph, subroutine);
+        (uint callVertex, uint nextVertex) = FindSingleCallSite(mainFlowGraph, subroutine);
 
         mainFlowGraph = RedirectEdgesToCallVertexToSubroutineStart(mainFlowGraph, callVertex, subroutineFlowGraph);
         mainFlowGraph = RedirectFinalEdgesFromSubroutineToNextVertex(mainFlowGraph, subroutineFlowGraph, nextVertex);
@@ -65,20 +77,27 @@ public sealed partial class FlowAnalyzer
 
         return mainFlowGraph;
     }
-    private static FlowGraph EmbedMultiReferenceSubroutine(FlowGraph mainFlowGraph, FlowGraph subroutineFlowGraph, SubroutineSymbol subroutine, CallerTrackerSymbol tracker)
+
+    private static FlowGraph EmbedMultiReferenceSubroutine(
+        FlowGraph mainFlowGraph,
+        FlowGraph subroutineFlowGraph,
+        SubroutineSymbol subroutine,
+        CallerTrackerSymbol tracker,
+        ref uint vertexIndex)
     {
         mainFlowGraph = AddSubroutineVertices(mainFlowGraph, subroutineFlowGraph);
 
-        (mainFlowGraph, List<long> callSites, Dictionary<long, long> nextVertices) = RedirectAndTrackCallSites(mainFlowGraph, subroutine, subroutineFlowGraph, tracker);
-        (mainFlowGraph, CallerResolutionStatementNode resolution) = SynthesizeResolutionStatement(mainFlowGraph, subroutine, tracker, callSites, nextVertices);
-        mainFlowGraph = RedirectFinalVerticesInSubroutine(mainFlowGraph, subroutineFlowGraph, resolution);
+        (mainFlowGraph, List<uint> callSites, Dictionary<uint, uint> nextVertices) = RedirectAndTrackCallSites(mainFlowGraph, subroutine, subroutineFlowGraph, tracker);
+        (mainFlowGraph, CallerResolutionStatementNode resolution, FlowVertex resolutionVertex)
+            = SynthesizeResolutionStatement(mainFlowGraph, subroutine, tracker, callSites, nextVertices, ref vertexIndex);
+        mainFlowGraph = RedirectFinalVerticesInSubroutine(mainFlowGraph, subroutineFlowGraph, resolution, resolutionVertex);
 
         return mainFlowGraph;
     }
 
     private static FlowGraph AddSubroutineVertices(FlowGraph mainFlowGraph, FlowGraph subroutineFlowGraph)
     {
-        foreach (long vertex in subroutineFlowGraph.Vertices.Keys)
+        foreach (uint vertex in subroutineFlowGraph.Vertices.Keys)
         {
             mainFlowGraph = mainFlowGraph.AddVertex(subroutineFlowGraph.Vertices[vertex], subroutineFlowGraph.OutgoingEdges[vertex]);
         }
@@ -86,10 +105,10 @@ public sealed partial class FlowAnalyzer
         return mainFlowGraph;
     }
 
-    private static (long callVertex, long nextVertex) FindSingleCallSite(FlowGraph mainFlowGraph, SubroutineSymbol subroutine)
+    private static (uint callVertex, uint nextVertex) FindSingleCallSite(FlowGraph mainFlowGraph, SubroutineSymbol subroutine)
     {
-        long? callVertex = null;
-        long? nextVertex = null;
+        uint? callVertex = null;
+        uint? nextVertex = null;
 
         foreach (FlowVertex vertex in mainFlowGraph.Vertices.Values)
         {
@@ -108,10 +127,10 @@ public sealed partial class FlowAnalyzer
         Debug.Assert(callVertex is not null);
         Debug.Assert(nextVertex is not null);
 
-        return ((long)callVertex, (long)nextVertex);
+        return ((uint)callVertex, (uint)nextVertex);
     }
 
-    private static FlowGraph RedirectEdgesToCallVertexToSubroutineStart(FlowGraph mainFlowGraph, long callVertex, FlowGraph subroutineFlowGraph)
+    private static FlowGraph RedirectEdgesToCallVertexToSubroutineStart(FlowGraph mainFlowGraph, uint callVertex, FlowGraph subroutineFlowGraph)
     {
         // for all vertices V s.t. (V -> callVertex) instead let (V -> subroutineFlowGraph.StartVertex)
 
@@ -166,7 +185,7 @@ public sealed partial class FlowAnalyzer
         return mainFlowGraph;
     }
 
-    private static FlowGraph RedirectFinalEdgesFromSubroutineToNextVertex(FlowGraph mainFlowGraph, FlowGraph subroutineFlowGraph, long nextVertex)
+    private static FlowGraph RedirectFinalEdgesFromSubroutineToNextVertex(FlowGraph mainFlowGraph, FlowGraph subroutineFlowGraph, uint nextVertex)
     {
         // for all vertices V s.t. V is in subroutineFlowGraph and V points to the empty vertex, remove edge to empty vertex and instead let (V -> N)
 
@@ -174,7 +193,7 @@ public sealed partial class FlowAnalyzer
         {
             if (subroutineFlowGraph.OutgoingEdges[vertex.Index].Contains(FlowGraph.FinalEdge))
             {
-                mainFlowGraph = mainFlowGraph.RemoveEdge(vertex.Index, FlowGraph.FinalVertex)
+                mainFlowGraph = mainFlowGraph.RemoveEdge(vertex.Index, FlowGraph.Sink)
                                              .AddEdge(vertex.Index, FlowEdge.CreateStrongTo(nextVertex));
 
                 if (vertex.AssociatedStatement is FlowBranchingStatementNode { Original: LoopSwitchStatementNode } flowBranchingStatement)
@@ -197,10 +216,10 @@ public sealed partial class FlowAnalyzer
         return mainFlowGraph;
     }
 
-    private static (FlowGraph mainFlowGraph, List<long> callSites, Dictionary<long, long> nextVertices) RedirectAndTrackCallSites(FlowGraph mainFlowGraph, SubroutineSymbol subroutine, FlowGraph subroutineFlowGraph, CallerTrackerSymbol tracker)
+    private static (FlowGraph mainFlowGraph, List<uint> callSites, Dictionary<uint, uint> nextVertices) RedirectAndTrackCallSites(FlowGraph mainFlowGraph, SubroutineSymbol subroutine, FlowGraph subroutineFlowGraph, CallerTrackerSymbol tracker)
     {
-        Dictionary<long, long> nextVertices = [];
-        List<long> callSites = [];
+        Dictionary<uint, uint> nextVertices = [];
+        List<uint> callSites = [];
 
         foreach (FlowVertex vertex in mainFlowGraph.Vertices.Values)
         {
@@ -237,7 +256,13 @@ public sealed partial class FlowAnalyzer
         return (mainFlowGraph, callSites, nextVertices);
     }
 
-    private static (FlowGraph mainFlowGraph, CallerResolutionStatementNode resolutionStatement) SynthesizeResolutionStatement(FlowGraph mainFlowGraph, SubroutineSymbol subroutine, CallerTrackerSymbol tracker, List<long> callSites, Dictionary<long, long> nextVertices)
+    private static (FlowGraph mainFlowGraph, CallerResolutionStatementNode resolutionStatement, FlowVertex resolutionVertex) SynthesizeResolutionStatement(
+        FlowGraph mainFlowGraph,
+        SubroutineSymbol subroutine,
+        CallerTrackerSymbol tracker,
+        List<uint> callSites,
+        Dictionary<uint, uint> nextVertices,
+        ref uint vertexIndex)
     {
         CallerResolutionStatementNode resolution = new()
         {
@@ -249,13 +274,13 @@ public sealed partial class FlowAnalyzer
         FlowVertex resolutionVertex = new()
         {
             AssociatedStatement = resolution,
-            Index = resolution.Index,
+            Index = vertexIndex++,
             Kind = FlowVertexKind.Invisible,
         };
 
         List<FlowEdge> edgesBuilder = [];
 
-        foreach (long site in callSites)
+        foreach (uint site in callSites)
         {
             edgesBuilder.Add(FlowEdge.CreateStrongTo(nextVertices[site]));
         }
@@ -266,10 +291,10 @@ public sealed partial class FlowAnalyzer
             OutgoingEdges = mainFlowGraph.OutgoingEdges.Add(resolutionVertex.Index, edgesBuilder.ToImmutableList()),
         };
 
-        return (mainFlowGraph, resolution);
+        return (mainFlowGraph, resolution, resolutionVertex);
     }
 
-    private static FlowGraph RedirectFinalVerticesInSubroutine(FlowGraph mainFlowGraph, FlowGraph subroutineFlowGraph, CallerResolutionStatementNode resolution)
+    private static FlowGraph RedirectFinalVerticesInSubroutine(FlowGraph mainFlowGraph, FlowGraph subroutineFlowGraph, CallerResolutionStatementNode resolution, FlowVertex resolutionVertex)
     {
         // for all vertices V s.t. V is in subroutine flow graph and V -> empty vertex, make V instead point to resolutionVertex
 
@@ -277,7 +302,7 @@ public sealed partial class FlowAnalyzer
         {
             if (subroutineFlowGraph.OutgoingEdges[vertex.Index].Contains(FlowGraph.FinalEdge))
             {
-                mainFlowGraph = mainFlowGraph.RemoveEdge(vertex.Index, FlowGraph.FinalVertex).AddEdge(vertex.Index, FlowEdge.CreateStrongTo(resolution.Index));
+                mainFlowGraph = mainFlowGraph.RemoveEdge(vertex.Index, FlowGraph.Sink).AddEdge(vertex.Index, FlowEdge.CreateStrongTo(resolutionVertex.Index));
             }
         }
 

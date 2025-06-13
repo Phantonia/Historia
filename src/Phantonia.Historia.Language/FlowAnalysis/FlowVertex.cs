@@ -8,7 +8,7 @@ public readonly record struct FlowVertex
 {
     public required StatementNode AssociatedStatement { get; init; }
 
-    public required long Index { get; init; }
+    public required uint Index { get; init; }
 
     public bool IsVisible => Kind is FlowVertexKind.Visible;
 

@@ -10,12 +10,12 @@
 /// <param name="options">The options of this vertex.</param>
 /// <param name="outgoingEdges">The edges eminating from this vertex.</param>
 /// <param name="incomingEdges">The edges ending in this vertex.</param>
-public readonly struct StoryVertex<TOutput, TOption>(long index, TOutput output, ReadOnlyList<TOption> options, ReadOnlyList<StoryEdge> outgoingEdges, ReadOnlyList<StoryEdge> incomingEdges)
+public readonly struct StoryVertex<TOutput, TOption>(uint index, TOutput output, ReadOnlyList<TOption> options, ReadOnlyList<StoryEdge> outgoingEdges, ReadOnlyList<StoryEdge> incomingEdges)
 {
     /// <summary>
     /// The index of this vertex.
     /// </summary>
-    public long Index { get; } = index;
+    public uint Index { get; } = index;
 
     /// <summary>
     /// The output value of this vertex.

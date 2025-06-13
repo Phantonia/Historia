@@ -1,4 +1,5 @@
-﻿using Phantonia.Historia.Language.SemanticAnalysis;
+﻿using Phantonia.Historia.Language.FlowAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using Phantonia.Historia.Language.SyntaxAnalysis;
 using System.CodeDom.Compiler;
@@ -79,7 +80,7 @@ public sealed class StateMachineEmitter(StoryNode boundStory, Settings settings,
         writer.BeginBlock();
 
         writer.Write("fields.state = ");
-        writer.Write(Constants.StartState);
+        writer.Write(FlowGraph.Source);
         writer.WriteLine(';');
 
         foreach (Symbol symbol in symbolTable.AllSymbols)
@@ -148,12 +149,12 @@ public sealed class StateMachineEmitter(StoryNode boundStory, Settings settings,
                 Output = Heart.GetOutput(ref fields);
                 Heart.GetOptions(ref fields, options, ref optionsCount);
             
-                if (fields.state != {{Constants.StartState}})
+                if (fields.state != {{FlowGraph.Source}})
                 {
                     NotStartedStory = false;
                 }
             
-                if (fields.state == {{Constants.EndState}})
+                if (fields.state == {{FlowGraph.Sink}})
                 {
                     FinishedStory = true;
                 }
@@ -173,12 +174,12 @@ public sealed class StateMachineEmitter(StoryNode boundStory, Settings settings,
                 Output = Heart.GetOutput(ref fields);
                 Heart.GetOptions(ref fields, options, ref optionsCount);
 
-                if (fields.state != {{Constants.StartState}})
+                if (fields.state != {{FlowGraph.Source}})
                 {
                     NotStartedStory = false;
                 }
 
-                if (fields.state == {{Constants.EndState}})
+                if (fields.state == {{FlowGraph.Sink}})
                 {
                     FinishedStory = true;
                 }

@@ -1,4 +1,5 @@
-﻿using Phantonia.Historia.Language.SemanticAnalysis;
+﻿using Phantonia.Historia.Language.FlowAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
 using System.CodeDom.Compiler;
 using System.Linq;
@@ -138,11 +139,11 @@ public sealed class SnapshotEmitter(Settings settings, SymbolTable symbolTable, 
         writer.WriteLine("this.optionsCount = optionsCount;");
 
         writer.Write("NotStartedStory = fields.state == ");
-        writer.Write(Constants.StartState);
+        writer.Write(FlowGraph.Source);
         writer.WriteLine(';');
 
         writer.Write("FinishedStory = fields.state == ");
-        writer.Write(Constants.EndState);
+        writer.Write(FlowGraph.Sink);
         writer.WriteLine(';');
 
         writer.WriteLine("CanContinueWithoutOption = canContinueWithoutOption;");

@@ -30,7 +30,7 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
         writer.WriteLine("switch (fields.state)");
         writer.BeginBlock();
 
-        foreach ((long index, FlowVertex vertex) in flowGraph.Vertices)
+        foreach ((uint index, FlowVertex vertex) in flowGraph.Vertices)
         {
             if (!vertex.IsStory)
             {
@@ -63,7 +63,7 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
         }
 
         writer.Write("case ");
-        writer.Write(Constants.EndState);
+        writer.Write(FlowGraph.Sink);
         writer.WriteLine(":");
         writer.Indent++;
 
@@ -91,7 +91,7 @@ public sealed class OutputEmitter(FlowGraph flowGraph, Settings settings, Indent
             writer.WriteLine("switch (fields.state)");
             writer.BeginBlock();
 
-            foreach ((long index, FlowVertex vertex) in flowGraph.Vertices)
+            foreach ((uint index, FlowVertex vertex) in flowGraph.Vertices)
             {
                 void GenerateOptions(IEnumerable<ExpressionNode> optionExpressions)
                 {

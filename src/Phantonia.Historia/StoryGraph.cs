@@ -12,22 +12,22 @@ namespace Phantonia.Historia;
 /// <typeparam name="TOption">The option type.</typeparam>
 /// <param name="vertices">The set of vertices.</param>
 /// <param name="startEdges">The set of start edges.</param>
-public sealed class StoryGraph<TOutput, TOption>(IReadOnlyDictionary<long, StoryVertex<TOutput, TOption>> vertices, IReadOnlyList<StoryEdge> startEdges)
+public sealed class StoryGraph<TOutput, TOption>(IReadOnlyDictionary<uint, StoryVertex<TOutput, TOption>> vertices, IReadOnlyList<StoryEdge> startEdges)
 {
     /// <summary>
     /// The imaginary start vertex.
     /// </summary>
-    public const long StartVertex = -2;
+    public const uint StartVertex = 0;
 
     /// <summary>
     /// The imaginary final vertex.
     /// </summary>
-    public const long FinalVertex = -1;
+    public const uint FinalVertex = uint.MaxValue;
 
     /// <summary>
     /// The set of vertices, as a map from vertex index to vertex object.
     /// </summary>
-    public IReadOnlyDictionary<long, StoryVertex<TOutput, TOption>> Vertices { get; } = vertices;
+    public IReadOnlyDictionary<uint, StoryVertex<TOutput, TOption>> Vertices { get; } = vertices;
 
     /// <summary>
     /// The set of start edges, i.e. edges that eminate from <see cref="StartVertex"/>.
@@ -40,7 +40,7 @@ public sealed class StoryGraph<TOutput, TOption>(IReadOnlyDictionary<long, Story
     /// <param name="start">The start point of the edge.</param>
     /// <param name="end">The end point of the edge.</param>
     /// <returns>True or False.</returns>
-    public bool ContainsEdge(long start, long end)
+    public bool ContainsEdge(uint start, uint end)
     {
         bool result = false;
 
@@ -63,19 +63,19 @@ public sealed class StoryGraph<TOutput, TOption>(IReadOnlyDictionary<long, Story
     /// </summary>
     /// <returns>A topological ordering.</returns>
     /// <remarks>Weak edges are ignored for this.</remarks>
-    public IEnumerable<long> TopologicalSort()
+    public IEnumerable<uint> TopologicalSort()
     {
         // adapted from FlowGraph equivalent
-        Dictionary<long, bool> marked = [];
+        Dictionary<uint, bool> marked = [];
 
-        foreach (long vertex in Vertices.Keys)
+        foreach (uint vertex in Vertices.Keys)
         {
             marked[vertex] = false;
         }
 
-        Stack<long> postOrder = new();
+        Stack<uint> postOrder = new();
 
-        foreach (long vertex in Vertices.Keys)
+        foreach (uint vertex in Vertices.Keys)
         {
             if (!marked[vertex])
             {
@@ -85,7 +85,7 @@ public sealed class StoryGraph<TOutput, TOption>(IReadOnlyDictionary<long, Story
 
         return postOrder;
 
-        void DepthFirstSearch(long vertex)
+        void DepthFirstSearch(uint vertex)
         {
             marked[vertex] = true;
 
@@ -110,18 +110,18 @@ public sealed class StoryGraph<TOutput, TOption>(IReadOnlyDictionary<long, Story
     /// <returns>The combined value of all vertices that point to <see cref="FinalVertex"/>.</returns>
     public T Induce<T>(Func<IEnumerable<T>, T> inductor, T baseValue)
     {
-        Dictionary<long, T> values = [];
+        Dictionary<uint, T> values = [];
 
         foreach (StoryEdge edge in StartEdges)
         {
             values[edge.ToVertex] = baseValue;
         }
 
-        IEnumerable<long> topologicalSort = TopologicalSort();
+        IEnumerable<uint> topologicalSort = TopologicalSort();
 
         List<T> predecessorValues = [];
 
-        foreach (long vertex in topologicalSort)
+        foreach (uint vertex in topologicalSort)
         {
             if (values.ContainsKey(vertex))
             {

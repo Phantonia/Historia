@@ -34,7 +34,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
         writer.BeginBlock();
 
         writer.Write("case ");
-        writer.Write(Constants.StartState);
+        writer.Write(FlowGraph.Source);
         writer.WriteLine(':');
         writer.Indent++;
 
@@ -42,7 +42,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
 
         writer.Indent--;
 
-        foreach ((long index, ImmutableList<FlowEdge> edges) in flowGraph.OutgoingEdges)
+        foreach ((uint index, ImmutableList<FlowEdge> edges) in flowGraph.OutgoingEdges)
         {
             if (!flowGraph.Vertices[index].IsStory) // purely semantic vertex
             {
@@ -113,12 +113,12 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
     {
         Debug.Assert(flowGraph.IsConformable);
 
-        long startVertex = flowGraph.StartEdges.Single(e => e.IsStory).ToVertex;
+        uint startVertex = flowGraph.StartEdges.Single(e => e.IsStory).ToVertex;
 
         GenerateTransitionTo(startVertex);
     }
 
-    private void GenerateBasicTransition(long index, ImmutableList<FlowEdge> edges)
+    private void GenerateBasicTransition(uint index, ImmutableList<FlowEdge> edges)
     {
         Debug.Assert(flowGraph.OutgoingEdges[index].Count(o => o.IsStory) == 1);
         GenerateTransitionTo(edges.First(e => e.IsStory).ToVertex);
@@ -304,7 +304,8 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
                 writer.WriteLine("default:");
                 writer.Indent++;
 
-                long nextState = flowGraph.OutgoingEdges[branchOnStatement.Index][i].ToVertex;
+                //uint nextState = flowGraph.OutgoingEdges[branchOnStatement.Index][i].ToVertex;
+                uint nextState = edges[i].ToVertex;
                 GenerateTransitionTo(nextState);
             }
         }
@@ -331,7 +332,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
             writer.WriteLine(" == 0)");
             writer.BeginBlock();
 
-            long? nextState = null;
+            uint? nextState = null;
 
             for (int i = 0; i < branchOnStatement.Options.Length; i++)
             {
@@ -343,7 +344,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
 
             nextState ??= edges[^1].ToVertex; // other option needs to be last
 
-            GenerateTransitionTo((int)nextState);
+            GenerateTransitionTo((uint)nextState);
 
             writer.EndBlock(); // if
         }
@@ -593,13 +594,13 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
         writer.EndBlock();
     }
 
-    private void GenerateTransitionTo(long toVertex)
+    private void GenerateTransitionTo(uint toVertex)
     {
-        void GenerateSimpleTransitionTo(long toVertex)
+        void GenerateSimpleTransitionTo(uint toVertex)
         {
             writer.WriteLine($"fields.state = {toVertex};");
 
-            if (toVertex == Constants.EndState)
+            if (toVertex == FlowGraph.Sink)
             {
                 writer.WriteLine("canContinueWithoutOption = false;");
                 writer.WriteLine("return;");
@@ -623,7 +624,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
             }
         }
 
-        if (toVertex != Constants.EndState
+        if (toVertex != FlowGraph.Sink
             && flowGraph.Vertices[toVertex].AssociatedStatement is FlowBranchingStatementNode
             {
                 Original: LoopSwitchStatementNode loopSwitch,

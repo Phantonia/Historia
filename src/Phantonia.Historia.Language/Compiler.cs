@@ -142,7 +142,7 @@ public static class Compiler
             settings,
             flowAnalysisResult.MainFlowGraph,
             flowAnalysisResult.SymbolTable,
-            flowAnalysisResult.DefinitelyAssignedOutcomesAtChapters,
+            flowAnalysisResult.ChapterData,
             outputWriter);
 
         emitter.GenerateOutputCode();

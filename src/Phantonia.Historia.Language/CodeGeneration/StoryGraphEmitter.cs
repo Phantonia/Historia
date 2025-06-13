@@ -168,7 +168,7 @@ public sealed class StoryGraphEmitter(FlowGraph flowGraph, Settings settings, In
                 writer.Write('(');
                 writer.Write(vertex.Index); // toVertex
                 writer.Write(", ");
-                writer.Write(Constants.StartState); // fromVertex
+                writer.Write(FlowGraph.Source); // fromVertex
                 writer.Write(", ");
                 writer.Write(edge.IsWeak ? "true" : "false");
                 writer.WriteLine("),");
@@ -271,7 +271,7 @@ public sealed class StoryGraphEmitter(FlowGraph flowGraph, Settings settings, In
             writer.Write('(');
             writer.Write(edge.ToVertex);
             writer.Write(", ");
-            writer.Write(Constants.StartState);
+            writer.Write(FlowGraph.Source);
             writer.Write(", ");
             writer.Write(edge.IsWeak ? "true" : "false");
             writer.WriteLine(");");

@@ -17,7 +17,7 @@ public sealed class ChapterEmitter(
     FlowGraph flowGraph,
     SymbolTable symbolTable,
     Settings settings,
-    ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtChapters,
+    ImmutableDictionary<SubroutineSymbol, ChapterData> chapterData,
     IndentedTextWriter writer)
 {
     public void GenerateChapterType()
@@ -110,7 +110,7 @@ public sealed class ChapterEmitter(
             writer.Write(chapter.Name);
             writer.WriteLine("'.");
 
-            if (definitelyAssignedOutcomesAtChapters[chapter.Index].Where(o => o.IsPublic).Any()) {
+            if (chapterData[chapter].DefinitelyAssignedOutcomes.Where(o => o.IsPublic).Any()) {
 
                 writer.WriteLine("/// The following outcomes are required: ");
                 writer.WriteLine("""/// <list type="bullet">""");
@@ -122,7 +122,7 @@ public sealed class ChapterEmitter(
                         continue;
                     }
 
-                    if (definitelyAssignedOutcomesAtChapters[chapter.Index].Any(o => o.Index == symbol.Index))
+                    if (chapterData[chapter].DefinitelyAssignedOutcomes.Any(o => o.Index == symbol.Index))
                     {
                         writer.Write("/// <item>");
                         writer.Write(symbol.Name);
@@ -149,7 +149,7 @@ public sealed class ChapterEmitter(
             // plus this might not be an exhaustive list of statements that don't result in vertices
             // TODO: find better way
             Debug.Assert(declaration.Body.Statements.Length > 0);
-            long entryIndex = declaration.Body.Statements.First(s => s is not BoundOutcomeDeclarationStatementNode or BoundSpectrumDeclarationStatementNode).Index;
+            uint entryIndex = chapterData[chapter].EntryVertex;
             bool needsStateTransition = !flowGraph.Vertices[entryIndex].IsVisible;
 
             writer.Write(settings.StoryName);
@@ -189,7 +189,7 @@ public sealed class ChapterEmitter(
 
                 writer.Write('.');
 
-                if (definitelyAssignedOutcomesAtChapters[chapter.Index].Any(o => o.Index == symbol.Index))
+                if (chapterData[chapter].DefinitelyAssignedOutcomes.Any(o => o.Index == symbol.Index))
                 {
                     writer.Write("Required");
                 }

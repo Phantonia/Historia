@@ -23,6 +23,8 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
     {
         Dictionary<SubroutineSymbol, FlowGraph> subroutineFlowGraphs = [];
 
+        uint vertexIndex = 1;
+
         foreach (TopLevelNode symbolDeclaration in story.GetTopLevelNodes())
         {
             if (symbolDeclaration is BoundSymbolDeclarationNode
@@ -34,7 +36,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
                     Symbol: SubroutineSymbol subroutine,
                 })
             {
-                FlowGraph subroutineFlowGraph = GenerateBodyFlowGraph(body);
+                FlowGraph subroutineFlowGraph = GenerateBodyFlowGraph(body, ref vertexIndex);
                 subroutineFlowGraphs[subroutine] = subroutineFlowGraph;
             }
         }
@@ -49,29 +51,35 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             {
                 MainFlowGraph = null,
                 SymbolTable = null,
-                DefinitelyAssignedOutcomesAtChapters = null,
+                ChapterData = null,
             };
         }
 
-        PerformReachabilityAnalysis(subroutineFlowGraphs, out ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtChapters);
+        PerformReachabilityAnalysis(subroutineFlowGraphs, out ImmutableDictionary<SubroutineSymbol, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtChapters);
 
-        (FlowGraph mainFlowGraph, SymbolTable updatedSymbolTable) = MergeFlowGraphs(topologicalOrder, subroutineFlowGraphs, referenceCounts);
+        (FlowGraph mainFlowGraph, SymbolTable updatedSymbolTable, ImmutableDictionary<SubroutineSymbol, uint>? chapterEntryVertices) = MergeFlowGraphs(topologicalOrder, subroutineFlowGraphs, referenceCounts, ref vertexIndex);
+
+        ImmutableDictionary<SubroutineSymbol, ChapterData> chapterData = definitelyAssignedOutcomesAtChapters.Select(kvp => KeyValuePair.Create(kvp.Key, new ChapterData
+        {
+            DefinitelyAssignedOutcomes = kvp.Value,
+            EntryVertex = chapterEntryVertices[kvp.Key]
+        })).ToImmutableDictionary();
 
         return new FlowAnalysisResult
         {
             MainFlowGraph = mainFlowGraph,
             SymbolTable = updatedSymbolTable,
-            DefinitelyAssignedOutcomesAtChapters = definitelyAssignedOutcomesAtChapters,
+            ChapterData = chapterData,
         };
     }
 
-    private FlowGraph GenerateBodyFlowGraph(StatementBodyNode body)
+    private FlowGraph GenerateBodyFlowGraph(StatementBodyNode body, ref uint vertexIndex)
     {
         FlowGraph graph = FlowGraph.Empty;
 
         foreach (StatementNode statement in body.Statements)
         {
-            FlowGraph statementGraph = GenerateStatementFlowGraph(statement);
+            FlowGraph statementGraph = GenerateStatementFlowGraph(statement, ref vertexIndex);
             graph = graph.Append(statementGraph);
         }
 
@@ -109,32 +117,32 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
         return graph;
     }
 
-    private FlowGraph GenerateStatementFlowGraph(StatementNode statement)
+    private FlowGraph GenerateStatementFlowGraph(StatementNode statement, ref uint vertexIndex)
     {
         return statement switch
         {
             OutputStatementNode or CallStatementNode or BoundLineStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex
             {
-                Index = statement.Index,
+                Index = vertexIndex++,
                 AssociatedStatement = statement,
                 Kind = FlowVertexKind.Visible,
             }),
-            SwitchStatementNode switchStatement => GenerateSwitchFlowGraph(switchStatement),
-            LoopSwitchStatementNode loopSwitchStatement => GenerateLoopSwitchFlowGraph(loopSwitchStatement),
-            BranchOnStatementNode branchOnStatement => GenerateBranchOnFlowGraph(branchOnStatement),
+            SwitchStatementNode switchStatement => GenerateSwitchFlowGraph(switchStatement, ref vertexIndex),
+            LoopSwitchStatementNode loopSwitchStatement => GenerateLoopSwitchFlowGraph(loopSwitchStatement, ref vertexIndex),
+            BranchOnStatementNode branchOnStatement => GenerateBranchOnFlowGraph(branchOnStatement, ref vertexIndex),
             OutcomeDeclarationStatementNode => FlowGraph.Empty,
             SpectrumDeclarationStatementNode => FlowGraph.Empty,
             AssignmentStatementNode or SpectrumAdjustmentStatementNode or BoundRunStatementNode => FlowGraph.CreateSimpleFlowGraph(new FlowVertex
             {
-                Index = statement.Index,
+                Index = vertexIndex++,
                 AssociatedStatement = statement,
                 Kind = FlowVertexKind.Invisible,
             }),
-            BoundChooseStatementNode chooseStatement => GenerateChooseFlowGraph(chooseStatement),
-            IfStatementNode ifStatement => GenerateIfFlowGraph(ifStatement),
+            BoundChooseStatementNode chooseStatement => GenerateChooseFlowGraph(chooseStatement, ref vertexIndex),
+            IfStatementNode ifStatement => GenerateIfFlowGraph(ifStatement, ref vertexIndex),
             NoOpStatementNode noopStatement => FlowGraph.CreateSimpleFlowGraph(new FlowVertex
             {
-                Index = noopStatement.Index,
+                Index = vertexIndex++,
                 AssociatedStatement = noopStatement,
                 Kind = FlowVertexKind.Invisible,
             }),
@@ -142,22 +150,24 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
         };
     }
 
-    private FlowGraph GenerateSwitchFlowGraph(SwitchStatementNode switchStatement)
+    private FlowGraph GenerateSwitchFlowGraph(SwitchStatementNode switchStatement, ref uint vertexIndex)
     {
+        uint switchVertexIndex = vertexIndex++;
+
         FlowGraph flowGraph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex
         {
-            Index = switchStatement.Index,
+            Index = switchVertexIndex,
             AssociatedStatement = switchStatement,
             Kind = FlowVertexKind.Visible,
         });
 
-        FlowGraph bodyFlowGraph = GenerateBodyFlowGraph(switchStatement.Body);
+        FlowGraph bodyFlowGraph = GenerateBodyFlowGraph(switchStatement.Body, ref vertexIndex);
         flowGraph = flowGraph.Append(bodyFlowGraph);
 
         foreach (OptionNode option in switchStatement.Options)
         {
-            FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body);
-            flowGraph = flowGraph.AppendToVertex(switchStatement.Index, nestedFlowGraph);
+            FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body, ref vertexIndex);
+            flowGraph = flowGraph.AppendToVertex(switchVertexIndex, nestedFlowGraph);
 
             foreach (FlowVertex vertex in bodyFlowGraph.Vertices.Values)
             {
@@ -179,9 +189,9 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
         {
             if (!vertex.IsVisible || !vertex.IsStory)
             {
-                if (bodyFlowGraph.OutgoingEdges[vertex.Index].Any(e => e.ToVertex is FlowGraph.FinalVertex))
+                if (bodyFlowGraph.OutgoingEdges[vertex.Index].Any(e => e.ToVertex is FlowGraph.Sink))
                 {
-                    ErrorFound?.Invoke(Errors.SwitchBodyEndsInInvisibleStatement(vertex.Index));
+                    ErrorFound?.Invoke(Errors.SwitchBodyEndsInInvisibleStatement(vertex.AssociatedStatement.Index));
                 }
 
                 continue;
@@ -192,7 +202,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             ImmutableList<FlowEdge> outgoingEdges = flowGraph.OutgoingEdges[vertex.Index];
             outgoingEdges = outgoingEdges.Remove((FlowEdge)nonOptionEdge);
 
-            if (((FlowEdge)nonOptionEdge).ToVertex is FlowGraph.FinalVertex)
+            if (((FlowEdge)nonOptionEdge).ToVertex is FlowGraph.Sink)
             {
                 nonOptionEdge = null;
             }
@@ -215,7 +225,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
 
         {
             FlowEdge? nonOptionEdge = !bodyFlowGraph.Vertices.IsEmpty ? bodyFlowGraph.StartEdges.Single(e => e.IsStory) : null;
-            ImmutableList<FlowEdge> outgoingEdges = flowGraph.OutgoingEdges[switchStatement.Index];
+            ImmutableList<FlowEdge> outgoingEdges = flowGraph.OutgoingEdges[switchVertexIndex];
             FlowBranchingStatementNode flowBranchingStatement;
 
             if (nonOptionEdge is not null)
@@ -243,7 +253,7 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
                 };
             }
 
-            flowGraph = flowGraph.SetVertex(switchStatement.Index, flowGraph.Vertices[switchStatement.Index] with
+            flowGraph = flowGraph.SetVertex(switchVertexIndex, flowGraph.Vertices[switchVertexIndex] with
             {
                 AssociatedStatement = flowBranchingStatement,
             });
@@ -252,42 +262,46 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
         return flowGraph;
     }
 
-    private FlowGraph GenerateLoopSwitchFlowGraph(LoopSwitchStatementNode loopSwitchStatement)
+    private FlowGraph GenerateLoopSwitchFlowGraph(LoopSwitchStatementNode loopSwitchStatement, ref uint vertexIndex)
     {
         bool hasFinalOption = loopSwitchStatement.Options.Any(o => o.Kind == LoopSwitchOptionKind.Final);
 
+        uint loopSwitchVertexIndex = vertexIndex++;
+
         FlowGraph flowGraph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex
         {
-            Index = loopSwitchStatement.Index,
+            Index = loopSwitchVertexIndex,
             AssociatedStatement = loopSwitchStatement,
             Kind = FlowVertexKind.Visible,
         });
 
+        uint copyVertexIndex = vertexIndex++;
+
         FlowGraph semanticCopy = FlowGraph.CreateSimpleSemanticFlowGraph(new FlowVertex
         {
-            Index = CalculateNewIndex(loopSwitchStatement.Index, loopSwitchStatement.Index),
+            Index = copyVertexIndex,
             AssociatedStatement = loopSwitchStatement,
             Kind = FlowVertexKind.PurelySemantic,
         });
 
-        List<long> nonFinalEndVertices = [];
-        List<long> finalStartVertices = [];
+        List<uint> nonFinalEndVertices = [];
+        List<uint> finalStartVertices = [];
 
         foreach (LoopSwitchOptionNode option in loopSwitchStatement.Options)
         {
-            FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body);
+            FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body, ref vertexIndex);
 
-            flowGraph = flowGraph.AppendToVertex(loopSwitchStatement.Index, nestedFlowGraph);
+            flowGraph = flowGraph.AppendToVertex(loopSwitchVertexIndex, nestedFlowGraph);
 
-            FlowGraph nestedSemanticCopy = CreateSemanticCopy(nestedFlowGraph, uniqueId: loopSwitchStatement.Index);
-            semanticCopy = semanticCopy.AppendToVertex(CalculateNewIndex(loopSwitchStatement.Index, loopSwitchStatement.Index), nestedSemanticCopy);
+            FlowGraph nestedSemanticCopy = CreateSemanticCopy(nestedFlowGraph, ref vertexIndex);
+            semanticCopy = semanticCopy.AppendToVertex(copyVertexIndex, nestedSemanticCopy);
 
             if (option.Kind != LoopSwitchOptionKind.Final)
             {
                 // redirect final edges as weak edges back up
-                foreach (long vertex in nestedFlowGraph.OutgoingEdges.Where(p => p.Value.Contains(FlowGraph.FinalEdge)).Select(p => p.Key))
+                foreach (uint vertex in nestedFlowGraph.OutgoingEdges.Where(p => p.Value.Contains(FlowGraph.FinalEdge)).Select(p => p.Key))
                 {
-                    flowGraph = flowGraph.ReplaceEdge(vertex, FlowGraph.FinalVertex, FlowEdge.CreateWeakTo(loopSwitchStatement.Index)); // important: weak edge
+                    flowGraph = flowGraph.ReplaceEdge(vertex, FlowGraph.Sink, FlowEdge.CreateWeakTo(loopSwitchVertexIndex)); // important: weak edge
                     
                     nonFinalEndVertices.Add(vertex);
                 }
@@ -301,12 +315,12 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             }
         }
 
-        foreach (long nonFinalEndVertex in nonFinalEndVertices)
+        foreach (uint nonFinalEndVertex in nonFinalEndVertices)
         {
             if (hasFinalOption)
             {
                 // add purely semantic edge from all end vertices of non final options to all start vertices of final options
-                foreach (long finalStartVertex in finalStartVertices)
+                foreach (uint finalStartVertex in finalStartVertices)
                 {
                     flowGraph = flowGraph.AddEdge(nonFinalEndVertex, FlowEdge.CreatePurelySemanticTo(finalStartVertex));
                 }
@@ -314,18 +328,18 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
             else
             {
                 // add purely semantic edges from all end vertices of non final options into nothingness
-                flowGraph = flowGraph.AddEdge(nonFinalEndVertex, FlowEdge.CreatePurelySemanticTo(FlowGraph.FinalVertex));
+                flowGraph = flowGraph.AddEdge(nonFinalEndVertex, FlowEdge.CreatePurelySemanticTo(FlowGraph.Sink));
             }
         }
 
         // loop switches without final options automatically continue after all normal options have been selected
         if (!hasFinalOption)
         {
-            flowGraph = flowGraph.AddEdge(loopSwitchStatement.Index, FlowGraph.FinalEdge);
+            flowGraph = flowGraph.AddEdge(loopSwitchVertexIndex, FlowGraph.FinalEdge);
         }
 
         Debug.Assert(flowGraph.IsConformable);
-        long startVertex = flowGraph.GetStoryStartVertex();
+        uint startVertex = flowGraph.GetStoryStartVertex();
 
         flowGraph = semanticCopy.Append(flowGraph);
         flowGraph = flowGraph with
@@ -336,12 +350,12 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
         FlowBranchingStatementNode flowBranchingStatement = new()
         {
             Original = loopSwitchStatement,
-            OutgoingEdges = flowGraph.OutgoingEdges[loopSwitchStatement.Index],
+            OutgoingEdges = flowGraph.OutgoingEdges[loopSwitchVertexIndex],
             Index = loopSwitchStatement.Index,
             PrecedingTokens = [],
         };
 
-        flowGraph = flowGraph.SetVertex(loopSwitchStatement.Index, flowGraph.Vertices[loopSwitchStatement.Index] with
+        flowGraph = flowGraph.SetVertex(loopSwitchVertexIndex, flowGraph.Vertices[loopSwitchVertexIndex] with
         {
             AssociatedStatement = flowBranchingStatement,
         });
@@ -349,23 +363,29 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
         return flowGraph;
     }
 
-    private FlowGraph CreateSemanticCopy(FlowGraph flowGraph, long uniqueId)
+    private FlowGraph CreateSemanticCopy(FlowGraph flowGraph, ref uint vertexIndex)
     {
-        FlowVertex SemantifyVertex(FlowVertex vertex) => vertex with
+        FlowVertex SemantifyVertex(FlowVertex vertex, ref uint vertexIndex) => vertex with
         {
             Kind = FlowVertexKind.PurelySemantic,
-            Index = vertex.Index != FlowGraph.FinalVertex ? CalculateNewIndex(vertex.Index, uniqueId) : FlowGraph.FinalVertex,
+            Index = vertex.Index != FlowGraph.Sink ? vertexIndex++ : FlowGraph.Sink,
         };
 
-        ImmutableDictionary<long, FlowVertex> vertices
-            = flowGraph.Vertices.Select(p => KeyValuePair.Create(CalculateNewIndex(p.Key, uniqueId), SemantifyVertex(p.Value)))
-                                .ToImmutableDictionary();
+        Dictionary<uint, uint> originalToSemantic = [];
+        FlowGraph flowGraphCopy = FlowGraph.Empty;
+
+        foreach ((uint index, FlowVertex vertex) in flowGraph.Vertices)
+        {
+            FlowVertex copy = SemantifyVertex(vertex, ref vertexIndex);
+            flowGraphCopy = flowGraphCopy.AddVertexWithoutStartEdge(copy);
+            originalToSemantic[index] = copy.Index;
+        }
 
         FlowEdge SemantifyEdge(FlowEdge edge)
         {
             FlowEdgeKind kind = edge.IsSemantic ? FlowEdgeKind.Semantic : FlowEdgeKind.None;
 
-            if (edge.ToVertex == FlowGraph.FinalVertex)
+            if (edge.ToVertex == FlowGraph.Sink)
             {
                 return edge with
                 {
@@ -377,55 +397,54 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
                 return edge with
                 {
                     Kind = kind,
-                    ToVertex = edge.ToVertex != FlowGraph.FinalVertex ? CalculateNewIndex(edge.ToVertex, uniqueId) : FlowGraph.FinalVertex,
+                    ToVertex = originalToSemantic[edge.ToVertex],
                 };
             }
         }
 
-        ImmutableDictionary<long, ImmutableList<FlowEdge>> edges
-            = flowGraph.OutgoingEdges
-                       .Select(p => KeyValuePair.Create(CalculateNewIndex(p.Key, uniqueId), p.Value.Select(e => SemantifyEdge(e)).ToImmutableList()))
-                       .ToImmutableDictionary();
-
-        IEnumerable<FlowEdge> newStartEdges = flowGraph.StartEdges.Select(
-            e => e with
-            {
-                ToVertex = e.ToVertex != FlowGraph.FinalVertex ? CalculateNewIndex(e.ToVertex, uniqueId) : FlowGraph.FinalVertex,
-            });
-        
-        return flowGraph with
+        foreach ((uint vertex, ImmutableList<FlowEdge> outgoingEdges) in flowGraph.OutgoingEdges)
         {
-            StartEdges = [.. newStartEdges],
-            Vertices = vertices,
-            OutgoingEdges = edges,
-        };
+            foreach (FlowEdge edge in outgoingEdges)
+            {
+                flowGraphCopy = flowGraphCopy.AddEdge(originalToSemantic[vertex], SemantifyEdge(edge));
+            }
+        }
+
+        foreach (FlowEdge edge in flowGraph.StartEdges)
+        {
+            flowGraphCopy = flowGraphCopy.AddStartEdge(SemantifyEdge(edge));
+        }
+
+        return flowGraphCopy;
     }
 
-    private FlowGraph GenerateBranchOnFlowGraph(BranchOnStatementNode branchOnStatement)
+    private FlowGraph GenerateBranchOnFlowGraph(BranchOnStatementNode branchOnStatement, ref uint vertexIndex)
     {
+        uint branchOnVertexIndex = vertexIndex++;
+
         FlowGraph flowGraph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex
         {
-            Index = branchOnStatement.Index,
+            Index = branchOnVertexIndex,
             AssociatedStatement = branchOnStatement,
             Kind = FlowVertexKind.Invisible,
         });
 
         foreach (BranchOnOptionNode option in branchOnStatement.Options)
         {
-            FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body);
+            FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body, ref vertexIndex);
 
-            flowGraph = flowGraph.AppendToVertex(branchOnStatement.Index, nestedFlowGraph);
+            flowGraph = flowGraph.AppendToVertex(branchOnVertexIndex, nestedFlowGraph);
         }
 
         FlowBranchingStatementNode flowBranchingStatement = new()
         {
             Original = branchOnStatement,
-            OutgoingEdges = flowGraph.OutgoingEdges[branchOnStatement.Index],
+            OutgoingEdges = flowGraph.OutgoingEdges[branchOnVertexIndex],
             Index = branchOnStatement.Index,
             PrecedingTokens = [],
         };
 
-        flowGraph = flowGraph.SetVertex(branchOnStatement.Index, flowGraph.Vertices[branchOnStatement.Index] with
+        flowGraph = flowGraph.SetVertex(branchOnVertexIndex, flowGraph.Vertices[branchOnVertexIndex] with
         {
             AssociatedStatement = flowBranchingStatement,
         });
@@ -433,31 +452,33 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
         return flowGraph;
     }
 
-    private FlowGraph GenerateChooseFlowGraph(BoundChooseStatementNode chooseStatement)
+    private FlowGraph GenerateChooseFlowGraph(BoundChooseStatementNode chooseStatement, ref uint vertexIndex)
     {
+        uint chooseVertexIndex = vertexIndex++;
+
         FlowGraph flowGraph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex
         {
-            Index = chooseStatement.Index,
+            Index = chooseVertexIndex,
             AssociatedStatement = chooseStatement,
             Kind = FlowVertexKind.Invisible,
         });
 
         foreach (OptionNode option in chooseStatement.Options)
         {
-            FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body);
+            FlowGraph nestedFlowGraph = GenerateBodyFlowGraph(option.Body, ref vertexIndex);
 
-            flowGraph = flowGraph.AppendToVertex(chooseStatement.Index, nestedFlowGraph);
+            flowGraph = flowGraph.AppendToVertex(chooseVertexIndex, nestedFlowGraph);
         }
 
         FlowBranchingStatementNode flowBranchingStatement = new()
         {
             Original = chooseStatement,
-            OutgoingEdges = flowGraph.OutgoingEdges[chooseStatement.Index],
+            OutgoingEdges = flowGraph.OutgoingEdges[chooseVertexIndex],
             Index = chooseStatement.Index,
             PrecedingTokens = [],
         };
 
-        flowGraph = flowGraph.SetVertex(chooseStatement.Index, flowGraph.Vertices[chooseStatement.Index] with
+        flowGraph = flowGraph.SetVertex(chooseVertexIndex, flowGraph.Vertices[chooseVertexIndex] with
         {
             AssociatedStatement = flowBranchingStatement,
         });
@@ -465,45 +486,45 @@ public sealed partial class FlowAnalyzer(StoryNode story, SymbolTable symbolTabl
         return flowGraph;
     }
 
-    private FlowGraph GenerateIfFlowGraph(IfStatementNode ifStatement)
+    private FlowGraph GenerateIfFlowGraph(IfStatementNode ifStatement, ref uint vertexIndex)
     {
+        uint ifVertexIndex = vertexIndex++;
+
         FlowGraph flowGraph = FlowGraph.CreateSimpleFlowGraph(new FlowVertex
         {
-            Index = ifStatement.Index,
+            Index = ifVertexIndex,
             AssociatedStatement = ifStatement,
             Kind = FlowVertexKind.Invisible,
         });
 
-        FlowGraph thenFlowGraph = GenerateBodyFlowGraph(ifStatement.ThenBlock);
+        FlowGraph thenFlowGraph = GenerateBodyFlowGraph(ifStatement.ThenBlock, ref vertexIndex);
 
         flowGraph = flowGraph.Append(thenFlowGraph);
 
         if (ifStatement.ElseBlock is not null)
         {
-            FlowGraph elseFlowGraph = GenerateBodyFlowGraph(ifStatement.ElseBlock);
-            flowGraph = flowGraph.AppendToVertex(ifStatement.Index, elseFlowGraph);
+            FlowGraph elseFlowGraph = GenerateBodyFlowGraph(ifStatement.ElseBlock, ref vertexIndex);
+            flowGraph = flowGraph.AppendToVertex(ifVertexIndex, elseFlowGraph);
         }
         else
         {
             // we need to draw an edge from the if statement vertex into nothingness
-            flowGraph = flowGraph.AddEdge(ifStatement.Index, FlowEdge.CreateStrongTo(FlowGraph.FinalVertex));
+            flowGraph = flowGraph.AddEdge(ifVertexIndex, FlowEdge.CreateStrongTo(FlowGraph.Sink));
         }
 
         FlowBranchingStatementNode flowBranchingStatement = new()
         {
             Original = ifStatement,
-            OutgoingEdges = flowGraph.OutgoingEdges[ifStatement.Index],
+            OutgoingEdges = flowGraph.OutgoingEdges[ifVertexIndex],
             Index = ifStatement.Index,
             PrecedingTokens = [],
         };
 
-        flowGraph = flowGraph.SetVertex(ifStatement.Index, flowGraph.Vertices[ifStatement.Index] with
+        flowGraph = flowGraph.SetVertex(ifVertexIndex, flowGraph.Vertices[ifVertexIndex] with
         {
             AssociatedStatement = flowBranchingStatement,
         });
 
         return flowGraph;
     }
-
-    private long CalculateNewIndex(long index, long uniqueId) => uniqueId * story.Length + index;
 }

@@ -11,7 +11,7 @@ namespace Phantonia.Historia.Language.FlowAnalysis;
 
 public sealed partial class FlowAnalyzer
 {
-    private void PerformReachabilityAnalysis(IReadOnlyDictionary<SubroutineSymbol, FlowGraph> subroutineFlowGraphs, out ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtChapters)
+    private void PerformReachabilityAnalysis(IReadOnlyDictionary<SubroutineSymbol, FlowGraph> subroutineFlowGraphs, out ImmutableDictionary<SubroutineSymbol, IEnumerable<OutcomeSymbol>> definitelyAssignedOutcomesAtChapters)
     {
         SubroutineSymbol mainSubroutine = (SubroutineSymbol)symbolTable["main"];
         VertexData defaultVertexData = GetDefaultData();
@@ -31,7 +31,7 @@ public sealed partial class FlowAnalyzer
         return new VertexData
         {
             Outcomes = outcomes.ToImmutable(),
-            DefinitelyAssignedOutcomesAtChapters = ImmutableDictionary<long, IEnumerable<OutcomeSymbol>>.Empty,
+            DefinitelyAssignedOutcomesAtChapters = ImmutableDictionary<SubroutineSymbol, IEnumerable<OutcomeSymbol>>.Empty,
         };
     }
 
@@ -41,19 +41,19 @@ public sealed partial class FlowAnalyzer
                                     ImmutableStack<SubroutineSymbol> callStack)
     {
         FlowGraph reversedFlowGraph = subroutineFlowGraph.Reverse();
-        IEnumerable<long> order = subroutineFlowGraph.TopologicalSort();
+        IEnumerable<uint> order = subroutineFlowGraph.TopologicalSort();
 
         if (!order.Any())
         {
             return defaultVertexData;
         }
 
-        Dictionary<long, VertexData> data = [];
+        Dictionary<uint, VertexData> data = [];
 
-        long firstVertex = order.First();
+        uint firstVertex = order.First();
         data[firstVertex] = ProcessVertex(subroutineFlowGraph, firstVertex, previousData: [defaultVertexData], defaultVertexData, subroutineFlowGraphs, callStack);
 
-        foreach (long vertex in order.Skip(1))
+        foreach (uint vertex in order.Skip(1))
         {
             IEnumerable<VertexData> previousData = reversedFlowGraph.OutgoingEdges[vertex]
                                                                     .Where(e => e.IsSemantic)
@@ -65,11 +65,11 @@ public sealed partial class FlowAnalyzer
             data.Where(p => subroutineFlowGraph.OutgoingEdges[p.Key].Contains(FlowGraph.FinalEdge))
                 .Select(p => p.Value);
 
-        return ProcessVertex(subroutineFlowGraph, FlowGraph.FinalVertex, finalVertexData, defaultVertexData, subroutineFlowGraphs, callStack);
+        return ProcessVertex(subroutineFlowGraph, FlowGraph.Sink, finalVertexData, defaultVertexData, subroutineFlowGraphs, callStack);
     }
 
     private VertexData ProcessVertex(FlowGraph flowGraph,
-                                     long vertex,
+                                     uint vertex,
                                      IEnumerable<VertexData> previousData,
                                      VertexData defaultVertexData,
                                      IReadOnlyDictionary<SubroutineSymbol, FlowGraph> subroutineFlowGraphs,
@@ -77,11 +77,11 @@ public sealed partial class FlowAnalyzer
     {
         VertexData thisVertexData = defaultVertexData;
 
-        StatementNode? statement = vertex == FlowGraph.FinalVertex ? null : flowGraph.Vertices[vertex].AssociatedStatement;
+        StatementNode? statement = vertex == FlowGraph.Sink ? null : flowGraph.Vertices[vertex].AssociatedStatement;
 
         foreach ((OutcomeSymbol outcome, OutcomeData outcomeData) in defaultVertexData.Outcomes)
         {
-            thisVertexData = ProcessOutcome(flowGraph, vertex, previousData, callStack, thisVertexData, statement, outcome);
+            thisVertexData = ProcessOutcome(flowGraph, vertex, previousData, callStack, thisVertexData, outcome);
         }
 
         thisVertexData = thisVertexData with
@@ -116,13 +116,15 @@ public sealed partial class FlowAnalyzer
 
     private VertexData ProcessOutcome(
         FlowGraph flowGraph,
-        long vertex,
+        uint vertex,
         IEnumerable<VertexData> previousData,
         ImmutableStack<SubroutineSymbol> callStack,
         VertexData thisVertexData,
-        StatementNode? statement,
         OutcomeSymbol outcome)
     {
+        StatementNode? statement = vertex == FlowGraph.Sink ? null : flowGraph.Vertices[vertex].AssociatedStatement;
+
+
         bool definitelyAssigned = true;
         bool possiblyAssigned = false;
         bool locked = false;
@@ -183,18 +185,18 @@ public sealed partial class FlowAnalyzer
                     ErrorFound?.Invoke(Errors.OutcomeMightBeAssignedMoreThanOnce(outcome.Name, callStack.Select(s => s.Name), boundAssignment.Index));
                 }
 
-                ErrorOnLocked(boundAssignment.Index);
+                ErrorOnLocked(flowGraph.Vertices[vertex].AssociatedStatement.Index);
 
                 definitelyAssigned = true;
                 possiblyAssigned = true;
                 break;
             case BoundSpectrumAdjustmentStatementNode boundAdjustment when boundAdjustment.Spectrum == outcome:
-                ErrorOnLocked(boundAdjustment.Index);
+                ErrorOnLocked(flowGraph.Vertices[vertex].AssociatedStatement.Index);
                 definitelyAssigned = true;
                 break;
             case FlowBranchingStatementNode { Original: BoundBranchOnStatementNode boundBranchOn } when boundBranchOn.Outcome == outcome:
-                ErrorOnUnassigned(boundBranchOn.Index);
-                ErrorOnLocked(boundBranchOn.Index);
+                ErrorOnUnassigned(flowGraph.Vertices[vertex].AssociatedStatement.Index);
+                ErrorOnLocked(flowGraph.Vertices[vertex].AssociatedStatement.Index);
                 break;
             case FlowBranchingStatementNode { Original: IfStatementNode ifStatement }:
                 void ProcessExpression(ExpressionNode expression)
@@ -214,9 +216,9 @@ public sealed partial class FlowAnalyzer
                             ProcessExpression(leftHandSide);
                             ProcessExpression(rightHandSide);
                             break;
-                        case BoundIsExpressionNode { Outcome: OutcomeSymbol thisOutcome, Index: long index } when thisOutcome == outcome:
-                            ErrorOnUnassigned(index);
-                            ErrorOnLocked(index);
+                        case BoundIsExpressionNode { Outcome: OutcomeSymbol thisOutcome } when thisOutcome == outcome:
+                            ErrorOnUnassigned(untypedExpression.Index);
+                            ErrorOnLocked(untypedExpression.Index);
                             break;
                     }
                 }
@@ -245,10 +247,10 @@ public sealed partial class FlowAnalyzer
         {
             DefinitelyAssignedOutcomesAtChapters
                             = thisVertexData.DefinitelyAssignedOutcomesAtChapters
-                                            .SetItem(chapter.Index, thisVertexData.Outcomes.Keys.Where(o => thisVertexData.Outcomes[o].IsDefinitelyAssigned)),
+                                            .SetItem(chapter, thisVertexData.Outcomes.Keys.Where(o => thisVertexData.Outcomes[o].IsDefinitelyAssigned)),
         };
 
-        foreach (OutcomeSymbol definitelyAssignedOutcome in thisVertexData.DefinitelyAssignedOutcomesAtChapters[chapter.Index])
+        foreach (OutcomeSymbol definitelyAssignedOutcome in thisVertexData.DefinitelyAssignedOutcomesAtChapters[chapter])
         {
             if (definitelyAssignedOutcome.IsPublic)
             {
@@ -276,7 +278,7 @@ public sealed partial class FlowAnalyzer
     {
         public ImmutableDictionary<OutcomeSymbol, OutcomeData> Outcomes { get; init; }
 
-        public ImmutableDictionary<long, IEnumerable<OutcomeSymbol>> DefinitelyAssignedOutcomesAtChapters { get; init; }
+        public ImmutableDictionary<SubroutineSymbol, IEnumerable<OutcomeSymbol>> DefinitelyAssignedOutcomesAtChapters { get; init; }
     }
 
     private readonly record struct OutcomeData
