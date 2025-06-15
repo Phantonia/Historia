@@ -96,6 +96,8 @@ public static class Compiler
 
     private static CompilationResult ProceedWithStory(StoryNode story, TextWriter outputWriter, List<Error> errors, LineIndexing lineIndexing)
     {
+        ulong fingerprint = FingerprintCalculator.GetStoryFingerprint(story);
+
         Binder binder = new(story);
         binder.ErrorFound += errors.Add;
         BindingResult bindingResult = binder.Bind();
@@ -116,9 +118,6 @@ public static class Compiler
         Debug.Assert(boundStory is not null);
         Debug.Assert(settings is not null);
         Debug.Assert(symbolTable is not null);
-
-        FingerprintCalculator calculator = new(boundStory, symbolTable);
-        ulong fingerprint = calculator.GetStoryFingerprint();
 
         FlowAnalyzer flowAnalyzer = new(boundStory, symbolTable);
         flowAnalyzer.ErrorFound += errors.Add;

@@ -30,6 +30,12 @@ public static class Fingerprinting
         return BitOperations.RotateLeft(temp, 29);
     }
 
+    public static ulong Combine(ulong w, ulong x, ulong y, ulong z)
+    {
+        ulong temp = w * PrimeA + x * PrimeB + y * PrimeC + z * PrimeD + PrimeE;
+        return BitOperations.RotateLeft(temp, 13);
+    }
+
     public static ulong Combine(IEnumerable<ulong> values)
     {
         ulong temp = PrimeE;
