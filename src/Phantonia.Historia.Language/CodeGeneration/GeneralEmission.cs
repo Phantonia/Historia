@@ -164,7 +164,7 @@ public static class GeneralEmission
 
             if (outcome is SpectrumSymbol spectrum)
             {
-                writer.Write("int value = fields.");
+                writer.Write("uint value = fields.");
                 GenerateSpectrumPositiveFieldName(spectrum, writer);
                 writer.Write(" * ");
                 writer.Write(spectrum.Intervals.First().Value.UpperDenominator);
@@ -217,7 +217,7 @@ public static class GeneralEmission
             {
                 writer.Write("return (Outcome");
                 writer.Write(outcome.Name);
-                writer.Write(")(fields.");
+                writer.Write(")unchecked(fields.");
                 GenerateOutcomeFieldName(outcome, writer);
                 writer.WriteLine(" + 1);"); // shifting by 1 because of Unset
             }
@@ -523,7 +523,7 @@ public static class GeneralEmission
                     {
                         SpectrumInterval previousInterval = spectrum.Intervals[spectrum.OptionNames[intervalIndex - 1]];
                         SpectrumInterval thisInterval = spectrum.Intervals[isExpression.Original.OptionName];
-                        
+
                         writer.Write("fields.");
                         GenerateSpectrumTotalFieldName(spectrum, writer);
                         writer.Write(" * ");

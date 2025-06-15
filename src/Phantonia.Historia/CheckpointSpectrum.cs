@@ -15,12 +15,12 @@ public readonly struct CheckpointSpectrum
     /// <summary>
     /// The amount of positive interactions.
     /// </summary>
-    public int PositiveCount { get; private init; }
+    public uint PositiveCount { get; private init; }
 
     /// <summary>
     /// The total amount of interactions.
     /// </summary>
-    public int TotalCount { get; private init; }
+    public uint TotalCount { get; private init; }
 
     /// <summary>
     /// Creates a copy of this checkpoint outcome with the given fraction assigned.
@@ -28,7 +28,7 @@ public readonly struct CheckpointSpectrum
     /// <param name="positiveCount">The amount of positive interactions.</param>
     /// <param name="totalCount">The total amount of interactions.</param>
     /// <returns>A copy of this checkpoint spectrum.</returns>
-    public CheckpointSpectrum Assign(int positiveCount, int totalCount)
+    public CheckpointSpectrum Assign(uint positiveCount, uint totalCount)
     {
         if (positiveCount < 0 || totalCount < 0 || totalCount < positiveCount)
         {

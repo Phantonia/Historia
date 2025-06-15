@@ -31,28 +31,27 @@ public sealed class FieldsEmitter(StoryNode boundStory, SymbolTable symbolTable,
 
     private void GenerateFields()
     {
-        writer.WriteLine("public long state;");
+        writer.WriteLine("public uint state;");
 
         foreach (Symbol symbol in symbolTable.AllSymbols)
         {
             switch (symbol)
             {
                 case SpectrumSymbol spectrum:
-                    writer.Write("public int ");
+                    writer.Write("public uint ");
                     GeneralEmission.GenerateSpectrumTotalFieldName(spectrum, writer);
                     writer.WriteLine(';');
-                    writer.Write("public int ");
+                    writer.Write("public uint ");
                     GeneralEmission.GenerateSpectrumPositiveFieldName(spectrum, writer);
                     writer.WriteLine(';');
                     break;
                 case OutcomeSymbol outcome:
-                    writer.Write("public int ");
+                    writer.Write("public uint ");
                     GeneralEmission.GenerateOutcomeFieldName(outcome, writer);
                     writer.WriteLine(';');
-
                     break;
                 case CallerTrackerSymbol tracker:
-                    writer.Write("public int ");
+                    writer.Write("public uint ");
                     GeneralEmission.GenerateTrackerFieldName(tracker, writer);
                     writer.WriteLine(";");
                     break;

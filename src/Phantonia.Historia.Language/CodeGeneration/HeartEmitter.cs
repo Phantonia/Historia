@@ -1,4 +1,5 @@
 ﻿using Phantonia.Historia.Language.FlowAnalysis;
+using Phantonia.Historia.Language.SemanticAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis.BoundTree;
 using Phantonia.Historia.Language.SyntaxAnalysis;
 using System.CodeDom.Compiler;
@@ -6,7 +7,7 @@ using System.Linq;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
-public sealed class HeartEmitter(FlowGraph flowGraph, StoryNode boundStory, Settings settings, IndentedTextWriter writer)
+public sealed class HeartEmitter(FlowGraph flowGraph, StoryNode boundStory, SymbolTable symbolTable, Settings settings, IndentedTextWriter writer)
 {
     public void GenerateHeartClass()
     {
@@ -25,6 +26,11 @@ public sealed class HeartEmitter(FlowGraph flowGraph, StoryNode boundStory, Sett
 
         OutputEmitter outputEmitter = new(flowGraph, settings, writer);
         outputEmitter.GenerateOutputMethods();
+
+        writer.WriteLine();
+
+        SaveDataEmitter saveDataEmitter = new(boundStory, symbolTable, settings, writer);
+        saveDataEmitter.GenerateGetSaveDataMethod();
 
         writer.EndBlock();
     }

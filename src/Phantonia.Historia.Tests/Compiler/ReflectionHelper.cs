@@ -34,7 +34,7 @@ internal static class ReflectionHelper
         outcomeProperty?.SetValue(chapterObject, assignedOutcome);
     }
 
-    public static void SetSpectrum(object chapterObject, string spectrumName, int positive, int total)
+    public static void SetSpectrum(object chapterObject, string spectrumName, uint positive, uint total)
     {
         Type? chapterType = chapterObject.GetType();
 

@@ -38,7 +38,7 @@ public sealed class ChapterEmitter(
         GenerateConstructor(settings, writer);
 
         writer.WriteLine();
-        writer.WriteLine("internal long Index { get; }");
+        writer.WriteLine("internal uint Index { get; }");
         writer.WriteLine();
         writer.WriteLine("internal bool NeedsStateTransition { get; }");
         writer.WriteLine();
@@ -56,7 +56,7 @@ public sealed class ChapterEmitter(
     {
         writer.Write("private ");
         writer.Write(settings.StoryName);
-        writer.WriteLine("Chapter(long index, bool needsStateTransition)");
+        writer.WriteLine("Chapter(uint index, bool needsStateTransition)");
 
         writer.BeginBlock();
         writer.WriteLine("Index = index;");

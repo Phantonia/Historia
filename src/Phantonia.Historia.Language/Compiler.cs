@@ -142,6 +142,7 @@ public static class Compiler
             flowAnalysisResult.MainFlowGraph,
             flowAnalysisResult.SymbolTable,
             flowAnalysisResult.ChapterData,
+            fingerprint,
             outputWriter);
 
         emitter.GenerateOutputCode();

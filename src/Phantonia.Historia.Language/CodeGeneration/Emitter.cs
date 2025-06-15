@@ -16,6 +16,7 @@ public sealed class Emitter(
     FlowGraph flowGraph,
     SymbolTable symbolTable,
     ImmutableDictionary<SubroutineSymbol, ChapterData> chapterData,
+    ulong fingerprint,
     TextWriter outputWriter)
 {
     private readonly IndentedTextWriter writer = new(outputWriter);
@@ -31,6 +32,11 @@ public sealed class Emitter(
             writer.WriteLine(settings.Namespace);
             writer.BeginBlock();
         }
+
+        ConstantsEmitter constantsEmitter = new(settings, fingerprint, writer);
+        constantsEmitter.GenerateConstantsClass();
+
+        writer.WriteLine();
 
         TypeDeclarationsEmitter typeDeclarationsEmitter = new(boundStory, settings, writer);
         typeDeclarationsEmitter.GenerateTypeDeclarations();
@@ -50,7 +56,7 @@ public sealed class Emitter(
 
         writer.WriteLine();
 
-        HeartEmitter heartEmitter = new(flowGraph, boundStory, settings, writer);
+        HeartEmitter heartEmitter = new(flowGraph, boundStory, symbolTable, settings, writer);
         heartEmitter.GenerateHeartClass();
 
         writer.WriteLine();

@@ -43,6 +43,10 @@ public sealed class StateMachineEmitter(StoryNode boundStory, Settings settings,
 
         writer.WriteLine();
 
+        GenerateSaveDataMethods();
+
+        writer.WriteLine();
+
         GenerateExplicitInterfaceImplementations();
 
         writer.EndBlock(); // class
@@ -95,7 +99,7 @@ public sealed class StateMachineEmitter(StoryNode boundStory, Settings settings,
                     writer.WriteLine(';');
 
                     break;
-                case OutcomeSymbol { IsPublic: true } outcome and not SpectrumSymbol:
+                case OutcomeSymbol outcome and not SpectrumSymbol:
                     writer.Write("fields.");
                     GeneralEmission.GenerateOutcomeFieldName(outcome, writer);
 
@@ -106,7 +110,7 @@ public sealed class StateMachineEmitter(StoryNode boundStory, Settings settings,
                     else
                     {
                         // hacky but idgaf. the property shifts it by 1 later. this is easier than changing it properly and i'm lazy
-                        writer.WriteLine(" = -1;");
+                        writer.WriteLine(" = uint.MaxValue;");
                     }
 
                     break;
@@ -308,9 +312,9 @@ public sealed class StateMachineEmitter(StoryNode boundStory, Settings settings,
 
             writer.Write("fields.");
             GeneralEmission.GenerateOutcomeFieldName(outcome, writer);
-            writer.Write(" = (int)chapter.Outcome");
+            writer.Write(" = unchecked((uint)chapter.Outcome");
             writer.Write(symbol.Name);
-            writer.WriteLine(".Option - 1;"); // outcome enums have the additional "Unset" option, so all options are shifted upwards by 1
+            writer.WriteLine(".Option - 1);"); // outcome enums have the additional "Unset" option, so all options are shifted upwards by 1
 
             writer.EndBlock();
 
@@ -329,6 +333,16 @@ public sealed class StateMachineEmitter(StoryNode boundStory, Settings settings,
             Output = Heart.GetOutput(ref fields);
             Heart.GetOptions(ref fields, options, ref optionsCount);
             """);
+
+        writer.EndBlock(); // method
+    }
+
+    private void GenerateSaveDataMethods()
+    {
+        writer.WriteLine("public byte[] GetSaveData()");
+        writer.BeginBlock();
+
+        writer.WriteLine("return Heart.GetSaveData(fields);");
 
         writer.EndBlock(); // method
     }

@@ -349,7 +349,7 @@ public sealed class StateTransitionEmitter(FlowGraph flowGraph, Settings setting
             writer.EndBlock(); // if
         }
 
-        writer.Write("int value = fields.");
+        writer.Write("uint value = fields.");
         GeneralEmission.GenerateSpectrumPositiveFieldName(spectrum, writer);
         writer.Write(" * ");
         writer.Write(spectrum.Intervals.First().Value.UpperDenominator);
