@@ -16,9 +16,10 @@ public sealed class SaveDataEmitter(StoryNode boundStory, SymbolTable symbolTabl
     // 8 bytes: fingerprint
     // 4 bytes: vertex
     // for each outcome: log(#options) bits
-    // -> padded to full byte
-    // for each spectrum: 16 bytes
+    // -> padded to full byte per outcome
+    // for each spectrum: 8 bytes
     // for each tracker: log(#callsites) bits
+    // -> padded to full byte per outcome
     // for each loop switch: 8 bytes
     // 1 byte: checksum
 
@@ -39,10 +40,10 @@ public sealed class SaveDataEmitter(StoryNode boundStory, SymbolTable symbolTabl
         {
             writer.Write(settings.StoryName);
             writer.Write("Constants.Fingerprint");
-        }, j => writer.Write(i + j), 8);
+        }, i, 8);
         i += 8;
 
-        GenerateNumberSplitUp(() => writer.Write("fields.state"), j => writer.Write(i + j), 4);
+        GenerateNumberSplitUp(() => writer.Write("fields.state"), i, 4);
         i += 4;
 
         GenerateOutcomeData(ref i);
@@ -54,6 +55,41 @@ public sealed class SaveDataEmitter(StoryNode boundStory, SymbolTable symbolTabl
         GenerateChecksum(i);
 
         writer.WriteLine("return saveData;");
+
+        writer.EndBlock(); // method
+    }
+
+    public void GenerateRestoreSaveDataMethod()
+    {
+        writer.WriteLine("public static bool TryRestoreSaveData(byte[] saveData, ref Fields fields)");
+        writer.BeginBlock();
+
+        writer.Write("if (saveData.Length != ");
+        writer.Write(GetByteCount());
+        writer.Write(" || !global::Phantonia.Historia.SaveDataHelper.ValidateSaveData(saveData, ");
+        writer.Write(settings.StoryName);
+        writer.WriteLine("Constants.Fingerprint))");
+        writer.BeginBlock();
+        writer.WriteLine("return false;");
+        writer.EndBlock(); // if
+
+        writer.WriteLine();
+
+        int i = 9;
+
+        writer.Write("fields.state = ");
+        GenerateNumberReconstruction("uint", i, 4);
+        writer.WriteLine(';');
+        i += 4;
+
+        GenerateOutcomeRestoration(ref i);
+
+        GenerateTrackerRestoration(ref i);
+
+        GenerateLoopSwitchRestoration(ref i);
+
+        writer.WriteLine();
+        writer.WriteLine("return true;");
 
         writer.EndBlock(); // method
     }
@@ -70,31 +106,13 @@ public sealed class SaveDataEmitter(StoryNode boundStory, SymbolTable symbolTabl
             }
             else
             {
-                int log = (int)Math.Ceiling(Math.Log2(outcome.OptionNames.Length));
-
-                if (log % 8 == 0)
-                {
-                    byteCount += log / 8;
-                }
-                else
-                {
-                    byteCount += log / 8 + 1;
-                }
+                byteCount += OptionCountToByteCount(outcome.OptionNames.Length);
             }
         }
 
         foreach (CallerTrackerSymbol tracker in symbolTable.AllSymbols.OfType<CallerTrackerSymbol>())
         {
-            int log = (int)Math.Ceiling(Math.Log2(tracker.CallSiteCount));
-
-            if (log % 8 == 0)
-            {
-                byteCount += log / 8;
-            }
-            else
-            {
-                byteCount += log / 8 + 1;
-            }
+            byteCount += OptionCountToByteCount(tracker.CallSiteCount);
         }
 
         byteCount += boundStory.FlattenHierarchie().OfType<LoopSwitchStatementNode>().Count() * 8;
@@ -106,45 +124,70 @@ public sealed class SaveDataEmitter(StoryNode boundStory, SymbolTable symbolTabl
     {
         foreach (OutcomeSymbol outcome in symbolTable.AllSymbols.OfType<OutcomeSymbol>())
         {
-            int iCopy = i;
-
             if (outcome is SpectrumSymbol spectrum)
             {
                 GenerateNumberSplitUp(() =>
                 {
                     writer.Write("fields.");
                     GeneralEmission.GenerateSpectrumPositiveFieldName(spectrum, writer);
-                }, j => writer.Write(iCopy + j), 4);
-                i += 4;
+                }, i, 4);
 
-                iCopy = i;
+                i += 4;
 
                 GenerateNumberSplitUp(() =>
                 {
                     writer.Write("fields.");
                     GeneralEmission.GenerateSpectrumTotalFieldName(spectrum, writer);
-                }, j => writer.Write(iCopy + j), 4);
+                },i, 4);
+
                 i += 4;
             }
             else
             {
-                int log = (int)Math.Ceiling(Math.Log2(outcome.OptionNames.Length));
-                int byteCount;
-
-                if (log % 8 == 0)
-                {
-                    byteCount = log / 8;
-                }
-                else
-                {
-                    byteCount = log / 8 + 1;
-                }
+                int byteCount = OptionCountToByteCount(outcome.OptionNames.Length);
 
                 GenerateNumberSplitUp(() =>
                 {
                     writer.Write("fields.");
                     GeneralEmission.GenerateOutcomeFieldName(outcome, writer);
-                }, j => writer.Write(iCopy + j), byteCount);
+                }, i, byteCount);
+                i += byteCount;
+            }
+        }
+    }
+
+    private void GenerateOutcomeRestoration(ref int i)
+    {
+        foreach (OutcomeSymbol outcome in symbolTable.AllSymbols.OfType<OutcomeSymbol>())
+        {
+            if (outcome is SpectrumSymbol spectrum)
+            {
+                writer.Write("fields.");
+                GeneralEmission.GenerateSpectrumPositiveFieldName(spectrum, writer);
+                writer.Write(" = ");
+                GenerateNumberReconstruction("uint", i, 4);
+                writer.WriteLine(';');
+
+                i += 4;
+
+                writer.Write("fields.");
+                GeneralEmission.GenerateSpectrumTotalFieldName(spectrum, writer);
+                writer.Write(" = ");
+                GenerateNumberReconstruction("uint", i, 4);
+                writer.WriteLine(';');
+
+                i += 4;
+            }
+            else
+            {
+                int byteCount = OptionCountToByteCount(outcome.OptionNames.Length);
+
+                writer.Write("fields.");
+                GeneralEmission.GenerateOutcomeFieldName(outcome, writer);
+                writer.Write(" = ");
+                GenerateNumberReconstruction("uint", i, byteCount);
+                writer.WriteLine(';');
+
                 i += byteCount;
             }
         }
@@ -154,25 +197,29 @@ public sealed class SaveDataEmitter(StoryNode boundStory, SymbolTable symbolTabl
     {
         foreach (CallerTrackerSymbol tracker in symbolTable.AllSymbols.OfType<CallerTrackerSymbol>())
         {
-            int log = (int)Math.Ceiling(Math.Log2(tracker.CallSiteCount));
-            int byteCount;
-
-            if (log % 8 == 0)
-            {
-                byteCount = log / 8;
-            }
-            else
-            {
-                byteCount = log / 8 + 1;
-            }
-
-            int iCopy = i;
+            int byteCount = OptionCountToByteCount(tracker.CallSiteCount);
 
             GenerateNumberSplitUp(() =>
             {
                 writer.Write("fields.");
                 GeneralEmission.GenerateTrackerFieldName(tracker, writer);
-            }, j => writer.Write(iCopy + j), byteCount);
+            }, i, byteCount);
+            i += byteCount;
+        }
+    }
+
+    private void GenerateTrackerRestoration(ref int i)
+    {
+        foreach (CallerTrackerSymbol tracker in symbolTable.AllSymbols.OfType<CallerTrackerSymbol>())
+        {
+            int byteCount = OptionCountToByteCount(tracker.CallSiteCount);
+
+            writer.Write("fields.");
+            GeneralEmission.GenerateTrackerFieldName(tracker, writer);
+            writer.Write(" = ");
+            GenerateNumberReconstruction("uint", i, byteCount);
+            writer.WriteLine(';');
+
             i += byteCount;
         }
     }
@@ -181,14 +228,24 @@ public sealed class SaveDataEmitter(StoryNode boundStory, SymbolTable symbolTabl
     {
         foreach (LoopSwitchStatementNode loopSwitch in boundStory.FlattenHierarchie().OfType<LoopSwitchStatementNode>())
         {
-            int iCopy = i;
-
             GenerateNumberSplitUp(() =>
             {
                 writer.Write("fields.");
                 GeneralEmission.GenerateLoopSwitchFieldName(loopSwitch, writer);
-            }, j => writer.Write(iCopy + j), 8);
+            }, i, 8);
             i += 8;
+        }
+    }
+
+    private void GenerateLoopSwitchRestoration(ref int i)
+    {
+        foreach (LoopSwitchStatementNode loopSwitch in boundStory.FlattenHierarchie().OfType<LoopSwitchStatementNode>())
+        {
+            writer.Write("fields.");
+            GeneralEmission.GenerateLoopSwitchFieldName(loopSwitch, writer);
+            writer.Write(" = ");
+            GenerateNumberReconstruction("ulong", i, 8);
+            writer.WriteLine(';');
         }
     }
 
@@ -211,14 +268,14 @@ public sealed class SaveDataEmitter(StoryNode boundStory, SymbolTable symbolTabl
         writer.EndBlock(); // unchecked
     }
 
-    private void GenerateNumberSplitUp(Action numberGenerator, Action<int> indexGenerator, int count)
+    private void GenerateNumberSplitUp(Action numberGenerator, int start, int count)
     {
         const ulong BitMask = (1ul << 8) - 1ul; // 0b11111111
 
         for (int i = 0; i < count; i++)
         {
             writer.Write("saveData[");
-            indexGenerator(i);
+            writer.Write(start + i);
             writer.Write("] = (byte)((");
             numberGenerator();
             writer.Write(" & 0x");
@@ -226,6 +283,43 @@ public sealed class SaveDataEmitter(StoryNode boundStory, SymbolTable symbolTabl
             writer.Write("ul) >> ");
             writer.Write(i * 8);
             writer.WriteLine(");");
+        }
+    }
+
+    private void GenerateNumberReconstruction(string type, int start, int count)
+    {
+        writer.Write('(');
+        writer.Write(type);
+        writer.Write(")(");
+
+        for (int i = 0; i < count; i++)
+        {
+            writer.Write("(saveData[");
+            writer.Write(start + i);
+            writer.Write("] << ");
+            writer.Write(i * 8);
+            writer.Write(')');
+
+            if (i < count - 1)
+            {
+                writer.Write(" | ");
+            }
+        }
+
+        writer.Write(')');
+    }
+
+    private static int OptionCountToByteCount(int optionCount)
+    {
+        int log = (int)Math.Ceiling(Math.Log2(optionCount));
+
+        if (log % 8 == 0)
+        {
+            return log / 8;
+        }
+        else
+        {
+            return log / 8 + 1;
         }
     }
 }

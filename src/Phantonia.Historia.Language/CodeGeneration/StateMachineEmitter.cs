@@ -339,12 +339,23 @@ public sealed class StateMachineEmitter(StoryNode boundStory, Settings settings,
 
     private void GenerateSaveDataMethods()
     {
-        writer.WriteLine("public byte[] GetSaveData()");
-        writer.BeginBlock();
+        writer.WriteManyLines(
+            """
+            public byte[] GetSaveData()
+            {
+                return Heart.GetSaveData(fields);
+            }
 
-        writer.WriteLine("return Heart.GetSaveData(fields);");
-
-        writer.EndBlock(); // method
+            public bool TryRestoreSaveData(byte[] saveData)
+            {
+                bool success = Heart.TryRestoreSaveData(saveData, ref fields);
+                
+                Output = Heart.GetOutput(ref fields);
+                Heart.GetOptions(ref fields, options, ref optionsCount);
+                
+                return success;
+            }
+            """);
     }
 
     private void GenerateExplicitInterfaceImplementations()

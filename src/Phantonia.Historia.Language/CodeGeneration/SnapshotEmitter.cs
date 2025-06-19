@@ -1,6 +1,7 @@
 ﻿using Phantonia.Historia.Language.FlowAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis;
 using Phantonia.Historia.Language.SemanticAnalysis.Symbols;
+using System;
 using System.CodeDom.Compiler;
 using System.Linq;
 
@@ -39,6 +40,10 @@ public sealed class SnapshotEmitter(Settings settings, SymbolTable symbolTable, 
         writer.WriteLine();
 
         GenerateReferenceMutators(); // ends in writer.WriteLine()
+
+        GenerateSaveDataMethods();
+
+        writer.WriteLine();
 
         GenerateExplicitInterfaceImplementations();
 
@@ -240,6 +245,17 @@ public sealed class SnapshotEmitter(Settings settings, SymbolTable symbolTable, 
 
             writer.WriteLine();
         }
+    }
+
+    private void GenerateSaveDataMethods()
+    {
+        writer.WriteManyLines(
+            """
+            public byte[] GetSaveData()
+            {
+                return Heart.GetSaveData(fields);
+            }
+            """);
     }
 
     private void GenerateExplicitInterfaceImplementations()

@@ -31,6 +31,8 @@ public sealed class HeartEmitter(FlowGraph flowGraph, StoryNode boundStory, Symb
 
         SaveDataEmitter saveDataEmitter = new(boundStory, symbolTable, settings, writer);
         saveDataEmitter.GenerateGetSaveDataMethod();
+        writer.WriteLine();
+        saveDataEmitter.GenerateRestoreSaveDataMethod();
 
         writer.EndBlock();
     }
