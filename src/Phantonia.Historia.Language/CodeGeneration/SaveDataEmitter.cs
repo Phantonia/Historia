@@ -246,6 +246,7 @@ public sealed class SaveDataEmitter(StoryNode boundStory, SymbolTable symbolTabl
             writer.Write(" = ");
             GenerateNumberReconstruction("ulong", i, 8);
             writer.WriteLine(';');
+            i += 8;
         }
     }
 
