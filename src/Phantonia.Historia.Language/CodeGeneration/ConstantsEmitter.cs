@@ -1,8 +1,10 @@
-﻿using System.CodeDom.Compiler;
+﻿using Phantonia.Historia.Language.SemanticAnalysis;
+using Phantonia.Historia.Language.SyntaxAnalysis;
+using System.CodeDom.Compiler;
 
 namespace Phantonia.Historia.Language.CodeGeneration;
 
-public sealed class ConstantsEmitter(Settings settings, ulong fingerprint, IndentedTextWriter writer)
+public sealed class ConstantsEmitter(StoryNode boundStory, SymbolTable symbolTable, Settings settings, ulong fingerprint, IndentedTextWriter writer)
 {
     public void GenerateConstantsClass()
     {
@@ -14,6 +16,10 @@ public sealed class ConstantsEmitter(Settings settings, ulong fingerprint, Inden
 
         writer.Write("public const ulong Fingerprint = 0x");
         writer.Write(fingerprint.ToString("x"));
+        writer.WriteLine(';');
+
+        writer.Write("public const int SaveDataLength = ");
+        writer.Write(SaveDataEmitter.GetByteCount(boundStory, symbolTable));
         writer.WriteLine(';');
 
         writer.EndBlock(); // class

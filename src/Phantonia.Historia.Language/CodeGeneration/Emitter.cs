@@ -33,7 +33,7 @@ public sealed class Emitter(
             writer.BeginBlock();
         }
 
-        ConstantsEmitter constantsEmitter = new(settings, fingerprint, writer);
+        ConstantsEmitter constantsEmitter = new(boundStory, symbolTable, settings, fingerprint, writer);
         constantsEmitter.GenerateConstantsClass();
 
         writer.WriteLine();

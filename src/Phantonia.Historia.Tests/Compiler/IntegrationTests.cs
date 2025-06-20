@@ -772,5 +772,12 @@ public sealed class IntegrationTests
         Assert.AreEqual(20, stateMachine.Output);
         _ = stateMachine.TryContinue();
         Assert.AreEqual(19, stateMachine.Output); // X was B, so we should get 19 next
+
+        // TEST CONSTANTS
+        Type? constantsClass = ((object)stateMachine).GetType().Assembly.GetType("HistoriaStoryConstants");
+        Assert.IsNotNull(constantsClass);
+
+        int length = (int?)constantsClass.GetField("SaveDataLength")?.GetValue(null) ?? -1;
+        Assert.AreEqual(saveData.Length, length);
     }
 }

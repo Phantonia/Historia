@@ -22,6 +22,32 @@ public sealed class SaveDataEmitter(StoryNode boundStory, SymbolTable symbolTabl
     // -> padded to full byte per outcome
     // for each loop switch: 8 bytes
     // 1 byte: checksum
+    public static int GetByteCount(StoryNode boundStory, SymbolTable symbolTable)
+    {
+        int byteCount = 14; // version + fingerprint + vertex + checksum
+
+        foreach (OutcomeSymbol outcome in symbolTable.AllSymbols.OfType<OutcomeSymbol>())
+        {
+            if (outcome is SpectrumSymbol)
+            {
+                byteCount += 8;
+            }
+            else
+            {
+                byteCount += OptionCountToByteCount(outcome.OptionNames.Length);
+            }
+        }
+
+        foreach (CallerTrackerSymbol tracker in symbolTable.AllSymbols.OfType<CallerTrackerSymbol>())
+        {
+            byteCount += OptionCountToByteCount(tracker.CallSiteCount);
+        }
+
+        byteCount += boundStory.FlattenHierarchie().OfType<LoopSwitchStatementNode>().Count() * 8;
+
+        return byteCount;
+    }
+
 
     public void GenerateGetSaveDataMethod()
     {
@@ -29,7 +55,7 @@ public sealed class SaveDataEmitter(StoryNode boundStory, SymbolTable symbolTabl
         writer.BeginBlock();
 
         writer.Write("byte[] saveData = new byte[");
-        writer.Write(GetByteCount());
+        writer.Write(GetByteCount(boundStory, symbolTable));
         writer.WriteLine("];");
 
         writer.WriteLine("saveData[0] = 0x01;");
@@ -65,7 +91,7 @@ public sealed class SaveDataEmitter(StoryNode boundStory, SymbolTable symbolTabl
         writer.BeginBlock();
 
         writer.Write("if (saveData.Length != ");
-        writer.Write(GetByteCount());
+        writer.Write(GetByteCount(boundStory, symbolTable));
         writer.Write(" || !global::Phantonia.Historia.SaveDataHelper.ValidateSaveData(saveData, ");
         writer.Write(settings.StoryName);
         writer.WriteLine("Constants.Fingerprint))");
@@ -92,32 +118,6 @@ public sealed class SaveDataEmitter(StoryNode boundStory, SymbolTable symbolTabl
         writer.WriteLine("return true;");
 
         writer.EndBlock(); // method
-    }
-
-    private int GetByteCount()
-    {
-        int byteCount = 14; // version + fingerprint + vertex + checksum
-
-        foreach (OutcomeSymbol outcome in symbolTable.AllSymbols.OfType<OutcomeSymbol>())
-        {
-            if (outcome is SpectrumSymbol)
-            {
-                byteCount += 8;
-            }
-            else
-            {
-                byteCount += OptionCountToByteCount(outcome.OptionNames.Length);
-            }
-        }
-
-        foreach (CallerTrackerSymbol tracker in symbolTable.AllSymbols.OfType<CallerTrackerSymbol>())
-        {
-            byteCount += OptionCountToByteCount(tracker.CallSiteCount);
-        }
-
-        byteCount += boundStory.FlattenHierarchie().OfType<LoopSwitchStatementNode>().Count() * 8;
-
-        return byteCount;
     }
 
     private void GenerateOutcomeData(ref int i)
